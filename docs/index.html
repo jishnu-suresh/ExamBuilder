@@ -190,6 +190,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .card select[data-f]{border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:#fff;font-size:13px;max-width:210px}
 .card select[data-part]{border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:#fff;font-size:13px;max-width:190px}
 .seg.algn button{padding:4px 9px;font-size:12.5px}
+.wrapchk{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:3px 9px;background:#fff;cursor:pointer}
 .bottom-bar{position:sticky;bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(4px);border-top:1px solid var(--line);margin:12px -20px -18px;padding:10px 20px;border-radius:0 0 var(--radius) var(--radius);z-index:5}
 .arr-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;max-height:62vh;overflow:auto;padding:4px}
 .tile{width:150px;min-height:74px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:7px 8px;cursor:grab;display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--muted);user-select:none;position:relative}
@@ -1022,7 +1023,8 @@ function render(){
         <button class="btn icon danger" data-act="del" title="Delete">✕</button></div>`;
     const imgBlock = it.img ? `<div class="img"><img src="${it.img.src}" alt=""></div>
         <div class="row"><label>Image width <input type="range" min="25" max="100" step="5" data-f="imgSize" value="${it.imgSize || 100}"> <span>${it.imgSize || 100}%</span></label>
-        <span class="seg algn" title="Image position">${[["left","⇤ Left"],["center","↔ Centre"],["right","Right ⇥"]].map(([v,l]) => `<button type="button" data-act="align" data-v="${v}" class="${(it.imgAlign || "left") === v ? "on" : ""}">${l}</button>`).join("")}</span></div>
+        <span class="seg algn" title="Image position">${[["left","⇤ Left"],["center","↔ Centre"],["right","Right ⇥"]].map(([v,l]) => `<button type="button" data-act="align" data-v="${v}" class="${(it.imgAlign || "left") === v ? "on" : ""}">${l}</button>`).join("")}</span>
+        ${(it.imgAlign || "left") !== "center" ? `<label class="wrapchk" title="Put the question text ${(it.imgAlign || "left") === "left" ? "to the right" : "to the left"} of the picture"><input type="checkbox" data-f="imgWrap" ${it.imgWrap ? "checked" : ""}> Wrap text ${(it.imgAlign || "left") === "left" ? "on the right" : "on the left"}</label>` : ""}</div>
         <div class="row">
         <button class="btn sm" data-act="label" title="Add label lines to a diagram (biology, physics…)">🏷 Label diagram</button><button class="btn sm" data-act="ocr" title="Turn the text in this photo into typed questions">🔍 Read text</button><button class="btn sm" data-act="rot">⟳ Rotate</button><button class="btn sm danger" data-act="rmimg">Remove image</button></div>` : "";
     if(it.type === "section"){
@@ -1075,6 +1077,11 @@ function onListInput(e){
   const card = e.target.closest(".card"); if(!card) return;
   const it = S.items.find(x => x.id === card.dataset.id); if(!it) return;
   lastEdited = it.id;
+  if(e.target.dataset.f === "imgWrap"){
+    it.imgWrap = e.target.checked;
+    if(it.imgWrap && (it.imgSize || 100) > 60) it.imgSize = 40;     // a sensible size for text beside a picture
+    render(); changed(); return;
+  }
   if(e.target.dataset.opt != null){ ensureOptions(it); it.options[+e.target.dataset.opt] = e.target.value; clearTimeout(card._rt); card._rt = setTimeout(() => updateRich(card, it), 250); changed(); return; }
   const f = e.target.dataset.f; if(!f) return;
   it[f] = f === "imgSize" ? +e.target.value : e.target.value;
@@ -1697,29 +1704,35 @@ function buildPDF(opt){
     if(cur.length) words.push(cur);
     return words;
   }
-  function layoutPara(b, width){
+  // wrap = { narrow:{w,h,dx}, acc }: rows that start above narrow.h use the narrow width (text beside a picture)
+  function layoutPara(b, width, wrap){
     doc.setFontSize(fs);
     const words = wordsOf(b.runs);
     setSt("normal"); const SP = tw(" ");
-    const avail = width - (b.ind || 0);
-    const rows = []; let row = [], rw = 0;
+    const rowH = r => { let a = TASC, d = LH - TASC; r.forEach(w => w.forEach(p => { if(p.t === "math"){ a = Math.max(a, p.asc + .7); d = Math.max(d, p.desc + .7); } })); return a + d; };
+    let accY = wrap ? wrap.acc : 0;
+    const isN = () => !!(wrap && wrap.narrow && accY < wrap.narrow.h);
+    let avail = (isN() ? wrap.narrow.w : width) - (b.ind || 0);
+    const rows = [], rowN = [];
+    let row = [], rw = 0;
+    const pushRow = r => { rows.push(r); rowN.push(isN()); accY += rowH(r); avail = (isN() ? wrap.narrow.w : width) - (b.ind || 0); };
     for(const w of words){
       const ww = w.reduce((a, p) => a + p.w, 0);
-      if(row.length && rw + SP + ww > avail){ rows.push(row); row = []; rw = 0; }
+      if(row.length && rw + SP + ww > avail){ pushRow(row); row = []; rw = 0; }
       // a single over-long plain word: break it by characters
       if(!row.length && ww > avail && w.length === 1 && w[0].t === "text"){
         setSt(w[0].st); let chunk = "";
-        for(const ch of w[0].s){ if(tw(chunk + ch) > avail && chunk){ rows.push([[{ t: "text", s: chunk, st: w[0].st, w: tw(chunk) }]]); chunk = ""; } chunk += ch; }
+        for(const ch of w[0].s){ if(tw(chunk + ch) > avail && chunk){ pushRow([[{ t: "text", s: chunk, st: w[0].st, w: tw(chunk) }]]); chunk = ""; } chunk += ch; }
         row = [[{ t: "text", s: chunk, st: w[0].st, w: tw(chunk) }]]; rw = row[0][0].w; continue;
       }
       row.push(w); rw += (row.length > 1 ? SP : 0) + ww;
     }
-    if(row.length) rows.push(row);
-    if(!rows.length) rows.push([]);
+    if(row.length) pushRow(row);
+    if(!rows.length) pushRow([]);
     return rows.map((r, ri) => {
       let asc = TASC, desc = LH - TASC;
       r.forEach(w => w.forEach(p => { if(p.t === "math"){ asc = Math.max(asc, p.asc + .7); desc = Math.max(desc, p.desc + .7); } }));
-      return { h: asc + desc, asc, width: r.reduce((a, w) => a + w.reduce((x, p) => x + p.w, 0), 0) + SP * Math.max(0, r.length - 1), draw(x, y, color){
+      return { h: asc + desc, asc, dx: (wrap && wrap.narrow && rowN[ri]) ? wrap.narrow.dx : 0, width: r.reduce((a, w) => a + w.reduce((x, p) => x + p.w, 0), 0) + SP * Math.max(0, r.length - 1), draw(x, y, color){
         doc.setFontSize(fs); doc.setTextColor(...(color || INK));
         let cx = x + (b.ind || 0);
         if(b.bullet && ri === 0){ setSt("bold"); doc.text("•", x + 1, y + asc); }
@@ -1774,25 +1787,29 @@ function buildPDF(opt){
       let lx = x; doc.line(lx, y + 1, lx, y + 1 + H); cw.forEach(w => { lx += w; doc.line(lx, y + 1, lx, y + 1 + H); });
     } };
   }
-  function layoutRich(text, width, q){
-    const out = [];
+  // narrow = { w, h, dx }: blocks that start within the first h mm are laid out w wide and shifted dx (text wrapping beside an image)
+  function layoutRich(text, width, q, narrow){
+    const out = []; let acc = 0;
+    const isNarrow = () => !!narrow && acc < narrow.h;
+    const curW = () => isNarrow() ? narrow.w : width;
+    const add = ls => { const n = isNarrow(); ls.forEach(l => { if(l.dx === undefined) l.dx = n ? narrow.dx : 0; out.push(l); acc += l.h; }); };
     const mark = q && q.mcq ? q.mcq : "";
     const cols = q ? Math.max(1, +q.optCols || 1) : 1;
     const grouped = !!(mark || cols > 1);
     let group = [], noted = false;
     const note = () => {
       if(mark !== "multi" || noted || /all that apply|more than one|two answers|three answers/i.test(q.text || "")) return;
-      noted = true; out.push(...layoutPara({ runs: [{ t: "text", s: "(Select all that apply.)", i: true }] }, width));
+      noted = true; add(layoutPara({ runs: [{ t: "text", s: "(Select all that apply.)", i: true }] }, curW()));
     };
     const flush = () => {
       if(!group.length) return;
       note();
-      const colW = width / cols;
       const ind = 5;
       for(let r = 0; r < group.length; r += cols){
+        const colW = curW() / cols;
         const cells = group.slice(r, r + cols).map(b => layoutPara(Object.assign({}, b, { ind }), colW - (cols > 1 ? 3 : 0)));
         const h = Math.max(...cells.map(c => c.reduce((a, l) => a + l.h, 0))) + (mark ? .8 : 0);
-        out.push({ h, asc: cells[0][0] ? cells[0][0].asc : TASC, draw(x, y){ cells.forEach((c, ci) => { let ly = y; c.forEach(l => { l.draw(x + ci * colW, ly); ly += l.h; }); }); } });
+        add([{ h, asc: cells[0][0] ? cells[0][0].asc : TASC, draw(x, y){ cells.forEach((c, ci) => { let ly = y; c.forEach(l => { l.draw(x + ci * colW, ly); ly += l.h; }); }); } }]);
       }
       group = [];
     };
@@ -1800,17 +1817,18 @@ function buildPDF(opt){
       if(grouped && b.type === "para" && b.opt){ group.push(b); continue; }
       if(grouped && b.type === "gap" && group.length) continue;
       flush();
-      if(b.type === "gap"){ out.push({ h: LH * .5, gap: true }); continue; }
+      const bw = curW();
+      if(b.type === "gap"){ add([{ h: LH * .5, gap: true }]); continue; }
       if(b.type === "display"){
         const m = texSVG(b.tex, true);
-        if(!m.png){ out.push(...layoutPara({ runs: [{ t: "text", s: "[" + b.tex + "]", b: false, i: false }] }, width)); continue; }
+        if(!m.png){ add(layoutPara({ runs: [{ t: "text", s: "[" + b.tex + "]", b: false, i: false }] }, bw)); continue; }
         let w = m.w * EM * 1.05, h = (m.asc + m.desc) * EM * 1.05;
-        if(w > width){ h *= width / w; w = width; }
-        out.push({ h: h + 4, asc: h / 2 + 2, draw(x, y){ doc.addImage(m.png, "PNG", x + (width - w) / 2, y + 2, w, h, mAlias(m), "FAST"); } });
+        if(w > bw){ h *= bw / w; w = bw; }
+        add([{ h: h + 4, asc: h / 2 + 2, draw(x, y){ doc.addImage(m.png, "PNG", x + (bw - w) / 2, y + 2, w, h, mAlias(m), "FAST"); } }]);
         continue;
       }
-      if(b.type === "table"){ out.push(layoutTable(b, width)); continue; }
-      out.push(...layoutPara(b, width));
+      if(b.type === "table"){ add([layoutTable(b, bw)]); continue; }
+      add(narrow && isNarrow() ? layoutPara(b, width, { narrow, acc }) : layoutPara(b, bw));
     }
     flush(); note();
     while(out.length && out[out.length - 1].gap) out.pop();
@@ -1835,12 +1853,23 @@ function buildPDF(opt){
       const mW = isQ ? (half ? Math.min(MARKW, Math.max(15, fs * 1.3)) : MARKW) : 0;
       const nW = isQ ? NUMW : 0;
       const tx = X + nW, tw = W - nW - mW;
-      const lines = layoutRich(qText(it), tw, it);
-      const img = it.img ? imgDims(it, tw) : null;
+      let img = it.img ? imgDims(it, tw) : null;
+      const WGAP = 5;
+      const al = it.imgAlign || "left";
+      const wrap = !!(img && it.imgWrap && al !== "center" && qText(it).trim());
+      if(wrap && tw - img.w - WGAP < tw * .3){ const nw = tw * .7 - WGAP; img = { w: nw, h: img.h * nw / img.w }; }   // keep at least 30% for the text
+      const narrow = wrap ? { w: tw - img.w - WGAP, h: img.h + 1, dx: al === "left" ? img.w + WGAP : 0 } : null;
+      const lines = layoutRich(qText(it), tw, it, narrow);
       const nAns = isQ && !SHEET ? Math.max(0, Math.min(60, Math.round(num(it.lines)))) : 0;
       const parts = [];
-      lines.forEach(l => parts.push({ h: l.h, draw: yy => { if(l.draw){ font(SANS, "normal", fs, INK); l.draw(tx, yy); } } }));
-      if(img){
+      lines.forEach(l => parts.push({ h: l.h, draw: yy => { if(l.draw){ font(SANS, "normal", fs, INK); l.draw(tx + (l.dx || 0), yy); } } }));
+      if(wrap){
+        // the picture sits at the top beside the text; reserve its height if the text is shorter
+        const textH = lines.reduce((a, l) => a + l.h, 0);
+        if(textH < img.h + 1) parts.push({ h: img.h + 1 - textH, draw: () => {} });
+        const fd0 = parts[0].draw, ix = al === "left" ? tx : tx + tw - img.w;
+        parts[0].draw = yy => { doc.addImage(it.img.src, imgFmt(it.img.src), ix, yy + .8, img.w, img.h, "img_" + it.id, "FAST"); fd0(yy); };
+      }else if(img){
         const pad = lines.length ? 3 : 0;
         parts.push({ h: img.h + pad, draw: yy => {
           const ix = it.imgAlign === "center" ? tx + (tw - img.w) / 2 : it.imgAlign === "right" ? tx + tw - img.w : tx;
