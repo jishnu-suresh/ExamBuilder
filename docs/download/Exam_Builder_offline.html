@@ -5370,137 +5370,179 @@ function buildPDF(opt){
   }
 
   /* ================= COVER ================= */
-  frame();
+  // The cover is laid out in two passes: measure with a set of sizes, tighten step by step until it fits one page, then draw.
   const ML = 20, MR = 20, CW = PW - ML - MR;
-  let y = 20;
-  if(hasLogo){
-    let lw = 92, lh = lw * S.logo.h / S.logo.w;
-    if(lh > 34){ lh = 34; lw = lh * S.logo.w / S.logo.h; }
-    doc.addImage(S.logo.src, imgFmt(S.logo.src), (PW - lw) / 2, y, lw, lh, "logo", "FAST");
-    y += lh + 7;
-  }else if(D.school){
-    font(SERIF, "bold", 22, ACC_D); doc.text(D.school, PW / 2, y + 9, { align: "center" }); y += 16;
-  }
-  ornament(y, 55); y += 15;
-  font(SERIF, "bold", 30, INK);
-  const titleLines = doc.splitTextToSize(D.title || "Exam", CW - 10);
-  titleLines.forEach(l => { doc.text(l, PW / 2, y, { align: "center" }); y += 11.5; });
-  y -= 4;
-  if(D.subtitle && D.subtitle.trim()){
-    font(SERIF, "italic", 15, [92, 84, 72]);
-    doc.splitTextToSize(D.subtitle.trim(), CW - 20).slice(0, 2).forEach(l => { y += 1.5; doc.text(l, PW / 2, y + 3, { align: "center" }); y += 6.5; });
-    y += 2;
-  }
-  if(D.year){ font(SANS, "normal", 11, MUTED); spaced(D.year, PW / 2, y + 2, .6); y += 8; }
-  if(D.subject){
-    y += 7; font(SANS, "bold", 17, ACC_D);
-    const subj = D.subject.toUpperCase();
-    const cs = 1.4; let ss = subj;
-    while(doc.getTextWidth(ss) + cs * ss.length > CW && doc.getFontSize() > 11) doc.setFontSize(doc.getFontSize() - 1);
-    spaced(ss, PW / 2, y, cs); y += 4;
-  }
-  // pills
+  const COVER_TOP = 20, COVER_BOTTOM = PH - 20;
+  const instr = (D.instructions || "").split("\n").map(s => s.trim()).filter(Boolean);
+  const showTable = D.scoreTable && (M.total > 0 || M.secs.length > 0);
+  const scoreRows = showTable ? (M.secs.length ? M.secs.map(s => [s.item.text || "Part", s.total]) : []) : [];
+  if(showTable && M.looseMarks > 0 && M.secs.length) scoreRows.unshift(["Other questions", M.looseMarks]);
   const pills = [];
   if(D.duration) pills.push(["DURATION", D.duration]);
   if(M.total > 0) pills.push(["TOTAL", fmt(M.total) + " points"]);
   if(LARGE) pills.push(["FORMAT", "Large print"]);
   if(D.answerMode === "sheet") pills.push(["ANSWERS", "Separate sheet"]);
-  if(pills.length){
-    y += 6;
-    const ph = 9, gap = 6;
-    const widths = pills.map(([k, v]) => { font(SANS, "bold", 7.5); const a = doc.getTextWidth(k) + 7.5 * .9; font(SANS, "bold", 10.5); return a + doc.getTextWidth(v) + 14; });
-    let px = PW / 2 - (widths.reduce((a, b) => a + b, 0) + gap * (pills.length - 1)) / 2;
-    pills.forEach(([k, v], i) => {
-      doc.setFillColor(...ACC_XL); doc.setDrawColor(...ACC_L); doc.setLineWidth(.3);
-      doc.roundedRect(px, y, widths[i], ph, ph / 2, ph / 2, "FD");
-      font(SANS, "bold", 7.5, ACC_D); doc.text(k, px + 5.5, y + 5.9, { charSpace: .9 });
-      const kw = doc.getTextWidth(k) + 7.5 * .9;
-      font(SANS, "bold", 10.5, INK); doc.text(v, px + 5.5 + kw + 3, y + 6.1);
-      px += widths[i] + gap;
-    });
-    y += ph;
-  }
 
-  // student box
-  y += 9;
-  const boxH = 33, rowH = 15.5;
-  doc.setDrawColor(...ACC_L); doc.setLineWidth(.4); doc.setFillColor(255, 255, 255);
-  doc.roundedRect(ML, y, CW, boxH, 2.5, 2.5, "S");
-  const field = (x, w, yy, label, value) => {
-    font(SANS, "bold", 7, MUTED); doc.text(label.toUpperCase(), x, yy + 5.2, { charSpace: .7 });
-    if(value){ font(SANS, "normal", 11.5, INK); doc.text(fitText(value, w - 2), x, yy + 11.6); }
-    else { doc.setDrawColor(...RULE); doc.setLineWidth(.25); doc.line(x, yy + 12.4, x + w - 4, yy + 12.4); }
-  };
-  const bx = ML + 6, bw = CW - 12;
-  field(bx, bw * .62, y + 1, "Student name", "");
-  field(bx + bw * .64, bw * .36, y + 1, "Class / Grade", D.className);
-  doc.setDrawColor(...ACC_XL); doc.setLineWidth(.3); doc.line(ML + 4, y + rowH + 1.2, ML + CW - 4, y + rowH + 1.2);
-  field(bx, bw * .4, y + rowH + 1.5, "Date", D.date);
-  field(bx + bw * .44, bw * .56, y + rowH + 1.5, "Teacher", D.teacher);
-  y += boxH;
-
-  // score table geometry (bottom-anchored)
-  const showTable = D.scoreTable && (M.total > 0 || M.secs.length > 0);
-  const rows = showTable ? (M.secs.length ? M.secs.map(s => [s.item.text || "Part", s.total]) : []) : [];
-  if(showTable && M.looseMarks > 0 && M.secs.length) rows.unshift(["Other questions", M.looseMarks]);
-  const tRowH = rows.length > 6 ? 6.6 : 8.4;
-  const tH = showTable ? 10 + tRowH * (rows.length + 1) + 4 : 0;
-  const tTop = PH - 22 - tH;
-
-  // instructions
-  const instr = (D.instructions || "").split("\n").map(s => s.trim()).filter(Boolean);
-  if(instr.length){
-    y += 8;
-    const avail = (showTable ? tTop - 8 : PH - 24) - y;
-    let fs = LARGE ? 13 : 10.5, wrapped, ih;
-    const bulletW = 4.5, iw = CW - 16 - bulletW;
-    for(;;){
-      font(SANS, "normal", fs);
-      wrapped = instr.map(s => doc.splitTextToSize(s, iw));
-      const lh = fs * mmPt * (LARGE ? 1.8 : 1.45);
-      ih = 13 + wrapped.reduce((a, w) => a + w.length, 0) * lh + (instr.length - 1) * 1.2 + 3;
-      if(ih <= avail || fs <= 7.5) break;
-      fs -= .5;
+  function cover(P, draw){
+    let y = COVER_TOP;
+    const g = P.gap;
+    if(hasLogo){
+      let lh = P.logoH, lw = lh * S.logo.w / S.logo.h;
+      if(lw > 92){ lw = 92; lh = lw * S.logo.h / S.logo.w; }
+      if(draw) doc.addImage(S.logo.src, imgFmt(S.logo.src), (PW - lw) / 2, y, lw, lh, "logo", "FAST");
+      y += lh + 7 * g;
+    }else if(D.school){
+      font(SERIF, "bold", 22 * P.title / 30, ACC_D); if(draw) doc.text(D.school, PW / 2, y + 9, { align: "center" }); y += 16 * g;
     }
-    const lh = fs * mmPt * (LARGE ? 1.8 : 1.45);
-    doc.setFillColor(...ACC_XL); doc.roundedRect(ML, y, CW, ih, 2.5, 2.5, "F");
-    doc.setFillColor(...ACC); doc.rect(ML, y, 1.6, ih, "F");
-    font(SANS, "bold", 8.5, ACC_D); doc.text("INSTRUCTIONS", ML + 8, y + 7.5, { charSpace: 1 });
-    let iy = y + 13.5;
-    wrapped.forEach(w => {
-      doc.setFillColor(...ACC); hexagon(ML + 9.2, iy - fs * mmPt * .35, .95, "F");
-      font(SANS, "normal", fs, INK);
-      w.forEach(l => { doc.text(l, ML + 8 + bulletW, iy); iy += lh; });
-      iy += 1.2;
-    });
-    y += ih;
+    if(draw) ornament(y, 55);
+    y += 15 * g;
+    font(SERIF, "bold", P.title, INK);
+    const tl = doc.splitTextToSize(D.title || "Exam", CW - 10), tStep = P.title * .383;
+    tl.forEach(l => { if(draw) doc.text(l, PW / 2, y, { align: "center" }); y += tStep; });
+    y -= tStep * .35;
+    if(D.subtitle && D.subtitle.trim()){
+      font(SERIF, "italic", P.sub, [92, 84, 72]);
+      doc.splitTextToSize(D.subtitle.trim(), CW - 20).slice(0, 2).forEach(l => { y += 1.5 * g; if(draw) doc.text(l, PW / 2, y + 3, { align: "center" }); y += P.sub * .43; });
+      y += 2 * g;
+    }
+    if(D.year){ font(SANS, "normal", 11, MUTED); if(draw) spaced(D.year, PW / 2, y + 2, .6); y += 8 * g; }
+    if(D.subject){
+      y += 7 * g; font(SANS, "bold", P.subj, ACC_D);
+      const subj = D.subject.toUpperCase(), cs = 1.4;
+      while(doc.getTextWidth(subj) + cs * subj.length > CW && doc.getFontSize() > 10) doc.setFontSize(doc.getFontSize() - 1);
+      if(draw) spaced(subj, PW / 2, y, cs);
+      y += 4;
+    }
+    // pills — wrap onto extra rows instead of running off the page
+    if(pills.length){
+      y += 6 * g;
+      const ph = 9, gap = 5, rowGap = 3;
+      const kws = pills.map(([k]) => { font(SANS, "bold", 7.5); return doc.getTextWidth(k) + k.length * .9; });
+      const widths = pills.map(([k, v], i) => { font(SANS, "bold", 10.5); return Math.min(CW, kws[i] + doc.getTextWidth(v) + 14); });
+      const rows = []; let cur = [], cw = 0;
+      pills.forEach((p2, i) => { const w = widths[i]; if(cur.length && cw + gap + w > CW){ rows.push(cur); cur = []; cw = 0; } cur.push(i); cw += (cur.length > 1 ? gap : 0) + w; });
+      if(cur.length) rows.push(cur);
+      rows.forEach((r, ri) => {
+        const tot = r.reduce((a, i) => a + widths[i], 0) + gap * (r.length - 1);
+        let px = PW / 2 - tot / 2;
+        r.forEach(i => {
+          const [k, v] = pills[i];
+          if(draw){
+            doc.setFillColor(...ACC_XL); doc.setDrawColor(...ACC_L); doc.setLineWidth(.3);
+            doc.roundedRect(px, y, widths[i], ph, ph / 2, ph / 2, "FD");
+            font(SANS, "bold", 7.5, ACC_D); doc.text(k, px + 5.5, y + 5.9, { charSpace: .9 });
+            const kw = kws[i];
+            font(SANS, "bold", 10.5, INK);
+            const vText = widths[i] >= CW ? fitText(v, CW - kw - 14) : v;      // only shorten if it can't fit across the page
+            doc.text(vText, px + 5.5 + kw + 3, y + 6.1);
+          }
+          px += widths[i] + gap;
+        });
+        y += ph + (ri < rows.length - 1 ? rowGap : 0);
+      });
+    }
+    // student box
+    y += 9 * g;
+    const rowH = P.boxRow, boxH = rowH * 2 + 2;
+    const fv = LARGE ? 12.5 : 11.5;
+    if(draw){
+      doc.setDrawColor(...ACC_L); doc.setLineWidth(.4); doc.setFillColor(255, 255, 255);
+      doc.roundedRect(ML, y, CW, boxH, 2.5, 2.5, "S");
+      const field = (x, w, yy, label, value) => {
+        font(SANS, "bold", 7, MUTED); doc.text(label.toUpperCase(), x, yy + 5.2, { charSpace: .7 });
+        if(value){ font(SANS, "normal", fv, INK); doc.text(fitText(value, w - 2), x, yy + rowH - 3.9); }
+        else { doc.setDrawColor(...RULE); doc.setLineWidth(.25); doc.line(x, yy + rowH - 3.1, x + w - 4, yy + rowH - 3.1); }
+      };
+      const bx = ML + 6, bw = CW - 12;
+      field(bx, bw * .62, y + 1, "Student name", "");
+      field(bx + bw * .64, bw * .36, y + 1, "Class / Grade", D.className);
+      doc.setDrawColor(...ACC_XL); doc.setLineWidth(.3); doc.line(ML + 4, y + rowH + 1.2, ML + CW - 4, y + rowH + 1.2);
+      field(bx, bw * .4, y + rowH + 1.5, "Date", D.date);
+      field(bx + bw * .44, bw * .56, y + rowH + 1.5, "Teacher", D.teacher);
+    }
+    y += boxH;
+    // instructions
+    let instrTop = null, ih = 0, wrapped = null, ifs = P.instr, ilh = 0;
+    const bulletW = 4.5, iw = CW - 16 - bulletW;
+    if(instr.length){
+      y += 8 * g;
+      font(SANS, "normal", ifs);
+      wrapped = instr.map(t => doc.splitTextToSize(t, iw));
+      ilh = ifs * mmPt * P.instrLH;
+      ih = 13 + wrapped.reduce((a, w) => a + w.length, 0) * ilh + (instr.length - 1) * 1.2 + 3;
+      instrTop = y; y += ih;
+    }
+    // points per part: 1 column, or 2 columns when there are many parts
+    let tH = 0, tLines = null, twoCol = false;
+    if(showTable){
+      tLines = scoreRows.map(([n, mk]) => [stripFmt(n).replace(/\$+([^$]*)\$+/g, "$1").replace(/[:\s]+$/, ""), mk]);
+      twoCol = P.scoreCols === 2 && tLines.length > 2;
+      const nRows = twoCol ? Math.ceil(tLines.length / 2) : tLines.length;
+      tH = 10 + P.scoreRow * (nRows + 1) + 4;
+    }
+    const contentBottom = y + (showTable ? 8 * g + tH : 0);
+    if(draw){
+      if(instr.length){
+        doc.setFillColor(...ACC_XL); doc.roundedRect(ML, instrTop, CW, ih, 2.5, 2.5, "F");
+        doc.setFillColor(...ACC); doc.rect(ML, instrTop, 1.6, ih, "F");
+        font(SANS, "bold", 8.5, ACC_D); doc.text("INSTRUCTIONS", ML + 8, instrTop + 7.5, { charSpace: 1 });
+        let iy = instrTop + 13.5;
+        wrapped.forEach(w => {
+          doc.setFillColor(...ACC); hexagon(ML + 9.2, iy - ifs * mmPt * .35, .95, "F");
+          font(SANS, "normal", ifs, INK);
+          w.forEach(l => { doc.text(l, ML + 8 + bulletW, iy); iy += ilh; });
+          iy += 1.2;
+        });
+      }
+      if(showTable){
+        // sit at the bottom of the page when there is room, otherwise right after the instructions
+        const tTop = Math.max(y + 8 * g, COVER_BOTTOM - 2 - tH);
+        const bw2 = twoCol ? CW : Math.min(140, CW), bx2 = (PW - bw2) / 2;
+        doc.setFillColor(255, 255, 255); doc.setDrawColor(...ACC_L); doc.setLineWidth(.4);
+        doc.roundedRect(bx2, tTop, bw2, tH, 2.5, 2.5, "S");
+        font(SANS, "bold", 7.5, MUTED); spaced("FOR EXAMINER USE", PW / 2, tTop + 6.5, 1);
+        const R = P.scoreRow, fsN = LARGE ? 11.5 : 11, fsT = LARGE ? 12.5 : 12;
+        const colW = twoCol ? (bw2 - 16) / 2 : bw2 - 16;
+        const blen = twoCol ? 18 : 30;
+        const drawRow = (lx, ty, w, label, mk, bold) => {
+          font(SANS, bold ? "bold" : "normal", bold ? fsT : fsN, INK);
+          let labW = 0; (bold ? [[label]] : tLines).forEach(([n]) => { labW = Math.max(labW, doc.getTextWidth(n + ":")); });
+          labW = Math.min(labW, w - blen - 14);
+          doc.text(fitText(label + ":", labW), lx, ty);
+          const bxs = lx + labW + 4;
+          doc.setDrawColor(...(bold ? ACC : RULE)); doc.setLineWidth(bold ? .45 : .3); doc.line(bxs, ty + .8, bxs + blen, ty + .8);
+          font(SANS, bold ? "bold" : "normal", bold ? fsT : fsN, bold ? INK : MUTED);
+          doc.text("/ " + fmt(mk), bxs + blen + 2.5, ty);
+        };
+        let ty = tTop + 10 + R * .78;
+        drawRow(bx2 + 8, ty, colW, "Total points", M.total, true);
+        if(tLines.length){ doc.setDrawColor(...ACC_XL); doc.setLineWidth(.3); doc.line(bx2 + 6, ty + R * .45, bx2 + bw2 - 6, ty + R * .45); }
+        ty += R;
+        const per = twoCol ? Math.ceil(tLines.length / 2) : tLines.length;
+        tLines.forEach(([n, mk], i) => {
+          const col = twoCol ? Math.floor(i / per) : 0, row = twoCol ? i % per : i;
+          drawRow(bx2 + 8 + col * (colW + 0), ty + row * R, colW - 4, n, mk, false);
+        });
+      }
+    }
+    return contentBottom;
   }
-
-  // points per part (teacher fills in the score)
-  if(showTable){
-    const lines = [["Total points", M.total, true]].concat(rows.map(([n, mk]) => [stripFmt(n).replace(/\$+([^$]*)\$+/g, "$1").replace(/[:\s]+$/, ""), mk, false]));
-    const bw2 = Math.min(140, CW), bx2 = (PW - bw2) / 2;
-    doc.setFillColor(255, 255, 255); doc.setDrawColor(...ACC_L); doc.setLineWidth(.4);
-    doc.roundedRect(bx2, tTop, bw2, tH, 2.5, 2.5, "S");
-    font(SANS, "bold", 7.5, MUTED); spaced("FOR EXAMINER USE", PW / 2, tTop + 6.5, 1);
-    // measure label column
-    let labW = 0;
-    lines.forEach(([n, , bold]) => { font(SANS, bold ? "bold" : "normal", bold ? 12 : 11); labW = Math.max(labW, doc.getTextWidth(n + ":")); });
-    const maxLab = bw2 - 16 - 30 - 22;
-    labW = Math.min(labW, maxLab);
-    let ty = tTop + 10 + tRowH * .78;
-    lines.forEach(([n, mk, bold], i) => {
-      const lx = bx2 + 8;
-      font(SANS, bold ? "bold" : "normal", bold ? 12 : 11, INK);
-      doc.text(fitText(n + ":", labW), lx, ty);
-      const bxs = lx + labW + 5, blen = 30;
-      doc.setDrawColor(...(bold ? ACC : RULE)); doc.setLineWidth(bold ? .45 : .3); doc.line(bxs, ty + .8, bxs + blen, ty + .8);
-      font(SANS, bold ? "bold" : "normal", bold ? 12 : 11, bold ? INK : MUTED);
-      doc.text("/ " + fmt(mk), bxs + blen + 2.5, ty);
-      if(bold && lines.length > 1){ doc.setDrawColor(...ACC_XL); doc.setLineWidth(.3); doc.line(bx2 + 6, ty + tRowH * .45, bx2 + bw2 - 6, ty + tRowH * .45); }
-      ty += tRowH;
-    });
-  }
+  // tighter and tighter versions of the cover until it fits on one page
+  const iBase = LARGE ? 13 : 10.5, iMin = LARGE ? 11 : 8.5;
+  const levels = [
+    { logoH: 34, title: 30, sub: 15, subj: 17, gap: 1,   boxRow: 15.5, instr: iBase,       instrLH: LARGE ? 1.8 : 1.45, scoreRow: 8.4, scoreCols: 1 },
+    { logoH: 34, title: 30, sub: 15, subj: 17, gap: 1,   boxRow: 15.5, instr: iBase,       instrLH: LARGE ? 1.8 : 1.45, scoreRow: 8.4, scoreCols: 2 },
+    { logoH: 28, title: 28, sub: 14, subj: 16, gap: .8,  boxRow: 14.5, instr: iBase,       instrLH: LARGE ? 1.65 : 1.4, scoreRow: 7.6, scoreCols: 2 },
+    { logoH: 24, title: 26, sub: 13, subj: 15, gap: .65, boxRow: 13.5, instr: iBase - .5,  instrLH: LARGE ? 1.55 : 1.35, scoreRow: 7,   scoreCols: 2 },
+    { logoH: 20, title: 24, sub: 12, subj: 14, gap: .5,  boxRow: 13,   instr: iBase - 1,   instrLH: LARGE ? 1.45 : 1.3, scoreRow: 6.4, scoreCols: 2 },
+    { logoH: 17, title: 22, sub: 11.5, subj: 13, gap: .4, boxRow: 12.5, instr: iBase - 1.5, instrLH: LARGE ? 1.4 : 1.25, scoreRow: 6,  scoreCols: 2 },
+  ];
+  for(let f = levels[5].instr - .5; f >= iMin; f -= .5) levels.push(Object.assign({}, levels[5], { instr: f, instrLH: LARGE ? 1.35 : 1.22 }));
+  let P = levels[levels.length - 1];
+  for(const L of levels){ if(cover(L, false) <= COVER_BOTTOM){ P = L; break; } }
+  frame();
+  cover(P, true);
+  let y = 0;   // question pages reset this via newPage()
 
   /* ================= QUESTION PAGES ================= */
   const items = opt.coverOnly ? [] : S.items.filter(it => it.type === "section" || (it.text && it.text.trim()) || it.img || it.type === "q");
