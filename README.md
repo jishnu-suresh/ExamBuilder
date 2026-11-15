@@ -3,7 +3,7 @@
 Make clean, formatted exam papers (PDF) from typed questions, pasted AI output, photos, maths, science and graphs.
 Everything runs on the teacher's own computer — exams and student details never leave it.
 
-**Open / install:** https://jishnu-suresh.github.io/ExamBuilder/
+**Open / install:** https://exams.thehiveacademy.com/
 
 ## Install it as an app (Windows, Mac, Ubuntu)
 1. Open the link above in **Chrome** or **Edge**.
@@ -31,6 +31,7 @@ python3 build/build.py     # builds docs/ (the web app) and docs/download/Exam_B
 - `app/app.html` — the whole application (HTML/CSS/JS)
 - `build/` — build script, service-worker template, vendor fetcher
 - `docs/` — generated site served by GitHub Pages (Settings → Pages → Branch `main`, folder `/docs`)
+- `build/custom-domain.txt` — the custom domain (written to `docs/CNAME` on build)
 - `tests/` — browser tests
 
 Libraries: jsPDF, MathJax, MathLive, pdf.js, Tesseract.js, SortableJS, DejaVu fonts (subset).

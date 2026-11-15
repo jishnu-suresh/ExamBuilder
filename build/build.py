@@ -120,6 +120,10 @@ open(os.path.join(OUT, "index.html"), "w").write(index_html)
 os.makedirs(os.path.join(OUT, "download"))
 open(os.path.join(OUT, "download", "Exam_Builder_offline.html"), "w").write(single_html)
 open(os.path.join(OUT, ".nojekyll"), "w").write("")
+# custom domain for GitHub Pages (e.g. exams.thehiveacademy.com) — read from build/custom-domain.txt
+cd = os.path.join(ROOT, "build", "custom-domain.txt")
+if os.path.exists(cd) and open(cd).read().strip():
+    open(os.path.join(OUT, "CNAME"), "w").write(open(cd).read().strip() + "\n")
 
 # service worker: core files cached on install; photo reader + extra fonts cached in the background
 def h(paths):
