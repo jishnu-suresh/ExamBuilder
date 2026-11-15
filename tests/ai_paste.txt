@@ -1,0 +1,38 @@
+```
+**Part I: Quick answers** [5]
+**1.** $\frac{3}{5}\times 45 = $ ________ [1] {half}
+**2.** $15\%$ of $200 = $ ________ [1] {half}
+**3.** $2^4 = $ ________ [1] {half}
+**4.** $\sqrt{81} = $ ________ [1] {half}
+**5.** $\lim_{x\to 2} (x^2+1) = $ ________ [1] {half}
+
+**Part II: MCQ** [6]
+6. Which organelle carries out photosynthesis? [1] {mcq} {cols: 2}
+a) Mitochondrion
+b) Chloroplast
+c) Ribosome
+d) Nucleus
+7. Select all the prime numbers. [2] {mcq: multi} {cols: 4}
+a) 2
+b) 9
+c) 11
+d) 15
+8. Which equation is balanced? [1] {mcq}
+a) $\ce{H2 + O2 -> H2O}$
+b) $\ce{2H2 + O2 -> 2H2O}$
+c) $\ce{H2 + 2O2 -> H2O}$
+9. In *Pisum sativum*, tall (T) is dominant over short (t). What fraction of offspring of $Tt \times Tt$ are tall? [2] {mcq}
+a) $\frac{1}{4}$
+b) $\frac{1}{2}$
+c) $\frac{3}{4}$
+d) $1$
+
+Part III: Structured
+Read the data and answer the questions.
+| Temperature (°C) | 10 | 20 | 30 | 40 |
+|---|---|---|---|---|
+| Rate (s$^{-1}$) | 0.2 | 0.5 | 0.9 | 0.4 |
+10. Explain why the rate falls above $30^\circ\mathrm{C}$. [3] {lines: 4}
+11. Evaluate: [4] {lines: 5}
+$$\int_0^2 (3x^2+1)\,dx$$
+```

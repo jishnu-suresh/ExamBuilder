@@ -1,0 +1,17 @@
+Part III: MCQ
+40. Which organelle carries out photosynthesis? [1] {mcq} {cols: 2}
+a) Mitochondrion
+b) Chloroplast
+c) Ribosome
+d) Nucleus
+41. Which of these are prime numbers? [2] {mcq: multi} {cols: 4}
+a) 2
+b) 9
+c) 11
+d) 15
+42. Find $\lim_{x\to2}f\left(x\right)$ where $f(x) = \frac{x^2-4}{x-2}$, and $\sum_{k=1}^{n} k$. [3]
+43. In pea plants, tall (*T*) is dominant. Complete the Punnett square. [2]
+|   | T | t |
+|---|---|---|
+| T |   |   |
+| t |   |   |
