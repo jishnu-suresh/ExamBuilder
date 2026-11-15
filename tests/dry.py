@@ -99,8 +99,11 @@ async def main():
         n_after = await pg.evaluate("__exam.S().items.filter(x=>x.type=='q').length"); ok("H2 work restored after reload", n_after==13, n_after)
         # I: open old-format project with edge cases
         await pg.evaluate("window.__openName='edge.exam.json'; __files['edge.exam.json']=" + json.dumps(open('edge.exam.json').read()))
-        await pg.click('#btnOpen'); await pg.clock.run_for(2500)
-        ok("I1 open older project file", await pg.evaluate("__exam.S().d.subject")=='Edge cases')
+        await pg.click('#btnOpen')
+        for _ in range(40):   # wait for the file to be read (instead of a fixed delay)
+            await pg.clock.run_for(500)
+            if await pg.evaluate("__exam.S().d.subject")=='Edge cases': break
+        ok("I1 open older project file", await pg.evaluate("__exam.S().d.subject")=='Edge cases', [await pg.evaluate("__exam.S().d.subject"), await pg.text_content('#toast'), await pg.evaluate("[...document.querySelectorAll('.modal.open')].map(m=>m.id)")])
         n3 = await pdf(pg,'dry_edge.pdf')
         ok("I2 edge PDF (Letter, no logo, 8 parts, unicode, very long question)", n3>=5, f"{n3} pages")
         await pg.evaluate("__exam.S().items.push({id:'z1',type:'q',text:'x',marks:'1',width:'half'}); 0")
