@@ -1,0 +1,43 @@
+```
+**Part I: Quick Answers** [6]
+**1.** $12 \times 15 = $ ________ [1] {half}
+**2.** $25\%$ of $80 = $ ________ [1] {half}
+**3.** $\sqrt{144} = $ ________ [1] {half}
+**4.** $3^3 = $ ________ [1] {half}
+**5.** $\frac{3}{4} + \frac{1}{8} = $ ________ [1] {half}
+**6.** $0.6 \times 50 = $ ________ [1] {half}
+
+**Part II: Multiple Choice** [5]
+Circle the correct answer.
+7. Which particle carries a negative charge? [1] {mcq} {cols: 4}
+a) Proton
+b) Neutron
+c) Electron
+d) Nucleus
+8. Which of these are vector quantities? [2] {mcq: multi} {cols: 2}
+a) Velocity
+b) Mass
+c) Force
+d) Temperature
+9. Which equation is correctly balanced? [1] {mcq}
+a) $\ce{H2 + O2 -> H2O}$
+b) $\ce{2H2 + O2 -> 2H2O}$
+c) $\ce{H2 + 2O2 -> 2H2O}$
+10. The unit of force is the: [1] {mcq} {cols: 4}
+a) Joule
+b) Watt
+c) Newton
+d) Pascal
+
+**Part III: Structured Questions** [14]
+A cyclist records the distance travelled every 10 seconds.
+| Time $t$ (s) | 0 | 10 | 20 | 30 | 40 |
+|---|---|---|---|---|---|
+| Distance $d$ (m) | 0 | 50 | 100 | 150 | 200 |
+11. Use the table to calculate the cyclist's average speed. Use $v = \frac{d}{t}$ and show your working. [3] {lines: 4}
+12. Balance the equation for the combustion of methane and name **both** products. [3] {lines: 3}
+$$\ce{CH4 + O2 -> CO2 + H2O}$$
+13. A ball of mass $0.5\,\mathrm{kg}$ moves at $4\,\mathrm{m/s}$. Calculate its kinetic energy. [4] {lines: 5}
+$$E_k = \tfrac{1}{2}mv^2$$
+14. Describe *one* safety precaution when heating a liquid in a test tube, and explain why it is needed. [4] {lines: 5}
+```

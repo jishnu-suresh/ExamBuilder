@@ -14,6 +14,11 @@ Everything runs on the teacher's own computer — exams and student details neve
 Safari (Mac): *File → Add to Dock* also works, but Safari can't auto-save to a project file — use Chrome/Edge for that.
 No internet / no install? Download the single-file version: [`docs/download/Exam_Builder_offline.html`](docs/download/Exam_Builder_offline.html) — double-click it to run.
 
+## Try it with the demo files
+- [`demo.exam.json`](docs/demo/demo.exam.json) — a complete sample exam: open it with **📂 Open** (or on the start screen)
+- [`demo_AI_answer.txt`](docs/demo/demo_AI_answer.txt) — copy its text into **🤖 Paste from AI**
+- [`demo_worksheet_photo.jpg`](docs/demo/demo_worksheet_photo.jpg) — choose *Read the text (offline)*, then **📷 Add photos**
+
 ## Features
 - Cover page with logo, subtitle, student box, instructions, points per part (or cover only download)
 - Questions from: **Paste from AI** (ready-made prompt), photos (offline text reader), .txt/.md files, typing

@@ -47,8 +47,11 @@ single.update({
 single_html = fill(src, single)
 
 # ---------------------------------------------------------------- web app (PWA)
+# keep hand-made demo files across rebuilds
+DEMO = os.path.join(ROOT, "demo")
 if os.path.isdir(OUT): shutil.rmtree(OUT)
 os.makedirs(OUT)
+if os.path.isdir(DEMO): shutil.copytree(DEMO, os.path.join(OUT, "demo"))
 def cp(rel_src, rel_dst):
     d = os.path.join(OUT, rel_dst); os.makedirs(os.path.dirname(d), exist_ok=True); shutil.copy(os.path.join(V, rel_src), d)
 cp("jspdf/jspdf.umd.min.js", "vendor/jspdf.umd.min.js")

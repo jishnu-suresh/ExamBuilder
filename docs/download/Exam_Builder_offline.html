@@ -5807,7 +5807,14 @@ function buildPDF(opt){
       if(it.type === "section"){
         if(D.sectionNewPage && y > TOP + 1) newPage();
         const h = 11;
-        if(y + h + 22 > BOTTOM) newPage();
+        // keep the heading together with (the start of) its first question — never alone at the bottom of a page
+        let need = 22;
+        const nx = items[idx + 1];
+        if(nx && nx.type !== "section"){
+          const nb = nx.type === "q" && nx.width === "half" ? qBlock(nx, ML, (CW - 8) / 2) : qBlock(nx, ML, CW);
+          need = Math.max(need, (nb.h <= pageAvail - h - 9 ? nb.h : nb.first) + 3);
+        }
+        if(y > TOP + 1 && y + h + 9 + need > BOTTOM) newPage();
         if(y > TOP + 1) y += 3;
         pageOf[it.id] = doc.getNumberOfPages();
         doc.setFillColor(...ACC_XL); doc.rect(ML, y, CW, h, "F");
