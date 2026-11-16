@@ -1451,7 +1451,7 @@ function render(){
       <textarea data-f="text" placeholder="Instructions, a reading passage, a diagram caption…">${esc(it.text)}</textarea>
         <div class="miss hidden" data-miss></div><div class="picstrip hidden" data-pics></div>
         <div class="rich hidden" data-rich></div>
-        ${imgBlock}<div class="row"><button class="btn sm" data-act="eq">∑ Equation</button><button class="btn sm" data-act="graph">📈 ${it.graph ? "Edit graph" : "Graph"}</button><button class="btn sm" data-act="mol">⌬ Molecule</button><button class="btn sm" data-act="inspic" title="Put a picture exactly where the cursor is in the text">🖼 Picture here</button>${it.img ? "" : `<button class="btn sm" data-act="addimg" title="One picture at the top or bottom, with text wrap">＋ Add image</button>`}
+        ${imgBlock}<div class="row"><button class="btn sm" data-act="eq">∑ Equation</button><button class="btn sm" data-act="graph" title="${it.graph ? "Edit the graph" : "Insert a graph where the cursor is"}">📈 ${it.graph ? "Edit graph" : "Graph here"}</button><button class="btn sm" data-act="mol" title="Insert a molecule where the cursor is">⌬ Molecule here</button><button class="btn sm" data-act="table" title="Insert a table where the cursor is">▦ Table here</button><button class="btn sm" data-act="inspic" title="Put a picture exactly where the cursor is in the text">🖼 Picture here</button>${it.img ? "" : `<button class="btn sm" data-act="addimg" title="One picture at the top or bottom, with text wrap">＋ Add image</button>`}
         <span class="grow"></span><button class="btn sm ${it.lineNums ? "on-t" : ""}" data-act="linenums" title="Number every 5th line (for reading passages)">№ Line numbers</button><button class="btn sm ${it.newPage ? "on-t" : ""}" data-act="newpage" title="Start on a new page">⤓ New page</button></div>
       </div></div>`;
     }
@@ -1480,10 +1480,10 @@ function render(){
         <button class="btn sm ${it.lineNums ? "on-t" : ""}" data-act="linenums" title="Number every 5th line of the question text">№ Line numbers</button>
         ${it.mcq ? "" : `<button class="btn sm" data-act="subadd" title="Add (a), (b), (c)… parts with their own marks">＋ Sub-question</button>`}
         ${it.mcq || (it.answer || "").trim() || it._ans ? "" : `<button class="btn sm" data-act="showans" title="Model answer for the answer key (teacher copy)">✎ Model answer</button>`}
-        <button class="btn sm" data-act="table" title="Insert a table (data table, Punnett square…)">▦ Table</button>
+        <button class="btn sm" data-act="table" title="Insert a table where the cursor is (data table, Punnett square…)">▦ Table here</button>
         <button class="btn sm" data-act="eq" title="Insert an equation">∑ Equation</button>
-        <button class="btn sm" data-act="graph" title="Plot a graph or add axes">📈 ${it.graph ? "Edit graph" : "Graph"}</button>
-        <button class="btn sm" data-act="mol" title="Draw a chemical structure (organic chemistry, biology)">⌬ Molecule</button>
+        <button class="btn sm" data-act="graph" title="${it.graph ? "Edit the graph" : "Insert a graph where the cursor is in the text"}">📈 ${it.graph ? "Edit graph" : "Graph here"}</button>
+        <button class="btn sm" data-act="mol" title="Insert a molecule where the cursor is in the text">⌬ Molecule here</button>
         <button class="btn sm" data-act="inspic" title="Put a picture exactly where the cursor is in the text">🖼 Picture here</button>
         ${it.img ? "" : `<button class="btn sm" data-act="addimg" title="One picture beside or above the question, with text wrap">＋ Image</button>`}
       </div>
@@ -1921,10 +1921,7 @@ $("#molGo").onclick = async () => {
   const m = await getMol(smi); if(m.err){ toast(m.err); return; }
   const it = S.items.find(x => x.id === molTarget); if(!it) return;
   const line = "{mol: " + smi + ($("#molCap").value.trim() ? " | " + $("#molCap").value.trim() : "") + "}";
-  const tf = lastTA && lastTA.id === it.id && lastTA.f ? { f: lastTA.f, sid: lastTA.sid } : null;
-  const v = tfGet(it, tf), pos = lastTA && lastTA.id === it.id ? lastTA.e : v.length;
-  const before = v.slice(0, pos), after = v.slice(pos);
-  tfSet(it, tf, before + (before && !before.endsWith("\n") ? "\n" : "") + line + (after && !after.startsWith("\n") ? "\n" : "") + after);
+  insertBlockAt(it, line);
   $("#molModal").classList.remove("open"); render(); changed(); focusItem(it.id);
 };
 const hasRich = t => /\$|\\\(|\\\[|\*\*|\*[^\s*]|^\s*\||\\ce\{|\+\+\S|~~\S|\{color:|^\s*\{\s*(?:mol|molecule|smiles|structure|img)\s*:|^\s*\{(?:center|centre|right|left|justify|small|big|bigger|huge)\}/m.test(t || "");
@@ -2054,7 +2051,7 @@ function updatePics(card, it){
   el.innerHTML = T.map(t => { const P = picData(t.id); return `<div class="picchip" data-pic="${t.id}">${P ? `<img src="${P.src}" alt="">` : "⚠"}
     <select data-picsize title="Picture width">${[25, 33, 40, 50, 60, 75, 100].map(v => `<option value="${v}" ${v === t.size ? "selected" : ""}>${v}%</option>`).join("")}${[25, 33, 40, 50, 60, 75, 100].includes(t.size) ? "" : `<option selected value="${t.size}">${t.size}%</option>`}</select>
     <select data-picalign title="Position">${["left", "center", "right"].map(v => `<option value="${v}" ${v === t.align ? "selected" : ""}>${{ left: "⇤ Left", center: "↔ Centre", right: "⇥ Right" }[v]}</option>`).join("")}</select>
-    <button class="btn sm" data-picdel title="Remove this picture">✕</button></div>`; }).join("");
+    ${P && P.graph ? `<button class="btn sm" data-picgraph title="Change this graph">📈 Edit</button>` : ""}<button class="btn sm" data-picdel title="Remove this picture">✕</button></div>`; }).join("");
 }
 function updateRich(card, it){
   updateMiss(card, it); updatePics(card, it);
@@ -3524,11 +3521,13 @@ function graphPreview(){
   try{ drawGraph($("#gCanvas"), graphCfg()); $("#gErr").textContent = ""; return true; }
   catch(e){ $("#gErr").textContent = "⚠ " + e.message; return false; }
 }
-function openGraph(targetId){
-  graphTarget = targetId || null;
+let graphPic = null;   // editing a graph that sits inside the text
+function openGraph(targetId, picId){
+  graphTarget = targetId || null; graphPic = picId || null;
   const it = targetId && S.items.find(x => x.id === targetId);
-  setGraphCfg(it && it.graph ? it.graph : { funcs: "" });
-  $("#gInsert").textContent = it && it.graph ? "Update graph" : it ? (it.img ? "Replace image with graph" : "Add graph to this question") : "Add as new question";
+  const P = picId && picData(picId);
+  setGraphCfg(P && P.graph ? P.graph : it && it.graph ? it.graph : { funcs: "" });
+  $("#gInsert").textContent = P ? "Update graph" : it && it.graph ? "Update graph" : it ? "Insert graph here" : "Add as new question";
   openModal("#graphModal"); graphPreview();
 }
 ["gFuncs", "gX0", "gX1", "gY0", "gY1", "gStep", "gShape", "gXL", "gYL", "gGrid", "gFine", "gNums", "gLabels"].forEach(id => {
@@ -3540,7 +3539,15 @@ $("#gInsert").onclick = () => {
   const img = { src: cv.toDataURL("image/png"), w: cv.width, h: cv.height };
   const size = g.shape === "wide" ? 85 : g.shape === "tall" ? 55 : 65;
   let it = graphTarget && S.items.find(x => x.id === graphTarget);
-  if(it){ it.img = img; it.graph = g; it.imgAlign = it.imgAlign || "center"; it.imgSize = it.imgSize && it.graph ? it.imgSize : size; }
+  if(graphPic){
+    // update a graph inside the text, wherever it is
+    const own = S.items.find(x => x.pics && x.pics[graphPic]); if(own){ own.pics = Object.assign({}, own.pics, { [graphPic]: Object.assign(img, { graph: g }) }); it = own; }
+  }else if(it && it.graph){ it.img = img; it.graph = g; }                     // older exams: the graph is the question's picture
+  else if(it){
+    const id = "g" + nid().replace(/\W/g, "").slice(-6);
+    it.pics = Object.assign({}, it.pics, { [id]: Object.assign(img, { graph: g }) });
+    insertBlockAt(it, "{img: " + id + " | " + size + "% | center}");
+  }
   else { it = { id: nid(), type: "q", text: "", marks: "", lines: "", img, imgSize: size, imgAlign: "center", graph: g }; S.items.push(it); }
   $("#graphModal").classList.remove("open"); render(); changed();
   const card = document.querySelector(`.card[data-id="${it.id}"]`); if(card) card.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -3943,6 +3950,19 @@ $("#bottomBar").addEventListener("click", e => {
      eq: () => openEq(null), graph: () => openGraph(null), arrange: () => openArrange(),
      img: () => { pendingImgTarget = null; $("#fileIn").accept = "image/*"; $("#fileIn").click(); } })[b.dataset.add]();
 });
+// a block goes on its own line(s): before the cursor's line if the cursor is at its start, otherwise right after that line.
+// Without a cursor in this question's text it goes at the end.
+function insertBlockAt(it, block){
+  const ok = lastTA && lastTA.id === it.id && lastTA.f === "text";
+  const tf = ok ? { f: "text", sid: lastTA.sid } : null;
+  const v = tfGet(it, tf), pos = ok ? Math.min(lastTA.e, v.length) : v.length;
+  const ls = v.lastIndexOf("\n", pos - 1) + 1, le = v.indexOf("\n", pos), cut = pos === ls ? ls : (le < 0 ? v.length : le);
+  const before = v.slice(0, cut), after = v.slice(cut);
+  const nv = before + (before && !before.endsWith("\n") ? "\n" : "") + block + (after && !after.startsWith("\n") ? "\n" : "") + after;
+  tfSet(it, tf, nv);
+  const at = nv.indexOf(block, Math.max(0, cut - 1)) + block.length;
+  lastTA = { id: it.id, f: "text", sid: tf ? tf.sid : null, s: at, e: at };   // the next insert goes after this one
+}
 function insertTable(it){
   const ans = prompt("Table size: rows × columns (e.g. 3x4).\nTip: a 2-gene Punnett square is 3x3, a dihybrid one is 5x5.", "3x3");
   if(!ans) return;
@@ -3950,11 +3970,7 @@ function insertTable(it){
   const R = Math.min(30, Math.max(1, +m[1])), C = Math.min(10, Math.max(1, +m[2]));
   const row = "|" + "   |".repeat(C);
   const tbl = [row, "|" + "---|".repeat(C)].concat(Array(Math.max(0, R - 1)).fill(row)).join("\n");
-  const tf = lastTA && lastTA.id === it.id && lastTA.f ? { f: lastTA.f, sid: lastTA.sid } : null;
-  const v = tfGet(it, tf);
-  const pos = lastTA && lastTA.id === it.id ? lastTA.e : v.length;
-  const before = v.slice(0, pos), after = v.slice(pos);
-  tfSet(it, tf, before + (before && !before.endsWith("\n") ? "\n" : "") + tbl + (after && !after.startsWith("\n") ? "\n" : "") + after);
+  insertBlockAt(it, tbl);
   render(); changed(); focusItem(it.id);
   toast("Table added — type inside the cells (between the | bars). Empty cells stay blank for students.");
 }
@@ -4126,12 +4142,8 @@ $("#fileIn").addEventListener("change", async e => {
         let done = swap(it.text); if(done != null) it.text = done; else { const sb = (it.subs || []).find(x => swap(x.text) != null); if(sb) sb.text = swap(sb.text); else it.text = (it.text ? it.text + "\n" : "") + tag; }
         toast("Picture added where the placeholder was — change its size or position under the text");
       }else{
-        const v = tfGet(it, P.tf), pos = P.pos == null ? v.length : Math.min(P.pos, v.length);
-        const lineStart = v.lastIndexOf("\n", pos - 1) + 1, lineEnd = v.indexOf("\n", pos), atEnd = lineEnd < 0 ? v.length : lineEnd;
-        // a picture always gets its own line: after the line the cursor is on
-        const cut = pos === lineStart ? lineStart : atEnd;
-        const before = v.slice(0, cut), after = v.slice(cut);
-        tfSet(it, P.tf, before + (before && !before.endsWith("\n") ? "\n" : "") + tag + (after && !after.startsWith("\n") ? "\n" : "") + after);
+        if(P.pos != null && P.tf && P.tf.f === "text") lastTA = { id: it.id, f: "text", sid: P.tf.sid, s: P.pos, e: P.pos }; else if(P.pos == null) lastTA = null;
+        insertBlockAt(it, tag);
         toast("Picture added — change its size or position under the text");
       }
       render(); changed();
@@ -4153,6 +4165,10 @@ $("#list").addEventListener("change", e => {
   const ta = card.querySelector("textarea[data-f=text]"); if(ta) ta.value = it.text;
   card.querySelectorAll("textarea[data-sf=text]").forEach(x => { const sb = (it.subs || []).find(s => s.id === x.dataset.sub); if(sb) x.value = sb.text; });
   updateRich(card, it); lastEdited = it.id; changed();
+});
+$("#list").addEventListener("click", e => {
+  const g = e.target.closest("[data-picgraph]"); if(!g) return;
+  const card = g.closest(".card"); openGraph(card.dataset.id, g.closest("[data-pic]").dataset.pic);
 });
 $("#list").addEventListener("click", e => {
   const b = e.target.closest("[data-picdel]"); if(!b) return;
