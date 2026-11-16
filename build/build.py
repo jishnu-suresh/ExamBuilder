@@ -41,6 +41,7 @@ single.update({
     "/*__MATHLIVE__*/": rd(os.path.join(V, "mathlive", "mathlive.min.js")),
     "/*__MLFONTS__*/": mathlive_css(True),
     "/*__SORTABLE__*/": rd(os.path.join(V, "sortable", "Sortable.min.js")),
+    "/*__SMILES__*/": rd(os.path.join(V, "smiles", "smiles-drawer.min.js")).replace("</script", "<\\/script"),
     "/*__PDFJS__*/": rd(os.path.join(V, "pdfjs", "pdf.min.js")),
     "__PDFJS_WORKER__": rd(os.path.join(V, "pdfjs", "pdf.worker.min.js")),
 })
@@ -59,6 +60,7 @@ cp("mathjax/tex-svg-full.js", "vendor/mathjax/tex-svg-full.js")
 cp("mathlive/mathlive.min.js", "vendor/mathlive/mathlive.min.js")
 open(os.path.join(OUT, "vendor/mathlive/fonts.css"), "w").write(mathlive_css(True))
 cp("sortable/Sortable.min.js", "vendor/sortable.min.js")
+cp("smiles/smiles-drawer.min.js", "vendor/smiles-drawer.min.js")
 cp("pdfjs/pdf.min.js", "vendor/pdfjs/pdf.min.js"); cp("pdfjs/pdf.worker.min.js", "vendor/pdfjs/pdf.worker.min.js")
 for f in ["tesseract.min.js", "worker.min.js", "tesseract-core-simd-lstm.wasm.js"]: cp("ocr/" + f, "vendor/ocr/" + f)
 cp("ocr/lang/eng.traineddata.gz", "vendor/ocr/lang/eng.traineddata.gz")
@@ -160,6 +162,7 @@ pwa.update({
     "<script>/*__MATHLIVE__*/</script>": '<script src="vendor/mathlive/mathlive.min.js"></script>',
     "<style>/*__MLFONTS__*/</style>": '<link rel="stylesheet" href="vendor/mathlive/fonts.css">',
     "<script>/*__SORTABLE__*/</script>": '<script src="vendor/sortable.min.js"></script>',
+    "<script>/*__SMILES__*/</script>": '<script src="vendor/smiles-drawer.min.js"></script>',
     "<script>/*__PDFJS__*/</script>": '<script src="vendor/pdfjs/pdf.min.js"></script>',
     '<script type="text/plain" id="pdfjs-worker">__PDFJS_WORKER__</script>': "",
 })
@@ -175,7 +178,7 @@ def h(paths):
     for p in paths: m.update(open(os.path.join(OUT, p), "rb").read())
     return m.hexdigest()[:12]
 CORE = ["./", "index.html", "manifest.webmanifest", "vendor/jspdf.umd.min.js", "vendor/mathjax/tex-svg-full.js", "vendor/mathlive/mathlive.min.js",
-        "vendor/mathlive/fonts.css", "vendor/sortable.min.js", "vendor/pdfjs/pdf.min.js", "vendor/pdfjs/pdf.worker.min.js",
+        "vendor/mathlive/fonts.css", "vendor/sortable.min.js", "vendor/smiles-drawer.min.js", "vendor/pdfjs/pdf.min.js", "vendor/pdfjs/pdf.worker.min.js",
         "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/apple-touch-icon.png", "icons/favicon-32.png"]
 LAZY = ["vendor/fonts.js", "vendor/ocr/tesseract.min.js", "vendor/ocr/worker.min.js", "vendor/ocr/tesseract-core-simd-lstm.wasm.js", "vendor/ocr/lang/eng.traineddata.gz"]
 sw = rd(os.path.join(ROOT, "build", "sw.template.js"))

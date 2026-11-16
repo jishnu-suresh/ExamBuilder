@@ -105,6 +105,15 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+.mol-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+@media (max-width:800px){.mol-grid{grid-template-columns:1fr}}
+.mol-presets{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;max-height:260px;overflow:auto}
+.mol-presets button{font:12.5px system-ui,sans-serif;padding:4px 8px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+.mol-presets button:hover{border-color:var(--acc)}
+.mol-presets .g{width:100%;font:600 11px system-ui,sans-serif;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-top:4px}
+.mol-prev{border:1px solid var(--line);border-radius:10px;background:#fff;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px}
+.mol-prev svg{max-width:100%;max-height:260px}
+.molbox{text-align:center;margin:4px 0}.molbox img{max-height:120px;max-width:100%}.molbox .cap{font-size:12px;font-style:italic;color:var(--muted)}
 .card.has-miss{border-color:#C0392B;box-shadow:0 0 0 2px rgba(192,57,43,.18)}
 .miss{margin:6px 0;padding:8px 10px;border:1.5px dashed #C0392B;background:#FDECEA;color:#8E2B20;border-radius:8px;font-size:13px}
 .miss .d{font-style:italic;margin:2px 0 0 4px}.miss .row{margin-top:6px;gap:6px}
@@ -382,6 +391,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
         <summary>Layout &amp; branding</summary>
         <div class="fields" style="margin-top:12px">
           <label class="f">School name<input data-k="school" placeholder="The Hive Academy"></label>
+          <label class="f">Language on the paper<select data-k="lang"><option value="">English</option><option value="fr">Français</option></select></label>
           <label class="f">Paper size<select data-k="paper"><option value="a4">A4</option><option value="letter">US Letter</option></select></label>
           <label class="f">Question font size<select data-k="fontSize"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt</option><option value="13">13 pt</option><option value="14">14 pt</option><option value="16">16 pt</option><option value="18">18 pt</option></select></label>
           <label class="f">Line spacing<select data-k="lineSpacing"><option value="1">Normal</option><option value="1.5">1.5 lines</option><option value="2">Double</option></select></label>
@@ -535,6 +545,7 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
 |---|---|---|---|
 | Distance (m) | 0 | 4 | 16 |</pre>
     <ul style="margin:6px 0 0 18px;padding:0">
+      <li><b>{numberline: -10..10}</b> and <b>{axes: -6..6}</b> after the marks give a number line or a coordinate grid to answer on; <b>{mol: CCO}</b> on its own line draws a molecule.</li>
       <li><b>**bold**</b>, <i>*italic*</i>, <u>++underline++</u>, <s>~~strikethrough~~</s>, and lines starting with <b>- </b> become bullet points.</li>
       <li>Don't know LaTeX? Use <b>∑ Equation</b> — click buttons to build the formula; it writes the LaTeX for you.</li>
       <li>A price like “$5 and $10” stays as normal text. Write <b>\$</b> if a dollar sign is ever mistaken for maths.</li>
@@ -571,6 +582,21 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
 </div>
 
 <!-- EQUATION EDITOR -->
+<div class="modal" id="molModal">
+  <div class="box wide">
+    <h3 style="margin:0 0 4px">⌬ Molecule — chemical structure</h3>
+    <p class="hint" style="margin:0 0 10px">Pick a molecule or type its <b>SMILES</b> code (ask any AI: “give me the SMILES for …”). Drawn in black and white, like a textbook.</p>
+    <div class="mol-grid">
+      <div>
+        <label class="f">SMILES<input id="molSmi" placeholder="e.g. CCO for ethanol" autocomplete="off" spellcheck="false"></label>
+        <label class="f" style="margin-top:8px">Caption under the drawing <span class="hint">· optional — leave empty for “name this compound”</span><input id="molCap" placeholder="e.g. ethanol"></label>
+        <div class="mol-presets" id="molPresets"></div>
+      </div>
+      <div class="mol-prev"><div id="molPrev"></div><div class="hint" id="molMsg"></div></div>
+    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px"><button class="btn" data-close>Cancel</button><button class="btn primary" id="molGo">Insert molecule</button></div>
+  </div>
+</div>
 <div class="modal" id="eqModal">
   <div class="box wide">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -786,6 +812,7 @@ window.MathJax = {
 </script>
 
 <script src="vendor/sortable.min.js"></script>
+<script src="vendor/smiles-drawer.min.js"></script>
 <script src="vendor/pdfjs/pdf.min.js"></script>
 
 <script>
@@ -976,7 +1003,7 @@ function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add
 /* ---------------- text parsing ---------------- */
 const RE_Q = /^\s*(?:\*\*)?(?:(?:Q|Question|Exercise|Ex)\s*\.?\s*)?(\d{1,3})\s*[\.\):\-–](?:\*\*)?(?=\s|$)\s*(.*)$/i;
 const RE_QONLY = /^\s*(?:\*\*)?(?:Q|Question)\s*\.?\s*(\d{1,3})\s*:?(?:\*\*)?\s*$/i;
-const RE_SEC = /^\s*(?:#{1,6}\s*(.+)|(?:\*\*)?((?:part|section)\s+(?:[ivxlc]+|\d+|[a-z])\b.*))$/i;
+const RE_SEC = /^\s*(?:#{1,6}\s*(.+)|(?:\*\*)?((?:part|partie|section)\s+(?:[ivxlc]+|\d+|[a-z])\b.*))$/i;
 const RE_MARKS_SQ = /\s*\[\s*(\d+(?:\.\d+)?)\s*(?:marks?|pts?|points?)?\s*\]\s*$/i;
 const RE_MARKS_PAR = /\s*\(\s*(\d+(?:\.\d+)?)\s*(?:marks?|pts?|points?)\s*\)\s*$/i;
 const RE_MCQ = /[ \t]*\{\s*mcq\s*:?\s*([a-z ]*)\}[ \t]*/i;
@@ -985,6 +1012,24 @@ const RE_COLS = /[ \t]*\{\s*cols?\s*:?\s*([124])\s*\}[ \t]*/i;
 const RE_LINES = /[ \t]*\{\s*lines?\s*:?\s*(\d{1,2})\s*\}[ \t]*/i;
 
 function dollarCount(t){ let n = 0; for(let i = 0; i < t.length; i++) if(t[i] === "$" && t[i - 1] !== "\\") n++; return n; }
+// "-10..10", "0 to 100 step 10", "-2..8, -5..5", "x -2..8 y -5..5"
+function parseRange(str, def){
+  const t = String(str || "").replace(/[−–]/g, "-"), st = t.match(/step\s*(\d+(?:\.\d+)?)/i);
+  const v = (t.replace(/step\s*\d+(?:\.\d+)?/i, "").match(/-?\d+(?:\.\d+)?/g) || []).map(Number);
+  let x = v.length >= 2 ? [Math.min(v[0], v[1]), Math.max(v[0], v[1])] : def.slice();
+  if(x[0] === x[1]) x = def.slice();
+  const y = v.length >= 4 && v[2] !== v[3] ? [Math.min(v[2], v[3]), Math.max(v[2], v[3])] : null;
+  return { x: x.map(Math.round), y: y && y.map(Math.round), step: st ? +st[1] : 0 };
+}
+const nlStep = (span, maxTicks) => [1, 2, 5, 10, 20, 25, 50, 100, 200, 500, 1000].find(s => span / s <= maxTicks) || Math.ceil(span / maxTicks);
+const labelStep = (step, gap, need) => [1, 2, 5, 10, 20, 50].find(k => gap * k >= need) || 100;
+// {numberline: -5..5}  {axes: -6..6}  {grid: 8}  {box: 6}  {blank: 5} in pasted text
+const RE_SPACE = /[ \t]*\{\s*(number\s*line|numberline|axes|coordinate\s*grid|grid|box|blank)\s*:?\s*([^}]*)\}[ \t]*/i;
+function takeSpace(str){
+  const m = String(str || "").match(RE_SPACE); if(!m) return null;
+  const k = m[1].toLowerCase().replace(/\s+/g, ""), kind = k === "numberline" ? "numberline" : (k === "axes" || k === "coordinategrid") ? "axes" : k, rng = kind === "numberline" || kind === "axes";
+  return { s: str.replace(RE_SPACE, " ").replace(/[ \t]+\n/g, "\n").replace(/\s+$/, ""), space: kind, range: rng ? m[2].trim() : "", lines: rng ? "" : (m[2].match(/\d+/) || [""])[0] };
+}
 function takeMarks(str){
   let m = str.match(RE_MARKS_SQ) || str.match(RE_MARKS_PAR);
   // ignore brackets that sit inside maths ($…$): odd number of unescaped $ before them
@@ -997,12 +1042,14 @@ function finishBlock(b){
   while(lines.length && !lines[lines.length - 1].trim()) lines.pop();
   while(lines.length && !lines[0].trim()) lines.shift();
   // tags for the question itself are read from its stem only — not from its (a), (b)… sub-question lines
-  const firstSub = b.type === "q" ? lines.findIndex(l => RE_SUB.test(l) && !!takeMarks(l.replace(RE_LINES, " ").replace(/\s+$/, "")).marks) : -1;
+  const firstSub = b.type === "q" ? lines.findIndex(l => RE_SUB.test(l) && !!takeMarks(l.replace(RE_LINES, " ").replace(RE_SPACE, " ").replace(/\s+$/, "")).marks) : -1;
   const tail = firstSub > 0 ? "\n" + lines.slice(firstSub).join("\n") : "";
   let text = (firstSub > 0 ? lines.slice(0, firstSub) : lines).join("\n");
   let ansLines = "";
   const lm = text.match(RE_LINES);
   if(lm){ ansLines = lm[1]; text = text.replace(RE_LINES, " ").replace(/[ \t]+\n/g, "\n").trim(); }
+  let spc = null;
+  { const fl = text.split("\n"); const k0 = fl.findIndex(l => RE_SPACE.test(l) && !RE_SUB.test(l)); if(k0 >= 0){ spc = takeSpace(fl[k0]); fl[k0] = spc.s; text = fl.join("\n").trim(); } }
   let mcq = "", optCols = "";
   const mm = text.match(RE_MCQ);
   if(mm){ mcq = /multi|many|several|all/i.test(mm[1] || "") ? "multi" : "single"; text = text.replace(RE_MCQ, " ").replace(/[ \t]+\n/g, "\n").trim(); }
@@ -1014,6 +1061,7 @@ function finishBlock(b){
   if(firstSub > 0){
     const st = takeMarks(text.split("\n")[0]); if(st.marks){ marks = st.marks; text = [st.s].concat(text.split("\n").slice(1)).join("\n"); }
     const q = { id: nid(), type: "q", text: text + tail, marks, lines: ansLines, img: null, mcq, optCols, width };
+    if(spc){ q.space = spc.space; q.range = spc.range; if(spc.lines) q.lines = spc.lines; }
     if(mcq) extractOptions(q);
     splitSubsAndAnswers(q);
     return q;
@@ -1028,6 +1076,7 @@ function finishBlock(b){
   if(b.type === "section") return { id: nid(), type: "section", text: text.replace(/^#+\s*/, "").replace(/^\*\*|\*\*$/g, ""), marks: marks };
   if(b.type === "note") return text ? { id: nid(), type: "note", text, img: null } : null;
   const q = { id: nid(), type: "q", text, marks, lines: ansLines, img: null, mcq, optCols, width };
+  if(spc){ q.space = spc.space; q.range = spc.range; if(spc.lines) q.lines = spc.lines; }
   if(mcq) extractOptions(q);
   splitSubsAndAnswers(q);
   return q;
@@ -1045,17 +1094,18 @@ function takeAnswer(lines){
 function splitSubsAndAnswers(q){
   let ls = String(q.text || "").split("\n");
   const starts = [];
-  ls.forEach((l, i) => { const m = l.match(RE_SUB); if(m){ const clean = l.replace(RE_LINES, " "); if(takeMarks(clean.replace(/\s+$/, "")).marks) starts.push(i); } });
+  ls.forEach((l, i) => { const m = l.match(RE_SUB); if(m){ const clean = l.replace(RE_LINES, " ").replace(RE_SPACE, " "); if(takeMarks(clean.replace(/\s+$/, "")).marks) starts.push(i); } });
   if(!q.mcq && starts.length){
     const stem = ls.slice(0, starts[0]);
     q.subs = starts.map((st, k) => {
       const block = ls.slice(st, k + 1 < starts.length ? starts[k + 1] : ls.length);
       let first = block[0].replace(RE_SUB, "$2");
-      let lines = "";
+      let lines = "", sspc = takeSpace(first);
+      if(sspc){ first = sspc.s; if(sspc.lines) lines = sspc.lines; }
       const lm = first.match(RE_LINES); if(lm){ lines = lm[1]; first = first.replace(RE_LINES, " "); }
       const mk = takeMarks(first.replace(/\s+$/, ""));
       const ta = takeAnswer([mk.s].concat(block.slice(1)));
-      return { id: nid(), text: ta.lines.join("\n").trim(), marks: mk.marks, lines, space: "lines", answer: ta.answer };
+      return { id: nid(), text: ta.lines.join("\n").trim(), marks: mk.marks, lines, space: sspc ? sspc.space : "lines", range: sspc ? sspc.range : "", answer: ta.answer };
     });
     ls = stem;
     if(q.marks && q.subs.some(sb => num(sb.marks) > 0)) q.marks = "";
@@ -1065,9 +1115,9 @@ function splitSubsAndAnswers(q){
   if(ta.answer) q.answer = ta.answer;
 }
 /* ---------------- exam details + rubric found in pasted AI text ---------------- */
-const DETAIL_KEYS = [[/^(?:exam\s+)?title$/i, "title"], [/^sub-?title$/i, "subtitle"], [/^subject|course$/i, "subject"],
-  [/^(?:academic\s+|school\s+)?year$/i, "year"], [/^duration|time(?:\s+allowed)?$/i, "duration"], [/^teacher(?:\s+name)?$/i, "teacher"],
-  [/^class(?:\s*\/\s*grade)?|grade$/i, "className"], [/^school$/i, "school"]];
+const DETAIL_KEYS = [[/^(?:exam\s+)?title$|^titre$/i, "title"], [/^sub-?title$|^sous-titre$/i, "subtitle"], [/^subject|course$|^mati[eè]re$|^discipline$/i, "subject"],
+  [/^(?:academic\s+|school\s+)?year$|^ann[ée]e(?:\s+scolaire)?$/i, "year"], [/^duration|time(?:\s+allowed)?$|^dur[ée]e$/i, "duration"], [/^teacher(?:\s+name)?$|^enseignant(?:\(e\)|e)?$|^professeur(?:e)?$/i, "teacher"],
+  [/^class(?:\s*\/\s*grade)?|grade$|^classe$|^niveau$/i, "className"], [/^school$|^[ée]tablissement$|^[ée]cole$/i, "school"]];
 const cleanCell = c => String(c || "").replace(/\*\*|~~/g, "").replace(/^\s*\*|\*\s*$/g, "").trim();
 function extractExtras(txt){
   const L = String(txt || "").replace(/\r\n?/g, "\n").split("\n");
@@ -1078,8 +1128,8 @@ function extractExtras(txt){
     const raw = L[i].trim(); if(!raw || /^\s*```/.test(raw)) continue;
     const t = cleanCell(raw);
     // student fill-in lines (Name: ____ Date: ____) — the cover page already has them
-    if(/^(?:student\s+)?name\s*:/i.test(t) && /_{3,}/.test(t)){ drop.add(i); continue; }
-    const im = t.match(/^instructions?(?:\s+for\s+the\s+exam)?\s*:\s*(.*)$/i);
+    if(/^(?:student\s+)?(?:name|nom)\s*:/i.test(t) && /_{3,}/.test(t)){ drop.add(i); continue; }
+    const im = t.match(/^(?:instructions?(?:\s+for\s+the\s+exam)?|consignes?)\s*:\s*(.*)$/i);
     if(im){
       drop.add(i); const out = [];
       if(im[1].trim()) out.push(...im[1].trim().split(/(?<=[.!?])\s+(?=[A-Z])/));
@@ -1087,7 +1137,7 @@ function extractExtras(txt){
       if(out.length) details.instructions = out.join("\n");
       continue;
     }
-    const km = t.match(/^([A-Za-z][A-Za-z /-]{1,24}?)\s*:\s*(.+)$/);
+    const km = t.match(/^([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ ()/-]{1,24}?)\s*:\s*(.+)$/);
     if(km && !/_{3,}/.test(km[2])){ const hit = DETAIL_KEYS.find(([re]) => re.test(km[1].trim())); if(hit){ details[hit[1]] = km[2].trim(); drop.add(i); } }
   }
   // 1b) an unlabelled header block at the very top (title / year / subject / duration / teacher, one per line)
@@ -1356,7 +1406,7 @@ function render(){
       <textarea data-f="text" placeholder="Instructions, a reading passage, a diagram caption…">${esc(it.text)}</textarea>
         <div class="miss hidden" data-miss></div>
         <div class="rich hidden" data-rich></div>
-        ${imgBlock}<div class="row"><button class="btn sm" data-act="eq">∑ Equation</button><button class="btn sm" data-act="graph">📈 ${it.graph ? "Edit graph" : "Graph"}</button>${it.img ? "" : `<button class="btn sm" data-act="addimg">＋ Add image</button>`}
+        ${imgBlock}<div class="row"><button class="btn sm" data-act="eq">∑ Equation</button><button class="btn sm" data-act="graph">📈 ${it.graph ? "Edit graph" : "Graph"}</button><button class="btn sm" data-act="mol">⌬ Molecule</button>${it.img ? "" : `<button class="btn sm" data-act="addimg">＋ Add image</button>`}
         <span class="grow"></span><button class="btn sm ${it.lineNums ? "on-t" : ""}" data-act="linenums" title="Number every 5th line (for reading passages)">№ Line numbers</button><button class="btn sm ${it.newPage ? "on-t" : ""}" data-act="newpage" title="Start on a new page">⤓ New page</button></div>
       </div></div>`;
     }
@@ -1386,6 +1436,7 @@ function render(){
         <button class="btn sm" data-act="table" title="Insert a table (data table, Punnett square…)">▦ Table</button>
         <button class="btn sm" data-act="eq" title="Insert an equation">∑ Equation</button>
         <button class="btn sm" data-act="graph" title="Plot a graph or add axes">📈 ${it.graph ? "Edit graph" : "Graph"}</button>
+        <button class="btn sm" data-act="mol" title="Draw a chemical structure (organic chemistry, biology)">⌬ Molecule</button>
         ${it.img ? "" : `<button class="btn sm" data-act="addimg">＋ Image</button>`}
       </div>
     </div></div>`;
@@ -1399,8 +1450,10 @@ function spaceCtl(o, attr, sid){
   if(S.d.answerMode === "sheet") return `<label title="Students answer on a separate sheet — change this under Exam details">Answer space <input type="number" disabled placeholder="sheet" style="opacity:.5;width:64px"></label>`;
   const a = sid ? `data-sub="${sid}" data-sf` : attr;
   const k = o.space || "lines";
-  return `<label>Answer <select ${a}="space">${[["lines", "Lines"], ["blank", "Blank space"], ["grid", "Grid"], ["box", "Box"]].map(([v, l]) => `<option value="${v}" ${k === v ? "selected" : ""}>${l}</option>`).join("")}</select>
-    <input type="number" min="0" max="40" ${a}="lines" value="${esc(o.lines || "")}" title="${k === "lines" ? "Number of lines" : "Height, in answer-line heights"}" placeholder="${k === "lines" ? "lines" : "size"}"></label>`;
+  return `<label>Answer <select ${a}="space">${[["lines", "Lines"], ["blank", "Blank space"], ["grid", "Grid"], ["box", "Box"], ["numberline", "Number line"], ["axes", "Coordinate grid (x, y)"]].map(([v, l]) => `<option value="${v}" ${k === v ? "selected" : ""}>${l}</option>`).join("")}</select>
+    ${k === "numberline" || k === "axes"
+      ? `<input type="text" ${a}="range" value="${esc(o.range || "")}" style="width:${k === "axes" ? 130 : 110}px" title="${k === "axes" ? "x from..to, y from..to — e.g. -6..6 (both) or -2..8, -5..5" : "From..to, e.g. -10..10 or 0..100 step 10"}" placeholder="${k === "axes" ? "-6..6, -6..6" : "-10..10"}">`
+      : `<input type="number" min="0" max="40" ${a}="lines" value="${esc(o.lines || "")}" title="${k === "lines" ? "Number of lines" : "Height, in answer-line heights"}" placeholder="${k === "lines" ? "lines" : "size"}">`}</label>`;
 }
 function ansBlock(it, sb){
   const o = sb || it, show = (o.answer || "").trim() || o._ans;
@@ -1505,6 +1558,7 @@ async function onListClick(e){
     case "ocr": queueOcr([it.id]); return;
     case "eq": openEq(it.id); return;
     case "graph": openGraph(it.id); return;
+    case "mol": openMol(it.id); return;
     case "rot": b.disabled = true; it.img = await rotateImg(it.img); delete it.graph; delete it.labels; break;
     case "addimg": pendingImgTarget = it.id; $("#fileIn").accept = "image/*"; $("#fileIn").click(); return;
     case "rmpic": if(picsOf(it.text).length) it.text = dropFirstPic(it.text); else { const sb = (it.subs || []).find(x => picsOf(x.text).length); if(sb) sb.text = dropFirstPic(sb.text); } break;
@@ -1672,6 +1726,7 @@ function parseRich(text, base){
     const l = lines[i], t = l.trim();
     if(!t){ blocks.push({ type: "gap" }); continue; }
     const pm = l.match(RE_PIC); if(pm){ blocks.push({ type: "pic", desc: pm[1].trim() }); continue; }
+    const mo = l.match(RE_MOL); if(mo){ blocks.push({ type: "mol", smi: mo[1].trim(), cap: (mo[2] || "").trim() }); continue; }
     const open = t.startsWith("$$") ? "$$" : t.startsWith("\\[") ? "\\[" : null;
     if(open){
       const close = open === "$$" ? "$$" : "\\]";
@@ -1729,7 +1784,84 @@ const RE_PIC = /^\s*\[\s*(?:diagram|image|picture|figure|fig\.?|graph|photo|phot
 const picsOf = t => String(t || "").split("\n").map(l => l.match(RE_PIC)).filter(Boolean).map(m => m[1].trim());
 const dropFirstPic = t => { const L = String(t || "").split("\n"); const k = L.findIndex(l => RE_PIC.test(l)); if(k >= 0){ L.splice(k, 1); if(k < L.length && !L[k].trim() && (k === 0 || !L[k - 1].trim())) L.splice(k, 1); } return L.join("\n"); };
 const missingPics = () => S.items.reduce((a, it) => a + (it.type === "section" ? 0 : picsOf(it.text).length + (it.subs || []).reduce((b, sb) => b + picsOf(sb.text).length, 0)), 0);
-const hasRich = t => /\$|\\\(|\\\[|\*\*|\*[^\s*]|^\s*\||\\ce\{|\+\+\S|~~\S|\{color:/m.test(t || "");
+/* ---------------- molecules: {mol: SMILES | caption} on its own line ---------------- */
+const RE_MOL = /^\s*\{\s*(?:mol|molecule|smiles|structure)\s*:\s*([^}|]+?)\s*(?:\|\s*([^}]*?))?\s*\}\s*$/i;
+const MOLS = {};   // smiles → { svg, png, w, h, err }
+const MOL_BW = { C: "#111", O: "#111", N: "#111", F: "#111", CL: "#111", BR: "#111", I: "#111", P: "#111", S: "#111", B: "#111", SI: "#111", H: "#111", BACKGROUND: "transparent" };
+function molSVG(smi){
+  return new Promise(res => {
+    if(!window.SmilesDrawer) return res({ err: "Molecule drawing isn't loaded" });
+    const host = document.createElement("div"); host.style.cssText = "position:fixed;left:-9999px;top:0;width:600px;height:400px";
+    const id = "molsvg_" + Math.random().toString(36).slice(2);
+    host.innerHTML = `<svg id="${id}" xmlns="http://www.w3.org/2000/svg"></svg>`; document.body.appendChild(host);
+    const done = r => { host.remove(); res(r); };
+    try{
+      const d = new SmilesDrawer.SvgDrawer({ width: 600, height: 400, bondThickness: 1.1, compactDrawing: false, terminalCarbons: false, explicitHydrogens: false, padding: 6, themes: { bw: MOL_BW } });
+      SmilesDrawer.parse(smi, tree => {
+        try{
+          d.draw(tree, id, "bw");
+          const el = document.getElementById(id), vb = (el.getAttribute("viewBox") || "0 0 100 100").split(/\s+/).map(Number);
+          el.setAttribute("width", vb[2]); el.setAttribute("height", vb[3]); el.removeAttribute("style");
+          done({ svg: new XMLSerializer().serializeToString(el), w: vb[2], h: vb[3] });
+        }catch(e){ done({ err: "Couldn't draw this molecule" }); }
+      }, () => done({ err: "That isn't a valid SMILES code" }));
+    }catch(e){ done({ err: "Couldn't draw this molecule" }); }
+  });
+}
+async function getMol(smi){
+  if(MOLS[smi] && (MOLS[smi].png || MOLS[smi].err)) return MOLS[smi];
+  const m = await molSVG(smi);
+  if(!m.err){
+    try{
+      const sc = 4, img = await loadImg("data:image/svg+xml;charset=utf-8," + encodeURIComponent(m.svg));
+      const c = document.createElement("canvas"); c.width = Math.ceil(m.w * sc); c.height = Math.ceil(m.h * sc);
+      const g = c.getContext("2d"); g.drawImage(img, 0, 0, c.width, c.height);
+      m.png = c.toDataURL("image/png");
+    }catch(e){ m.err = "Couldn't draw this molecule"; }
+  }
+  return MOLS[smi] = m;
+}
+function molsIn(t){ return String(t || "").split("\n").map(l => l.match(RE_MOL)).filter(Boolean).map(m => m[1].trim()); }
+async function prepareMols(){
+  const want = new Set();
+  S.items.forEach(it => { molsIn(qText(it)).forEach(x => want.add(x)); molsIn(it.answer).forEach(x => want.add(x)); (it.subs || []).forEach(sb => { molsIn(sb.text).forEach(x => want.add(x)); molsIn(sb.answer).forEach(x => want.add(x)); }); });
+  await Promise.all([...want].map(getMol));
+}
+const MOL_PRESETS = [
+  ["Alkanes", [["methane", "C"], ["ethane", "CC"], ["propane", "CCC"], ["butane", "CCCC"], ["2-methylpropane", "CC(C)C"], ["pentane", "CCCCC"], ["cyclohexane", "C1CCCCC1"]]],
+  ["Alkenes & alkynes", [["ethene", "C=C"], ["propene", "C=CC"], ["but-1-ene", "C=CCC"], ["but-2-ene", "CC=CC"], ["ethyne", "C#C"]]],
+  ["Alcohols, acids, esters", [["methanol", "CO"], ["ethanol", "CCO"], ["propan-1-ol", "CCCO"], ["propan-2-ol", "CC(O)C"], ["methanoic acid", "OC=O"], ["ethanoic acid", "CC(=O)O"], ["ethyl ethanoate", "CCOC(C)=O"], ["ethanal", "CC=O"], ["propanone", "CC(C)=O"]]],
+  ["Other organic", [["chloromethane", "CCl"], ["ethylamine", "CCN"], ["benzene", "C1=CC=CC=C1"], ["methylbenzene", "CC1=CC=CC=C1"], ["phenol", "OC1=CC=CC=C1"], ["aspirin", "CC(=O)OC1=CC=CC=C1C(=O)O"], ["urea", "NC(N)=O"], ["caffeine", "CN1C=NC2=C1C(=O)N(C)C(=O)N2C"]]],
+  ["Biology", [["glucose", "OC[C@H]1OC(O)[C@H](O)[C@@H](O)[C@@H]1O"], ["fructose", "OCC1(O)OC[C@@H](O)[C@@H](O)[C@@H]1O"], ["glycine", "NCC(=O)O"], ["alanine", "CC(N)C(=O)O"], ["glycerol", "OCC(O)CO"], ["fatty acid (C6)", "CCCCCC(=O)O"]]],
+  ["Small molecules", [["water", "O"], ["ammonia", "N"], ["carbon dioxide", "O=C=O"], ["hydrogen peroxide", "OO"]]]
+];
+let molTarget = null;
+function openMol(id){
+  molTarget = id; $("#molSmi").value = ""; $("#molCap").value = ""; $("#molPrev").innerHTML = ""; $("#molMsg").textContent = "Pick a molecule on the left, or type a SMILES code";
+  $("#molPresets").innerHTML = MOL_PRESETS.map(([g, L]) => `<div class="g">${g}</div>` + L.map(([n, smi]) => `<button type="button" data-smi="${esc(smi)}" data-n="${esc(n)}">${esc(n)}</button>`).join("")).join("");
+  openModal("#molModal"); setTimeout(() => $("#molSmi").focus(), 50);
+}
+async function molPreview(){
+  const smi = $("#molSmi").value.trim(); if(!smi){ $("#molPrev").innerHTML = ""; return; }
+  const m = await molSVG(smi); if(smi !== $("#molSmi").value.trim()) return;
+  $("#molPrev").innerHTML = m.err ? "" : m.svg; $("#molMsg").textContent = m.err || ($("#molCap").value.trim() ? $("#molCap").value.trim() : "");
+}
+$("#molSmi").addEventListener("input", () => { clearTimeout(molPreview._t); molPreview._t = setTimeout(molPreview, 200); });
+$("#molCap").addEventListener("input", () => { if(!$("#molMsg").textContent.startsWith("Th")) $("#molMsg").textContent = $("#molCap").value; });
+$("#molPresets").addEventListener("click", e => { const b = e.target.closest("[data-smi]"); if(!b) return; $("#molSmi").value = b.dataset.smi; if(!$("#molCap").dataset.touched) $("#molCap").value = ""; $("#molMsg").dataset.name = b.dataset.n; molPreview(); $("#molMsg").textContent = b.dataset.n + " — add it as a caption if students may see the name"; });
+$("#molCap").addEventListener("change", () => $("#molCap").dataset.touched = "1");
+$("#molGo").onclick = async () => {
+  const smi = $("#molSmi").value.trim(); if(!smi){ toast("Pick or type a molecule first"); return; }
+  const m = await getMol(smi); if(m.err){ toast(m.err); return; }
+  const it = S.items.find(x => x.id === molTarget); if(!it) return;
+  const line = "{mol: " + smi + ($("#molCap").value.trim() ? " | " + $("#molCap").value.trim() : "") + "}";
+  const tf = lastTA && lastTA.id === it.id && lastTA.f ? { f: lastTA.f, sid: lastTA.sid } : null;
+  const v = tfGet(it, tf), pos = lastTA && lastTA.id === it.id ? lastTA.e : v.length;
+  const before = v.slice(0, pos), after = v.slice(pos);
+  tfSet(it, tf, before + (before && !before.endsWith("\n") ? "\n" : "") + line + (after && !after.startsWith("\n") ? "\n" : "") + after);
+  $("#molModal").classList.remove("open"); render(); changed(); focusItem(it.id);
+};
+const hasRich = t => /\$|\\\(|\\\[|\*\*|\*[^\s*]|^\s*\||\\ce\{|\+\+\S|~~\S|\{color:|^\s*\{\s*(?:mol|molecule|smiles|structure)\s*:/m.test(t || "");
 // whole-question formatting chosen on the card (bold / italic / underline / colour)
 const fmtOf = it => (it && it.fmt && (it.fmt.b || it.fmt.i || it.fmt.u || it.fmt.x || it.fmt.c)) ? it.fmt : null;
 
@@ -1793,6 +1925,7 @@ async function prepareGrayLogo(){
 }
 async function prepareMath(){
   await prepareGrayLogo();
+  try{ await prepareMols(); }catch(e){ console.warn(e); }
   if(!FONT_R && window.__PWA__){ try{ await ensureFonts(); }catch(e){ console.warn(e); } }
   await mathReady;
   const jobs = [];
@@ -1816,6 +1949,8 @@ function richHTML(text, q){
   return parseRich(text, fmtOf(q)).map(b => {
     if(b.type === "gap") return "<div style='height:.5em'></div>";
     if(b.type === "pic") return `<div class="picmiss">🖼 Picture missing: <i>${esc(b.desc)}</i></div>`;
+    if(b.type === "mol"){ const m = MOLS[b.smi]; if(!m){ getMol(b.smi).then(() => { const c = q && $("#list").querySelector(`.card[data-id="${q.id}"]`); if(c) updateRich(c, q); }); return `<div class="molbox hint">⌬ drawing ${esc(b.smi)}…</div>`; }
+      return m.err ? `<span class="err">⚠ ${esc(b.smi)} — ${esc(m.err)}</span>` : `<div class="molbox"><img src="${m.png}" alt="${esc(b.smi)}">${b.cap ? `<div class="cap">${esc(b.cap)}</div>` : ""}</div>`; }
     if(b.type === "display"){ const m = texSVG(b.tex, true); return `<div class="disp">${m.err ? `<span class="err" title="${esc(m.errMsg)}">⚠ ${esc(b.tex)} — ${esc(m.errMsg)}</span>` : m.svg}</div>`; }
     if(b.type === "table") return "<table>" + b.rows.map((r, i) => "<tr>" + r.map(c => (b.header && i === 0 ? "<th>" : "<td>") + runsH(c) + (b.header && i === 0 ? "</th>" : "</td>")).join("") + "</tr>").join("") + "</table>";
     const mk = "";
@@ -1841,7 +1976,7 @@ function updateRich(card, it){
   const box = card.querySelector("[data-rich]"); if(!box) return;
   const T = qText(it);
   const blocks = (hasRich(T) || it.mcq || fmtOf(it)) && mathOK ? parseRich(T, fmtOf(it)) : [];
-  const rich = ((it.mcq || fmtOf(it)) && blocks.length) || blocks.some(b => b.type === "display" || b.type === "table" || b.bullet || (b.runs || []).some(r => r.t === "math" || r.b || r.i || r.u || r.x || r.c));
+  const rich = ((it.mcq || fmtOf(it)) && blocks.length) || blocks.some(b => b.type === "display" || b.type === "table" || b.type === "mol" || b.bullet || (b.runs || []).some(r => r.t === "math" || r.b || r.i || r.u || r.x || r.c));
   const subs = it.subs || [];
   const subRich = subs.some(sb => hasRich(sb.text));
   if(!rich && !subRich){ box.classList.add("hidden"); box.innerHTML = ""; return; }
@@ -1866,7 +2001,15 @@ function tint(rgb, t){ return rgb.map(v => Math.round(v + (255 - v) * t)); }
 function shade(rgb, t){ return rgb.map(v => Math.round(v * (1 - t))); }
 function imgFmt(src){ return /^data:image\/png/i.test(src) ? "PNG" : "JPEG"; }
 
+const TR_FR = { "Part": "Partie", "Other questions": "Autres questions", "DURATION": "DURÉE", "TOTAL": "TOTAL", "FORMAT": "FORMAT", "Large print": "Gros caractères",
+  "ANSWERS": "RÉPONSES", "Separate sheet": "Feuille séparée", "VERSION": "VERSION", "ANSWER KEY": "CORRIGÉ", "Teacher copy": "Exemplaire enseignant",
+  "Student name": "Nom de l'élève", "Class / Grade": "Classe", "Date": "Date", "Teacher": "Enseignant(e)", "INSTRUCTIONS": "CONSIGNES",
+  "FOR EXAMINER USE": "RÉSERVÉ AU CORRECTEUR", "Total points": "Note totale", "Criteria": "Critères", "Points": "Points", "TOTAL EXAM GRADE": "NOTE FINALE",
+  "TEACHER COMMENTS": "COMMENTAIRES DE L'ENSEIGNANT", "ANSWER KEY · TEACHER COPY": "CORRIGÉ · EXEMPLAIRE ENSEIGNANT", "NAME": "NOM",
+  "(Select all that apply.)": "(Plusieurs réponses possibles.)", " mark]": " point]", " marks]": " points]", " MARK": " POINT", " MARKS": " POINTS",
+  "END OF EXAM": "FIN DE L'ÉPREUVE", " of ": " sur ", "MODEL ANSWER": "RÉPONSE ATTENDUE", "Diagram": "Schéma", " points": " points" };
 function buildPDF(opt){
+  const PT = w => (S.d.lang === "fr" && TR_FR[w] != null) ? TR_FR[w] : w;   // words printed on the paper
   const FINAL = !!(opt && opt.final);   // downloads: placeholders print as a plain grey frame, not red
   opt = opt || {};
   const { jsPDF } = window.jspdf;
@@ -1942,15 +2085,15 @@ function buildPDF(opt){
   const COVER_TOP = 20, COVER_BOTTOM = PH - 20;
   const instr = (D.instructions || "").split("\n").map(s => s.trim()).filter(Boolean);
   const showTable = D.scoreTable && (M.total > 0 || M.secs.length > 0);
-  const scoreRows = showTable ? (M.secs.length ? M.secs.map(s => [s.item.text || "Part", s.total]) : []) : [];
-  if(showTable && M.looseMarks > 0 && M.secs.length) scoreRows.unshift(["Other questions", M.looseMarks]);
+  const scoreRows = showTable ? (M.secs.length ? M.secs.map(s => [s.item.text || PT("Part"), s.total]) : []) : [];
+  if(showTable && M.looseMarks > 0 && M.secs.length) scoreRows.unshift([PT("Other questions"), M.looseMarks]);
   const pills = [];
-  if(D.duration) pills.push(["DURATION", D.duration]);
-  if(M.total > 0) pills.push(["TOTAL", fmt(M.total) + " points"]);
-  if(LARGE) pills.push(["FORMAT", "Large print"]);
-  if(D.answerMode === "sheet") pills.push(["ANSWERS", "Separate sheet"]);
-  if(opt.version) pills.unshift(["VERSION", opt.version]);
-  if(opt.key) pills.unshift(["ANSWER KEY", "Teacher copy"]);
+  if(D.duration) pills.push([PT("DURATION"), D.duration]);
+  if(M.total > 0) pills.push([PT("TOTAL"), fmt(M.total) + " points"]);
+  if(LARGE) pills.push([PT("FORMAT"), PT("Large print")]);
+  if(D.answerMode === "sheet") pills.push([PT("ANSWERS"), PT("Separate sheet")]);
+  if(opt.version) pills.unshift([PT("VERSION"), opt.version]);
+  if(opt.key) pills.unshift([PT("ANSWER KEY"), PT("Teacher copy")]);
 
   function cover(P, draw){
     let y = COVER_TOP;
@@ -2023,11 +2166,11 @@ function buildPDF(opt){
         else { doc.setDrawColor(...RULE); doc.setLineWidth(.25); doc.line(x, yy + rowH - 3.1, x + w - 4, yy + rowH - 3.1); }
       };
       const bx = ML + 6, bw = CW - 12;
-      field(bx, bw * .62, y + 1, "Student name", "");
-      field(bx + bw * .64, bw * .36, y + 1, "Class / Grade", D.className);
+      field(bx, bw * .62, y + 1, PT("Student name"), "");
+      field(bx + bw * .64, bw * .36, y + 1, PT("Class / Grade"), D.className);
       doc.setDrawColor(...ACC_XL); doc.setLineWidth(.3); doc.line(ML + 4, y + rowH + 1.2, ML + CW - 4, y + rowH + 1.2);
-      field(bx, bw * .4, y + rowH + 1.5, "Date", D.date);
-      field(bx + bw * .44, bw * .56, y + rowH + 1.5, "Teacher", D.teacher);
+      field(bx, bw * .4, y + rowH + 1.5, PT("Date"), D.date);
+      field(bx + bw * .44, bw * .56, y + rowH + 1.5, PT("Teacher"), D.teacher);
     }
     y += boxH;
     // instructions
@@ -2054,7 +2197,7 @@ function buildPDF(opt){
       if(instr.length){
         doc.setFillColor(...ACC_XL); doc.roundedRect(ML, instrTop, CW, ih, 2.5, 2.5, "F");
         doc.setFillColor(...ACC); doc.rect(ML, instrTop, 1.6, ih, "F");
-        font(SANS, "bold", 8.5, ACC_D); doc.text("INSTRUCTIONS", ML + 8, instrTop + 7.5, { charSpace: 1 });
+        font(SANS, "bold", 8.5, ACC_D); doc.text(PT("INSTRUCTIONS"), ML + 8, instrTop + 7.5, { charSpace: 1 });
         let iy = instrTop + 13.5;
         wrapped.forEach(w => {
           doc.setFillColor(...ACC); hexagon(ML + 9.2, iy - ifs * mmPt * .35, .95, "F");
@@ -2069,7 +2212,7 @@ function buildPDF(opt){
         const bw2 = twoCol ? CW : Math.min(140, CW), bx2 = (PW - bw2) / 2;
         doc.setFillColor(255, 255, 255); doc.setDrawColor(...ACC_L); doc.setLineWidth(.4);
         doc.roundedRect(bx2, tTop, bw2, tH, 2.5, 2.5, "S");
-        font(SANS, "bold", 7.5, MUTED); spaced("FOR EXAMINER USE", PW / 2, tTop + 6.5, 1);
+        font(SANS, "bold", 7.5, MUTED); spaced(PT("FOR EXAMINER USE"), PW / 2, tTop + 6.5, 1);
         const R = P.scoreRow, fsN = LARGE ? 11.5 : 11, fsT = LARGE ? 12.5 : 12;
         const colW = twoCol ? (bw2 - 16) / 2 : bw2 - 16;
         const blen = twoCol ? 18 : 30;
@@ -2084,7 +2227,7 @@ function buildPDF(opt){
           doc.text("/ " + fmt(mk), bxs + blen + 2.5, ty);
         };
         let ty = tTop + 10 + R * .78;
-        drawRow(bx2 + 8, ty, colW, "Total points", M.total, true);
+        drawRow(bx2 + 8, ty, colW, PT("Total points"), M.total, true);
         if(tLines.length){ doc.setDrawColor(...ACC_XL); doc.setLineWidth(.3); doc.line(bx2 + 6, ty + R * .45, bx2 + bw2 - 6, ty + R * .45); }
         ty += R;
         const per = twoCol ? Math.ceil(tLines.length / 2) : tLines.length;
@@ -2121,8 +2264,8 @@ function buildPDF(opt){
     // rows: parts, group headings, criteria, totals
     const rows = [];
     if(R.showParts && M.secs.length){
-      if(M.looseMarks > 0) rows.push({ k: "part", label: "Other questions", pts: M.looseMarks });
-      M.secs.forEach(sx => rows.push({ k: "part", label: stripFmt(sx.item.text || "Part").replace(/\$+([^$]*)\$+/g, "$1"), pts: sx.total }));
+      if(M.looseMarks > 0) rows.push({ k: "part", label: PT("Other questions"), pts: M.looseMarks });
+      M.secs.forEach(sx => rows.push({ k: "part", label: stripFmt(sx.item.text || PT("Part")).replace(/\$+([^$]*)\$+/g, "$1"), pts: sx.total }));
     }
     (R.groups || []).forEach(g => {
       const its = (g.items || []).filter(it => (it.name || "").trim() || num(it.pts) > 0);
@@ -2132,8 +2275,8 @@ function buildPDF(opt){
       its.forEach(it => rows.push({ k: "crit", label: (it.name || "").trim(), desc: R.showDesc ? (it.desc || "").trim() : "", pts: num(it.pts) }));
     });
     const total = R.showParts && M.secs.length ? M.total : rbSum(R);
-    if(R.showTotal) rows.push({ k: "total", label: "TOTAL", pts: total });
-    if(R.showGrade) rows.push({ k: "grade", label: "TOTAL EXAM GRADE", pts: null });
+    if(R.showTotal) rows.push({ k: "total", label: PT("TOTAL"), pts: total });
+    if(R.showGrade) rows.push({ k: "grade", label: PT("TOTAL EXAM GRADE"), pts: null });
     const RX = ML, RW = CW, PCOL = 44, LCOL = RW - PCOL;
     let top = 22;
     font(SERIF, "bold", LARGE ? 20 : 18, INK); doc.text(fitText(R.title || "Rubric", RW), PW / 2, top + 6, { align: "center" });
@@ -2161,8 +2304,8 @@ function buildPDF(opt){
     let ry = top;
     doc.setFillColor(...ACC); doc.rect(RX, ry, RW, headerH, "F");
     font(SANS, "bold", fsR, [255, 255, 255]);
-    doc.text("Criteria", RX + 4, ry + headerH * .66);
-    doc.text("Points", RX + LCOL + PCOL / 2, ry + headerH * .66, { align: "center" });
+    doc.text(PT("Criteria"), RX + 4, ry + headerH * .66);
+    doc.text(PT("Points"), RX + LCOL + PCOL / 2, ry + headerH * .66, { align: "center" });
     ry += headerH;
     const pointsCell = (pts, y0, h, bold) => {
       const cx = RX + LCOL, by = y0 + h * .66;
@@ -2193,7 +2336,7 @@ function buildPDF(opt){
     doc.setDrawColor(...ACC); doc.setLineWidth(.45); doc.rect(RX, top, RW, ry - top, "S"); doc.line(RX + LCOL, top, RX + LCOL, ry);
     if(R.showComments){
       const cy = ry + 8;
-      font(SANS, "bold", 8.5, ACC_D); doc.text("TEACHER COMMENTS", RX, cy + 3, { charSpace: 1 });
+      font(SANS, "bold", 8.5, ACC_D); doc.text(PT("TEACHER COMMENTS"), RX, cy + 3, { charSpace: 1 });
       doc.setDrawColor(...ACC_L); doc.setLineWidth(.35); doc.roundedRect(RX, cy + 6, RW, commentsH - 6, 2, 2, "S");
       doc.setDrawColor(...RULE); doc.setLineWidth(.2); for(let ly = cy + 15; ly < cy + commentsH - 2; ly += 8) doc.line(RX + 4, ly, RX + RW - 4, ly);
     }
@@ -2215,10 +2358,10 @@ function buildPDF(opt){
     const right = PW - MR;
     let rx = right;
     if(opt.key){
-      font(SANS, "bold", 8, [192, 57, 43]); const kl = "ANSWER KEY · TEACHER COPY";
+      font(SANS, "bold", 8, [192, 57, 43]); const kl = PT("ANSWER KEY · TEACHER COPY");
       const kw = doc.getTextWidth(kl) + kl.length * .4; doc.text(kl, right - kw, 19.5, { charSpace: .4 }); rx = right - kw - 6;
     }else if(D.nameEveryPage){
-      font(SANS, "bold", 7.5, MUTED); const lab = "NAME"; const lw2 = doc.getTextWidth(lab) + 2.5;
+      font(SANS, "bold", 7.5, MUTED); const lab = PT("NAME"); const lw2 = doc.getTextWidth(lab) + 2.5;
       const lineW = 46; rx = right - lineW - lw2;
       doc.text(lab, rx, 19.5, { charSpace: .5 });
       doc.setDrawColor(...RULE); doc.setLineWidth(.25); doc.line(rx + lw2 + 1, 20, right, 20);
@@ -2369,7 +2512,7 @@ function buildPDF(opt){
     let group = [], noted = false;
     const note = () => {
       if(mark !== "multi" || noted || /all that apply|more than one|two answers|three answers/i.test(q.text || "")) return;
-      noted = true; add(layoutPara({ runs: [{ t: "text", s: "(Select all that apply.)", i: true }] }, curW()));
+      noted = true; add(layoutPara({ runs: [{ t: "text", s: PT("(Select all that apply.)"), i: true }] }, curW()));
     };
     const flush = () => {
       if(!group.length) return;
@@ -2398,13 +2541,25 @@ function buildPDF(opt){
         continue;
       }
       if(b.type === "table"){ add([layoutTable(b, bw)]); continue; }
+      if(b.type === "mol"){
+        const m = MOLS[b.smi];
+        if(!m || !m.png){ add(layoutPara({ runs: [{ t: "text", s: "[molecule: " + b.smi + (m && m.err ? " — " + m.err : "") + "]", i: true }] }, bw)); continue; }
+        let w = m.w * .4 * (fs / 11), h = m.h * .4 * (fs / 11);           // same bond length for every molecule
+        const k = Math.min(1, bw / w, 75 / h); w *= k; h *= k;
+        const capH = b.cap ? LH : 0;
+        add([{ h: h + 4 + capH, asc: TASC, draw(x, y){
+          doc.addImage(m.png, "PNG", x + (bw - w) / 2, y + 2, w, h, "mol_" + strHash(b.smi), "FAST");
+          if(b.cap){ font(SANS, "italic", fs - 1, INK); doc.text(b.cap, x + bw / 2, y + 2 + h + capH * .75, { align: "center" }); }
+        } }]);
+        continue;
+      }
       if(b.type === "pic"){
         const ph = 30, pw = Math.min(bw, 110);
         add([{ h: ph + 4, asc: TASC, draw(x, y){
           const red = [192, 57, 43], grey = [150, 150, 150], col = FINAL ? grey : red;
           if(!FINAL){ doc.setFillColor(253, 236, 234); doc.roundedRect(x, y + 2, pw, ph, 1.5, 1.5, "F"); }
           doc.setDrawColor(...col); doc.setLineWidth(.35); doc.setLineDashPattern([1.6, 1.2], 0); doc.roundedRect(x, y + 2, pw, ph, 1.5, 1.5, "S"); doc.setLineDashPattern([], 0);
-          font(SANS, "bold", 9, col); doc.text(FINAL ? "Diagram" : "PICTURE MISSING — add it in BEE", x + 4, y + 8);
+          font(SANS, "bold", 9, col); doc.text(FINAL ? PT("Diagram") : "PICTURE MISSING — add it in BEE", x + 4, y + 8);
           font(SANS, "italic", 8.5, col); doc.splitTextToSize(b.desc || "", pw - 8).slice(0, 4).forEach((l, k) => doc.text(l, x + 4, y + 13 + k * 4));
           doc.setTextColor(...INK);
         } }]);
@@ -2431,7 +2586,9 @@ function buildPDF(opt){
     // a question (or text item) as a list of stackable parts
     const KEY = !!opt.key, KEYC = [192, 57, 43], KEYBG = [253, 240, 237];
     // answer space: lines | blank | grid | box, n "line heights" tall, from x0 to x1
-    function spaceParts(kind, n, x0, x1){
+    function spaceParts(kind, n, x0, x1, range){
+      if(kind === "numberline") return numberLine(range, x0, x1);
+      if(kind === "axes") return coordGrid(range, x0, x1);
       n = Math.max(0, Math.min(60, Math.round(num(n)))); if(!n) return [];
       if(!kind || kind === "lines"){
         const out = [{ h: 2, draw: () => {} }];
@@ -2452,13 +2609,56 @@ function buildPDF(opt){
     // answer-key box (teacher copy): model answer in red, at least as tall as the student's space
     function answerParts(text, x0, x1, minH){
       const ls = layoutRich(text, x1 - x0 - 8, null);
-      const out = [{ h: 6.5, draw: yy => { doc.setFillColor(...KEYBG); doc.rect(x0, yy + 1.5, x1 - x0, 5, "F"); doc.setFillColor(...KEYC); doc.rect(x0, yy + 1.5, 1.2, 5, "F"); font(SANS, "bold", 7, KEYC); doc.text("MODEL ANSWER", x0 + 4, yy + 5.2, { charSpace: .6 }); } }];
+      const out = [{ h: 6.5, draw: yy => { doc.setFillColor(...KEYBG); doc.rect(x0, yy + 1.5, x1 - x0, 5, "F"); doc.setFillColor(...KEYC); doc.rect(x0, yy + 1.5, 1.2, 5, "F"); font(SANS, "bold", 7, KEYC); doc.text(PT("MODEL ANSWER"), x0 + 4, yy + 5.2, { charSpace: .6 }); } }];
       ls.forEach(l => out.push({ h: l.h, draw: yy => { doc.setFillColor(...KEYBG); doc.rect(x0, yy, x1 - x0, l.h, "F"); doc.setFillColor(...KEYC); doc.rect(x0, yy, 1.2, l.h, "F"); if(l.draw){ font(SANS, "normal", fs, KEYC); l.draw(x0 + 4 + (l.dx || 0), yy, KEYC); } } }));
       let h = out.reduce((a, p) => a + p.h, 0);
       if(h < minH) out.push({ h: minH - h, draw: yy => { doc.setFillColor(...KEYBG); doc.rect(x0, yy, x1 - x0, minH - h, "F"); doc.setFillColor(...KEYC); doc.rect(x0, yy, 1.2, minH - h, "F"); } });
       out.push({ h: 1.5, draw: () => {} });
       return out;
     }
+    // ---- number line:  "-10..10"  or  "0..100 step 10"
+    function numberLine(range, x0, x1){
+      const R = parseRange(range, [-10, 10]);
+      const [a, b] = R.x, step = R.step || nlStep(b - a, 30);
+      const pad = 6, L = x0 + pad, Rr = x1 - pad, H = 15;
+      return [{ h: 3, draw: () => {} }, { h: H, draw: yy => {
+        const y = yy + 5, X = v => L + (v - a) / (b - a) * (Rr - L);
+        doc.setDrawColor(...INK); doc.setLineWidth(.35); doc.line(x0 + 1, y, x1 - 1, y);
+        arrowHead(x1 - 1, y, 1, 0); arrowHead(x0 + 1, y, -1, 0);
+        const fsz = Math.min(9, fs - 2); font(SANS, "normal", fsz, INK);
+        const gap = (Rr - L) / ((b - a) / step), every = labelStep(1, gap, Math.max(String(a).length, String(b).length) * fsz * .2 + 2);
+        for(let k = 0, v = a; v <= b + 1e-9; v = +(a + (++k) * step).toFixed(6)){
+          const big = k % every === 0;
+          doc.setLineWidth(big ? .3 : .2); doc.line(X(v), y - (big ? 1.8 : 1.1), X(v), y + (big ? 1.8 : 1.1));
+          if(big) doc.text(fmt(v), X(v), y + 5.6, { align: "center" });
+        }
+      } }];
+    }
+    // ---- coordinate grid with x and y axes:  "-6..6"  or  "-2..8, -5..5"
+    function coordGrid(range, x0, x1){
+      const R = parseRange(range, [-6, 6]);
+      const [xa, xb] = R.x, [ya, yb] = R.y || R.x;
+      const nx = Math.max(1, xb - xa), ny = Math.max(1, yb - ya);
+      let cell = Math.min(7, (x1 - x0 - 12) / nx, (pageAvail - 24) / ny); cell = Math.max(2.5, cell);
+      const W = nx * cell, H = ny * cell, gx0 = x0 + (x1 - x0 - W) / 2;
+      return [{ h: 3, draw: () => {} }, { h: H + 8, draw: yy => {
+        const gy0 = yy + 4, X = v => gx0 + (v - xa) * cell, Y = v => gy0 + (yb - v) * cell;
+        doc.setDrawColor(215, 211, 203); doc.setLineWidth(.15);
+        for(let i = 0; i <= nx; i++) doc.line(gx0 + i * cell, gy0, gx0 + i * cell, gy0 + H);
+        for(let j = 0; j <= ny; j++) doc.line(gx0, gy0 + j * cell, gx0 + W, gy0 + j * cell);
+        const ax = (xa <= 0 && xb >= 0) ? 0 : xa, ay = (ya <= 0 && yb >= 0) ? 0 : ya;
+        doc.setDrawColor(...INK); doc.setLineWidth(.35);
+        doc.line(gx0, Y(ay), gx0 + W + 2.5, Y(ay)); arrowHead(gx0 + W + 2.5, Y(ay), 1, 0);
+        doc.line(X(ax), gy0 + H, X(ax), gy0 - 2.5); arrowHead(X(ax), gy0 - 2.5, 0, -1);
+        const fsz = Math.min(8, Math.max(5.5, cell * 1.25)); font(SANS, "normal", fsz, INK);
+        const ex = labelStep(1, cell, Math.max(String(xa).length, String(xb).length) * fsz * .22 + 1.2), ey = labelStep(1, cell, fsz * .45);
+        for(let v = xa; v <= xb; v++) if(v !== ax && (v - ax) % ex === 0){ doc.setLineWidth(.25); doc.line(X(v), Y(ay) - .9, X(v), Y(ay) + .9); doc.text(fmt(v), X(v), Y(ay) + fsz * .42 + 1.6, { align: "center" }); }
+        for(let v = ya; v <= yb; v++) if(v !== ay && (v - ay) % ey === 0){ doc.setLineWidth(.25); doc.line(X(ax) - .9, Y(v), X(ax) + .9, Y(v)); doc.text(fmt(v), X(ax) - 1.6, Y(v) + fsz * .14, { align: "right" }); }
+        if(ax === 0 && ay === 0) doc.text("0", X(0) - 1.4, Y(0) + fsz * .42 + 1.4, { align: "right" });
+        font(SANS, "italic", fsz + 1.5, INK); doc.text("x", gx0 + W + 3.6, Y(ay) + 1.2); doc.text("y", X(ax) + 1.8, gy0 - 2.2);
+      } }];
+    }
+    function arrowHead(x, y, dx, dy){ const s = 1.6, w = .55; doc.setFillColor(...INK); doc.triangle(x + dx * .4, y + dy * .4, x - dx * s - dy * s * w, y - dy * s - dx * s * w, x - dx * s + dy * s * w, y - dy * s + dx * s * w, "F"); }
     const spaceH = (kind, n) => spaceParts(kind, n, 0, 10).reduce((a, p) => a + p.h, 0);
     // a question (or text item) as a list of stackable parts
     function qBlock(it, X, W){
@@ -2500,7 +2700,7 @@ function buildPDF(opt){
       }
       // the question's own answer space (or, in the answer key, its model answer)
       if(isQ){
-        const sp = SHEET ? [] : spaceParts(it.space, it.lines, tx, X + W);
+        const sp = SHEET ? [] : spaceParts(it.space, it.lines, tx, X + W, it.range);
         if(KEY && (it.answer || "").trim()) parts.push(...answerParts(it.answer, tx, X + W, sp.reduce((a, p) => a + p.h, 0) - 3));
         else parts.push(...sp);
       }
@@ -2521,7 +2721,7 @@ function buildPDF(opt){
             if(D.showMarks && mk > 0){ font(SANS, "normal", fs - 1.5, MUTED); doc.text("[" + fmt(mk) + "]", X + W, yy + base0, { align: "right" }); }
           }
         } }));
-        const sp = SHEET ? [] : spaceParts(sb.space, sb.lines, sx, X + W);
+        const sp = SHEET ? [] : spaceParts(sb.space, sb.lines, sx, X + W, sb.range);
         if(KEY && (sb.answer || "").trim()) parts.push(...answerParts(sb.answer, sx, X + W, sp.reduce((a, p) => a + p.h, 0) - 3));
         else parts.push(...sp);
       });
@@ -2534,7 +2734,7 @@ function buildPDF(opt){
           font(SANS, "bold", fs, ACC_D); doc.text(M.meta[it.id] + ".", X, yy + base0);
           const mk = qMarks(it);
           // with sub-questions the marks are shown on each part; otherwise next to the question
-          if(D.showMarks && mk > 0 && !subs.some(sb => num(sb.marks) > 0)){ font(SANS, "normal", fs - 1.5, MUTED); doc.text("[" + fmt(mk) + (half ? "]" : (mk === 1 ? " mark]" : " marks]")), X + W, yy + base0, { align: "right" }); }
+          if(D.showMarks && mk > 0 && !subs.some(sb => num(sb.marks) > 0)){ font(SANS, "normal", fs - 1.5, MUTED); doc.text("[" + fmt(mk) + (half ? "]" : (mk === 1 ? PT(" mark]") : PT(" marks]"))), X + W, yy + base0, { align: "right" }); }
         };
       }
       const h = parts.reduce((a, p) => a + p.h, 0);
@@ -2559,11 +2759,11 @@ function buildPDF(opt){
         doc.setFillColor(...ACC); doc.rect(ML, y, 1.6, h, "F");
         const mk = M.meta[it.id];
         font(SANS, "bold", 8.5, ACC_D);
-        const mtxt = mk > 0 ? fmt(mk) + (mk === 1 ? " MARK" : " MARKS") : "";
+        const mtxt = mk > 0 ? fmt(mk) + (mk === 1 ? PT(" MARK") : PT(" MARKS")) : "";
         const mw = mtxt ? doc.getTextWidth(mtxt) + mtxt.length * .5 + 4 : 0;
         if(mtxt) doc.text(mtxt, PW - MR - 3 - doc.getTextWidth(mtxt) - mtxt.length * .5, y + 7.1, { charSpace: .5 });
         font(SANS, "bold", 12.5, INK);
-        doc.text(fitText(stripFmt(it.text || "Part").replace(/\$+([^$]*)\$+/g, "$1"), CW - 12 - mw), ML + 6, y + 7.4);
+        doc.text(fitText(stripFmt(it.text || PT("Part")).replace(/\$+([^$]*)\$+/g, "$1"), CW - 12 - mw), ML + 6, y + 7.4);
         y += h + (COMPACT ? 4.5 : 6);
         continue;
       }
@@ -2592,7 +2792,7 @@ function buildPDF(opt){
       if(y + 14 > BOTTOM) newPage();
       y += 4;
       font(SANS, "bold", 8.5, ACC_D);
-      const s = "END OF EXAM"; const w = doc.getTextWidth(s) + s.length * 1.1;
+      const s = PT("END OF EXAM"); const w = doc.getTextWidth(s) + s.length * 1.1;
       doc.setDrawColor(...ACC); doc.setLineWidth(.3);
       doc.line(PW / 2 - w / 2 - 30, y, PW / 2 - w / 2 - 6, y); doc.line(PW / 2 + w / 2 + 6, y, PW / 2 + w / 2 + 30, y);
       doc.setFillColor(...ACC); hexagon(PW / 2 - w / 2 - 3.2, y, 1.1, "F"); hexagon(PW / 2 + w / 2 + 3.2, y, 1.1, "F");
@@ -2605,7 +2805,7 @@ function buildPDF(opt){
     for(let p = firstQPage; p <= N; p++){
       doc.setPage(p);
       font(SANS, "normal", 8, MUTED);
-      doc.text("Page " + (p - firstQPage + 1) + " of " + qPages, PW / 2, PH - 12.6, { align: "center" });
+      doc.text("Page " + (p - firstQPage + 1) + PT(" of ") + qPages, PW / 2, PH - 12.6, { align: "center" });
       if(D.school){ doc.setFontSize(7.5); doc.text(fitText(D.school, 55), ML, PH - 12.6); }
       if(D.year){ doc.setFontSize(7.5); doc.text(D.year, PW - MR, PH - 12.6, { align: "right" }); }
     }
@@ -3192,13 +3392,15 @@ FORMAT RULES
 5. Every question starts on a new line with its number:  1. Question text
 6. Marks go at the END of the question's first line in square brackets:  1. Solve the equation. [3]
 7. If students must write the answer on the paper, add ruled answer lines after the marks:  [6] {lines: 8}
+   Other answer spaces: {grid: 8} (squared paper), {box: 6}, {numberline: -10..10} (a number line, add "step 5" if needed), {axes: -6..6} or {axes: -2..8, -5..5} (a coordinate grid with x and y axes to draw on).
 8. Multiple-choice options and sub-questions each go on their own line:  a) …   b) …   or   i) …   ii) …
    For multiple-choice questions add {mcq} after the marks (one correct answer) or {mcq: multi} (more than one correct answer). Add {cols: 2} or {cols: 4} to lay short options out in columns.
    Sub-questions with their own marks start with (a), (b), (c) and end with their marks:  (a) Name the gas. [1] {lines: 2}
    Short one-line questions can be printed two per row: add {half}.
 9. Maths: LaTeX between single dollar signs inside sentences, e.g.  $x^2 + 3x - 4 = 0$,  $\\frac{3}{4}$,  $\\sqrt{2}$,  $90^\\circ$
 10. Important equations on their own line between double dollar signs:  $$\\int_0^1 x^2\\,dx$$
-11. Chemistry with mhchem:  $\\ce{H2SO4}$,  $\\ce{2H2 + O2 -> 2H2O}$,  $\\ce{N2 + 3H2 <=> 2NH3}$
+11. Organic or biological structures that must be drawn (skeletal formulas): {mol: SMILES} on its own line, e.g.  {mol: CCO}  — add a caption only if the name may be shown:  {mol: CC(=O)O | ethanoic acid}
+    Chemistry equations and formulas with mhchem:  $\\ce{H2SO4}$,  $\\ce{2H2 + O2 -> 2H2O}$,  $\\ce{N2 + 3H2 <=> 2NH3}$
 12. Units:  $9.8\\,\\mathrm{m/s^2}$
 13. Tables: Markdown tables (| a | b |, with a |---|---| line under the header row).
 14. Biology: scientific names in italics (*Homo sapiens*), Punnett squares and data as Markdown tables, temperatures as $37^\\circ\\mathrm{C}$, sizes as $10\\,\\mu\\mathrm{m}$.
