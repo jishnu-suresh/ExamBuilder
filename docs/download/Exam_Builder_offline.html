@@ -413,6 +413,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
           <label><input type="checkbox" data-k="showMarks"> Show marks beside questions</label>
           <label><input type="checkbox" data-k="nameEveryPage"> Name field on every page</label>
           <label><input type="checkbox" data-k="restartNumbering"> Restart numbering in each part</label>
+          <label title="Paragraphs get a straight right edge, like a book. Single lines, options and tables stay as they are."><input type="checkbox" data-k="justify"> Justify paragraphs (straight right edge)</label>
           <label><input type="checkbox" data-k="sectionNewPage"> Start each part on a new page</label>
           <label><input type="checkbox" data-k="endMarker"> “End of exam” marker</label>
           <label><input type="checkbox" data-k="scoreTable"> Points per part on cover</label>
@@ -4805,7 +4806,7 @@ const defaults = () => ({
     school: "The Hive Academy", paper: "a4", fontSize: "11", accent: "#2E2E2E",
     lineSpacing: "1", largePrint: false, answerMode: "paper",
     showMarks: true, nameEveryPage: true, restartNumbering: false, sectionNewPage: false,
-    endMarker: true, scoreTable: true, bigInline: true
+    endMarker: true, scoreTable: true, bigInline: true, justify: true
   },
   logo: { src: DEFAULT_LOGO, w: DEFAULT_LOGO_SIZE[0], h: DEFAULT_LOGO_SIZE[1], isDefault: true },
   items: []
@@ -5308,7 +5309,7 @@ function bindDetails(){
       S.d[k] = el.type === "checkbox" ? el.checked : el.value;
       if(k === "accent") S.d.accentChosen = true;
       lastEdited = null;
-      if(k === "restartNumbering" || k === "totalOverride" || k === "bigInline" || k === "answerMode") render();
+      if(k === "justify" || k === "restartNumbering" || k === "totalOverride" || k === "bigInline" || k === "answerMode") render();
       changed();
     });
   });
@@ -5699,13 +5700,13 @@ function selStyle(text, a, e){
   const c0 = sel[0].st.c;
   return { b: sel.every(x => x.st.b), i: sel.every(x => x.st.i), u: sel.every(x => x.st.u), x: sel.every(x => x.st.x), c: sel.every(x => x.st.c === c0) ? c0 : "" };
 }
-const RE_ALIGN = /^\s*\{(center|centre|right|left)\}\s*/i;
+const RE_ALIGN = /^\s*\{(center|centre|right|left|justify)\}\s*/i;
 const SIZES = ["small", "", "big", "bigger", "huge"], SIZE_K = { small: .85, big: 1.2, bigger: 1.45, huge: 1.75 };
-const RE_PRE = /^\s*\{(center|centre|right|left|small|big|bigger|huge)\}\s*/i;
+const RE_PRE = /^\s*\{(center|centre|right|left|justify|small|big|bigger|huge)\}\s*/i;
 function linePre(l){ let align = "", size = "", rest = String(l); for(let m; (m = rest.match(RE_PRE));){ const t = m[1].toLowerCase().replace("centre", "center"); if(SIZE_K[t]) size = t; else align = t; rest = rest.slice(m[0].length); } return { align, size, rest }; }
 const buildLine = (align, size, rest) => (align ? "{" + align + "}" : "") + (size ? "{" + size + "}" : "") + rest;
 // a picture placed inside the text:  {img: ID | 60% | center}
-const RE_IMG = /^\s*(?:\{(?:center|centre|right|left|small|big|bigger|huge)\}\s*)*\{\s*img\s*:\s*([\w-]+)\s*(?:\|\s*(\d{1,3})\s*%?\s*)?(?:\|\s*(left|center|centre|right)\s*)?\}\s*$/i;
+const RE_IMG = /^\s*(?:\{(?:center|centre|right|left|justify|small|big|bigger|huge)\}\s*)*\{\s*img\s*:\s*([\w-]+)\s*(?:\|\s*(\d{1,3})\s*%?\s*)?(?:\|\s*(left|center|centre|right)\s*)?\}\s*$/i;
 function picData(id){ for(const it of S.items){ if(it.pics && it.pics[id]) return it.pics[id]; } return null; }
 function parseRich(text, base){
   const lines = String(text || "").replace(/\t/g, "    ").split("\n");
@@ -5859,7 +5860,7 @@ $("#molGo").onclick = async () => {
   tfSet(it, tf, before + (before && !before.endsWith("\n") ? "\n" : "") + line + (after && !after.startsWith("\n") ? "\n" : "") + after);
   $("#molModal").classList.remove("open"); render(); changed(); focusItem(it.id);
 };
-const hasRich = t => /\$|\\\(|\\\[|\*\*|\*[^\s*]|^\s*\||\\ce\{|\+\+\S|~~\S|\{color:|^\s*\{\s*(?:mol|molecule|smiles|structure|img)\s*:|^\s*\{(?:center|centre|right|left|small|big|bigger|huge)\}/m.test(t || "");
+const hasRich = t => /\$|\\\(|\\\[|\*\*|\*[^\s*]|^\s*\||\\ce\{|\+\+\S|~~\S|\{color:|^\s*\{\s*(?:mol|molecule|smiles|structure|img)\s*:|^\s*\{(?:center|centre|right|left|justify|small|big|bigger|huge)\}/m.test(t || "");
 // whole-question formatting chosen on the card (bold / italic / underline / colour)
 const fmtOf = it => (it && it.fmt && (it.fmt.b || it.fmt.i || it.fmt.u || it.fmt.x || it.fmt.c || it.fmt.align || it.fmt.size)) ? it.fmt : null;
 
@@ -5953,7 +5954,7 @@ function richHTML(text, q){
     if(b.type === "display"){ const m = texSVG(b.tex, true); return `<div class="disp">${m.err ? `<span class="err" title="${esc(m.errMsg)}">⚠ ${esc(b.tex)} — ${esc(m.errMsg)}</span>` : m.svg}</div>`; }
     if(b.type === "table") return "<table>" + b.rows.map((r, i) => "<tr>" + r.map(c => (b.header && i === 0 ? "<th>" : "<td>") + runsH(c) + (b.header && i === 0 ? "</th>" : "</td>")).join("") + "</tr>").join("") + "</table>";
     const mk = "";
-    return `<div style="padding-left:${b.ind ? 1.2 : 0}em${b.align ? ";text-align:" + b.align : ""}${b.scale && b.scale !== 1 ? ";font-size:" + b.scale + "em;line-height:1.35" : ""}">${b.bullet ? "• " : ""}${mk}${runsH(b.runs) || "&nbsp;"}</div>`;
+    return `<div style="padding-left:${b.ind ? 1.2 : 0}em${b.align ? ";text-align:" + b.align : (!b.opt && !b.bullet && S.d.justify !== false ? ";text-align:justify" : "")}${b.scale && b.scale !== 1 ? ";font-size:" + b.scale + "em;line-height:1.35" : ""}">${b.bullet ? "• " : ""}${mk}${runsH(b.runs) || "&nbsp;"}</div>`;
   }).join("") + (q && q.mcq === "multi" && !/all that apply/i.test(q.text || "") ? '<div><i style="color:var(--muted)">(Select all that apply.)</i></div>' : "");
 }
 function mathErrors(text){
@@ -6398,6 +6399,7 @@ function buildPDF(opt){
   function newPage(){ doc.addPage(); frame(); header(); y = TOP; if(firstQPage === null) firstQPage = doc.getNumberOfPages(); }
 
   let fs = LARGE ? Math.max(16, num(D.fontSize) || 11) : (num(D.fontSize) || 11);
+  const JUST = D.justify !== false;
   const SPC = LARGE ? 2 : (num(D.lineSpacing) || 1);
   const SHEET = D.answerMode === "sheet";
   const COMPACT = SHEET && !LARGE && SPC < 1.5;      // separate answer sheet → tighter paper (not for accommodations)
@@ -6470,6 +6472,9 @@ function buildPDF(opt){
       const rowW = r.reduce((a, w) => a + w.reduce((x, p) => x + p.w, 0), 0) + SP * Math.max(0, r.length - 1);
       const rowAvail = ((wrap && wrap.narrow && rowN[ri]) ? wrap.narrow.w : width) - (b.ind || 0);
       const shift = b.align === "center" ? Math.max(0, (rowAvail - rowW) / 2) : b.align === "right" ? Math.max(0, rowAvail - rowW) : 0;
+      // justified: spread the spaces of every line except the last one of the paragraph
+      const just = (b.align === "justify" || (!b.align && b.type === "para" && !b.opt && JUST)) && ri < rows.length - 1 && r.length > 1;
+      let gap = SP; if(just){ const g = SP + (rowAvail - rowW) / (r.length - 1); if(g > SP && g < SP * 4.5) gap = g; }
       r.forEach(w => w.forEach(p => { if(p.t === "math"){ asc = Math.max(asc, p.asc + .7); desc = Math.max(desc, p.desc + .7); } }));
       return { h: asc + desc, asc, txt: true, dx: (wrap && wrap.narrow && rowN[ri]) ? wrap.narrow.dx : 0, width: r.reduce((a, w) => a + w.reduce((x, p) => x + p.w, 0), 0) + SP * Math.max(0, r.length - 1), draw(x, y, color){
         doc.setFontSize(fs); doc.setTextColor(...(color || INK));
@@ -6481,10 +6486,10 @@ function buildPDF(opt){
           if(b.mark === "multi") doc.rect(cx0 - r, cy - r, 2 * r, 2 * r, "S"); else doc.circle(cx0, cy, r, "S");
         }
         r.forEach((w, wi) => {
-          if(wi) cx += SP;
+          if(wi) cx += gap;
           // underline continues across the space between two underlined words
-          if(wi && w[0].u && r[wi - 1][r[wi - 1].length - 1].u){ const uc = w[0].c ? hexRgb(cssHex(w[0].c)) : (color || INK); doc.setDrawColor(...uc); doc.setLineWidth(Math.max(.18, fs * .018)); doc.line(cx - SP, y + asc + fs * mmPt * .14, cx, y + asc + fs * mmPt * .14); }
-          if(wi && w[0].x && r[wi - 1][r[wi - 1].length - 1].x){ const xc = w[0].c ? hexRgb(cssHex(w[0].c)) : (color || INK); doc.setDrawColor(...xc); doc.setLineWidth(Math.max(.18, fs * .018)); doc.line(cx - SP, y + asc - fs * mmPt * .27, cx, y + asc - fs * mmPt * .27); }
+          if(wi && w[0].u && r[wi - 1][r[wi - 1].length - 1].u){ const uc = w[0].c ? hexRgb(cssHex(w[0].c)) : (color || INK); doc.setDrawColor(...uc); doc.setLineWidth(Math.max(.18, fs * .018)); doc.line(cx - gap, y + asc + fs * mmPt * .14, cx, y + asc + fs * mmPt * .14); }
+          if(wi && w[0].x && r[wi - 1][r[wi - 1].length - 1].x){ const xc = w[0].c ? hexRgb(cssHex(w[0].c)) : (color || INK); doc.setDrawColor(...xc); doc.setLineWidth(Math.max(.18, fs * .018)); doc.line(cx - gap, y + asc - fs * mmPt * .27, cx, y + asc - fs * mmPt * .27); }
           w.forEach(p => {
             if(p.t === "math") doc.addImage(p.m.png, "PNG", cx, y + asc - p.asc, p.w, p.asc + p.desc, mAlias(p.m), "FAST");
             else {
@@ -6700,17 +6705,20 @@ function buildPDF(opt){
     function qBlock(it, X, W){
       const isQ = it.type === "q";
       const half = W < CW - 1;
+      const subMarks = isQ && Array.isArray(it.subs) && it.subs.some(sb => num(sb.marks) > 0);
+      const markShown = isQ && D.showMarks && !it.hideMarks && qMarks(it) > 0 && !subMarks;
       const mW = isQ ? (half ? Math.min(MARKW, Math.max(15, fs * 1.3)) : MARKW) : 0;
       const nW = isQ && !it.nonum ? NUMW : 0;
-      const tx = X + nW, tw = W - nW - mW;
-      let img = it.img ? imgDims(it, tw) : null;
+      const tx = X + nW, tw = W - nW, twM = tw - mW;     // twM: width beside the [marks] label
+      let img = it.img ? imgDims(it, markShown ? twM : tw) : null;
       const WGAP = 5;
       const al = it.imgAlign || "left";
       const T = qText(it, KEY);
       const wrap = !!(img && it.imgWrap && al !== "center" && T.trim());
-      if(wrap && tw - img.w - WGAP < tw * .3){ const nw = tw * .7 - WGAP; img = { w: nw, h: img.h * nw / img.w }; }   // keep at least 30% for the text
-      const narrow = wrap ? { w: tw - img.w - WGAP, h: img.h + 1, dx: al === "left" ? img.w + WGAP : 0 } : null;
-      const lines = layoutRich(T, tw, it, narrow);
+      if(wrap && twM - img.w - WGAP < twM * .3){ const nw = twM * .7 - WGAP; img = { w: nw, h: img.h * nw / img.w }; }   // keep at least 30% for the text
+      // beside a wrapped picture: the narrow column; otherwise only the first line steps aside for "[5 marks]"
+      const narrow = wrap ? { w: twM - img.w - WGAP, h: img.h + 1, dx: al === "left" ? img.w + WGAP : 0 } : markShown ? { w: twM, h: .01, dx: 0 } : null;
+      const lines = layoutRich(T, wrap ? twM : tw, it, narrow);
       const parts = [];
       let lineNo = 0;
       lines.forEach(l => {
@@ -6744,7 +6752,7 @@ function buildPDF(opt){
       const subs = isQ && Array.isArray(it.subs) ? it.subs : [];
       subs.forEach((sb, k) => {
         const lab = "(" + LETTERS[k] + ")", SI = Math.max(8, fs * .72);
-        const sx = tx + SI, sw = tw - SI;
+        const sx = tx + SI, sw = (num(sb.marks) > 0 && D.showMarks ? twM : tw) - SI;
         const sl = layoutRich(sb.text || "", sw, null);
         parts.push({ h: 2.5, draw: () => {} });
         const base0 = sl[0] && sl[0].asc ? sl[0].asc : TASC;
@@ -7499,7 +7507,7 @@ FORMAT RULES
 12. Units:  $9.8\\,\\mathrm{m/s^2}$
 13. Tables: Markdown tables (| a | b |, with a |---|---| line under the header row).
 14. Biology: scientific names in italics (*Homo sapiens*), Punnett squares and data as Markdown tables, temperatures as $37^\\circ\\mathrm{C}$, sizes as $10\\,\\mu\\mathrm{m}$.
-15. To centre or right-align a line (a poem, a title, a quotation), start the line with {center} or {right}. To make a line bigger (a title) start it with {big} or {bigger}; smaller: {small}. They can be combined: {center}{big}The Water Cycle
+15. To centre or right-align a line (a poem, a title, a quotation), start the line with {center} or {right} ({left} keeps one line ragged when paragraphs are justified). To make a line bigger (a title) start it with {big} or {bigger}; smaller: {small}. They can be combined: {center}{big}The Water Cycle
     Text styles: **bold**, *italic*, ++underline++ and ~~strikethrough~~ — keep every one that appears in the original. Do not use any other Markdown (no # headings, no horizontal rules, no numbered-list auto-formatting).
 16. EVERY picture, photo, diagram, graph, map or chart that cannot be typed: write  [diagram: short description]  on its own line exactly where it belongs (include any caption or credit in the description). Never skip a picture.
 17. Copy the wording exactly and keep the original numbering. Do NOT add answers or solutions unless I ask for them.
@@ -7541,6 +7549,7 @@ $("#promptToPaste").onclick = () => { $("#promptModal").classList.remove("open")
 
 /* ---------------- text formatting (per question) ---------------- */
 const SWATCHES = [["#111111", "Black"], ["#C0392B", "Red"], ["#1F5FBF", "Blue"], ["#2E7D32", "Green"], ["#D35400", "Orange"], ["#7B3FA0", "Purple"]];
+const alDef = () => S.d.justify !== false ? "justify" : "left";   // what a line with no alignment of its own looks like
 function fmtBar(it){
   const f = it.fmt || {};
   return `<div class="fmtbar" title="Select words to format just them — or select nothing to format the whole question">
@@ -7552,9 +7561,10 @@ function fmtBar(it){
     <button type="button" data-fmt="sz" data-d="-1" class="sz" title="Smaller text — select lines, or nothing = whole question">A<small>−</small></button>
     <button type="button" data-fmt="sz" data-d="1" class="sz" title="Bigger text (e.g. a title) — select lines, or nothing = whole question"><b>A</b><small>+</small></button>
     <span class="fsep"></span>
-    <button type="button" data-fmt="al" data-a="left" class="al ${(f.align || "left") === "left" ? "on" : ""}" title="Align left (default) — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M2 6.5h8M2 10h12M2 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
-    <button type="button" data-fmt="al" data-a="center" class="al ${(f.align || "left") === "center" ? "on" : ""}" title="Align center — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M4 6.5h8M2 10h12M4 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
-    <button type="button" data-fmt="al" data-a="right" class="al ${(f.align || "left") === "right" ? "on" : ""}" title="Align right — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M6 6.5h8M2 10h12M6 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button type="button" data-fmt="al" data-a="left" class="al ${(f.align || alDef()) === "left" ? "on" : ""}" title="Align left — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M2 6.5h8M2 10h12M2 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button type="button" data-fmt="al" data-a="center" class="al ${(f.align || alDef()) === "center" ? "on" : ""}" title="Centre — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M4 6.5h8M2 10h12M4 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button type="button" data-fmt="al" data-a="right" class="al ${(f.align || alDef()) === "right" ? "on" : ""}" title="Align right — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M6 6.5h8M2 10h12M6 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button type="button" data-fmt="al" data-a="justify" class="al ${(f.align || alDef()) === "justify" ? "on" : ""}" title="Justify (straight right edge) — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M2 6.5h12M2 10h12M2 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
     <span class="fsep"></span>
     ${SWATCHES.map(([c, n]) => `<button type="button" data-fmt="color" data-c="${c}" class="sw ${f.c === c ? "on" : ""}" title="${n} text" style="--c:${c}"></button>`).join("")}
     <label class="sw custom ${f.c && !SWATCHES.some(x => x[0] === f.c) ? "on" : ""}" title="Other colour…" style="--c:${f.c && !SWATCHES.some(x => x[0] === f.c) ? f.c : "#fff"}"><input type="color" data-fmt="colorpick" value="${f.c || "#1F5FBF"}"></label>
@@ -7580,7 +7590,7 @@ function applyToggle(card, it, key, val){
   lastTA = { id: it.id, s: r.a, e: r.e };
   return true;
 }
-function stripFmt(t){ return t.replace(/^(?:\s*\{(?:center|centre|right|left|small|big|bigger|huge)\}\s*)+/gm, "").replace(/\{\/?color[^}]*\}/g, "").replace(/\*\*|\+\+|~~/g, "").replace(/(^|[^\w*])\*([^\s*][^*]*?)\*(?!\*)/g, "$1$2"); }
+function stripFmt(t){ return t.replace(/^(?:\s*\{(?:center|centre|right|left|justify|small|big|bigger|huge)\}\s*)+/gm, "").replace(/\{\/?color[^}]*\}/g, "").replace(/\*\*|\+\+|~~/g, "").replace(/(^|[^\w*])\*([^\s*][^*]*?)\*(?!\*)/g, "$1$2"); }
 function onFmt(btn, card, it, colorVal){
   const k = btn.dataset.fmt;
   it.fmt = it.fmt || {};
@@ -7604,11 +7614,11 @@ function onFmt(btn, card, it, colorVal){
     if(r && r.e > r.a){
       // align only the lines touched by the selection
       const v = r.ta.value, a0 = v.lastIndexOf("\n", r.a - 1) + 1, e1 = v.indexOf("\n", r.e - (v[r.e - 1] === "\n" ? 1 : 0)), e0 = e1 < 0 ? v.length : e1;
-      const whole = (it.fmt.align || "left");
+      const whole = (it.fmt.align || alDef());
       const seg = v.slice(a0, e0).split("\n").map(l => { const P = linePre(l); return !P.rest.trim() ? l : buildLine(want === whole ? "" : want, P.size, P.rest); }).join("\n");
       it.text = v.slice(0, a0) + seg + v.slice(e0); r.ta.value = it.text;
       r.ta.focus(); r.ta.setSelectionRange(a0, a0 + seg.length);
-    }else it.fmt.align = want === "left" ? "" : want;
+    }else it.fmt.align = want === alDef() ? "" : want;
   }else if(k === "clear"){
     if(!applyToggle(card, it, "clear")) it.fmt = {};
   }
@@ -7623,13 +7633,14 @@ function refreshFmtBar(card, it){
   let f = it.fmt || {};
   if(ta && document.activeElement === ta && ta.selectionEnd > ta.selectionStart){ const ss = selStyle(ta.value, ta.selectionStart, ta.selectionEnd); if(ss) f = ss; }
   bar.querySelectorAll("button[data-fmt=b],button[data-fmt=i],button[data-fmt=u],button[data-fmt=x]").forEach(x => x.classList.toggle("on", !!f[x.dataset.fmt]));
-  { let al = it.fmt && it.fmt.align || "left";
+  { let al = it.fmt && it.fmt.align || alDef();
     if(ta && document.activeElement === ta && ta.selectionEnd > ta.selectionStart){
       const v = ta.value, a0 = v.lastIndexOf("\n", ta.selectionStart - 1) + 1, e1 = v.indexOf("\n", ta.selectionEnd), L = v.slice(a0, e1 < 0 ? v.length : e1).split("\n").filter(l => l.trim());
-      const set = new Set(L.map(l => linePre(l).align || (it.fmt && it.fmt.align || "left")));
+      const set = new Set(L.map(l => linePre(l).align || (it.fmt && it.fmt.align || alDef())));
       al = set.size === 1 ? [...set][0] : "";
     }
     bar.querySelectorAll("button[data-fmt=al]").forEach(x => x.classList.toggle("on", x.dataset.a === al)); }
+  // (al: "" from a line means the exam default)
   bar.querySelectorAll("button[data-fmt=color]").forEach(x => x.classList.toggle("on", !!f.c && f.c.toLowerCase() === x.dataset.c.toLowerCase()));
   const cu = bar.querySelector(".custom"); if(cu){ const custom = f.c && !SWATCHES.some(x => x[0].toLowerCase() === f.c.toLowerCase()); cu.classList.toggle("on", !!custom); cu.style.setProperty("--c", custom ? cssHex(f.c) : "#fff"); }
 }
