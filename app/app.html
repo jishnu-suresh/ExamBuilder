@@ -12,7 +12,7 @@
   --radius:12px; --shadow:0 1px 2px rgba(60,45,10,.06),0 4px 14px rgba(60,45,10,.05);
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+html,body{max-width:100%;overflow-x:hidden;margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
 h1,h2,h3{font-family:Georgia,"Times New Roman",serif;font-weight:600;margin:0}
 button,input,select,textarea{font:inherit;color:inherit}
 .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:16px;padding:10px 22px;background:rgba(250,247,240,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
@@ -98,6 +98,71 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+.lbl-m{display:none}
+.pvfab{display:none}
+/* ================= phones & small tablets ================= */
+@media (max-width:700px){
+  html,body{font-size:15px}
+  .topbar{flex-wrap:wrap;gap:8px 6px;padding:8px 10px;position:sticky}
+  .topbar #topLogo{display:none}
+  .topbar h1{order:1;font-size:17px}
+  .brand .bee{font-size:19px}.bee-name{font-size:19px;letter-spacing:2px}
+  .topbar .sp{display:none}
+  .savechip{order:2;max-width:38vw;margin-left:auto;font-size:11.5px;padding:3px 9px}
+  .topbar>.btn,.topbar .dl-wrap{order:3}
+  .topbar .lbl{display:none}
+  .topbar .lbl-m{display:inline}
+  .topbar>.btn{padding:6px 10px;min-width:38px;justify-content:center}
+  .topbar .dl-wrap{margin-left:auto}
+  .topbar #btnDownload{padding:7px 12px}
+  .grid{padding:10px;gap:14px;display:block}
+  .panel{padding:14px 12px;margin-bottom:14px;border-radius:10px}
+  .panel>h2{font-size:17px;flex-wrap:wrap}
+  .fields{grid-template-columns:1fr!important;gap:10px}
+  /* 16px text stops iPhones zooming in when a box is tapped */
+  input,select,textarea,label.f input,label.f select,label.f textarea,.card textarea,.card input[type=text],.card input[type=number],.rb-row input,.opt-row input,.sub-row textarea,.ansbox textarea{font-size:16px!important}
+  .actions{gap:6px}
+  .actions .btn.sm{padding:6px 9px}
+  .card{grid-template-columns:30px 1fr;padding:9px 9px 10px;gap:7px}
+  .badge{width:28px;height:28px;font-size:12px}
+  .card .row{gap:6px}
+  .card .tools{margin-left:0;width:100%;justify-content:flex-end}
+  .card .row label{flex-wrap:wrap}
+  .card select[data-f],.card select[data-part]{max-width:100%}
+  .fmtbar .fhint{display:none}
+  .subs{padding-left:7px}
+  .sub-row{flex-direction:column;gap:4px}.sub-row b{padding-top:0}
+  .rb-top{grid-template-columns:1fr}
+  .rb-row{grid-template-columns:1fr 64px auto;grid-template-areas:"n p t" "d d d"}
+  .rb-row input[data-rb=name]{grid-area:n}.rb-row input[data-rb=pts]{grid-area:p}.rb-row .t{grid-area:t}.rb-row input[data-rb=desc]{grid-area:d}
+  .bottom-bar{margin:12px -12px -14px;padding:8px 10px}
+  .bottom-bar .btn.sm{padding:6px 8px;font-size:12.5px}
+  .preview{position:relative!important;top:auto!important;height:78vh!important;margin-bottom:60px}
+  .preview .bar{flex-wrap:wrap;gap:6px;padding:8px 10px}
+  .preview .bar h2{font-size:15px}
+  .preview .status{order:9;width:100%}
+  .pv{padding:8px}
+  /* dialogs become full-screen sheets */
+  .modal{padding:0;align-items:flex-end}
+  .modal .box,.modal .box.wide,.start-box{max-width:100%!important;width:100%;max-height:94vh;border-radius:14px 14px 0 0;padding:16px 14px calc(16px + env(safe-area-inset-bottom))}
+  .modal h3{font-size:17px}
+  .modal textarea{min-height:200px}
+  .eq-pal .grp>span{width:100%}
+  .eq-pal button{min-width:38px;height:36px}
+  math-field{font-size:22px}
+  .graph-prev canvas{max-height:45vh}
+  .ocr-right textarea{min-height:30vh}
+  .start-brand .bee,.start-brand .bee-name{font-size:32px}
+  .dl-menu{right:0;min-width:min(300px,92vw)}
+  .updbar{top:auto!important;bottom:84px!important;width:92vw;flex-wrap:nowrap}
+  .wm{font-size:10px;bottom:2px;right:8px;opacity:.55}
+  .toast{bottom:76px;width:90vw;text-align:center}
+  .pvfab{display:flex;align-items:center;gap:6px;position:fixed;right:14px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:40;border:0;border-radius:999px;padding:11px 16px;background:var(--ink);color:#fff;font:600 14px system-ui,sans-serif;box-shadow:0 8px 22px rgba(0,0,0,.25)}
+}
+@media (max-width:380px){
+  .savechip{display:none}
+  .card .row label{font-size:12px}
+}
 .photo-mode{margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff}
 .photo-mode .lbl{font-size:12.5px;color:var(--muted);font-weight:600;margin-right:6px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;flex-wrap:wrap}
@@ -147,6 +212,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .dl-menu button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:0;background:none;text-align:left;padding:8px 10px;border-radius:7px;cursor:pointer}
 .dl-menu button span{font-size:12px;color:var(--muted)}
 .dl-menu button:hover{background:var(--gold-xl)}
+.updbar small{opacity:.8;font-size:12px}.updbar .upd-hex{font-size:22px;line-height:1}
 .updbar{position:fixed;left:50%;transform:translateX(-50%);top:62px;z-index:60;background:var(--ink);color:#fff;border-radius:10px;padding:8px 10px 8px 14px;display:flex;align-items:center;gap:10px;font-size:13.5px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
 .switch{margin-left:auto;position:relative;display:inline-block;width:42px;height:24px;flex:none}
 .switch input{opacity:0;width:0;height:0}
@@ -258,14 +324,14 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
   <h1 class="brand"><span class="bee" aria-hidden="true">🐝</span><span class="bee-name">BEE</span><span class="bee-tag">Build&nbsp;•&nbsp;Edit&nbsp;•&nbsp;Evaluate</span></h1>
   <button class="savechip" id="saveChip" title="Your project is saved automatically every minute">…</button>
   <span class="sp"></span>
-  <button class="btn sm hidden" id="btnInstall" title="Install BEE as an app on this computer">⤓ Install app</button>
+  <button class="btn sm hidden" id="btnInstall" title="Install BEE as an app on this computer">⤓ <span class="lbl">Install app</span></button>
   <button class="btn sm icon" id="btnUndo" title="Undo (Ctrl/⌘ + Z)" disabled>↶</button>
   <button class="btn sm icon" id="btnRedo" title="Redo (Ctrl/⌘ + Shift + Z, or Ctrl + Y)" disabled>↷</button>
-  <button class="btn sm" id="btnNew" title="Start a new exam">＋ New</button>
-  <button class="btn sm" id="btnOpen" title="Open a saved .exam.json project">📂 Open</button>
-  <button class="btn sm" id="btnSave" title="Save the project to a (new) file">💾 Save as…</button>
+  <button class="btn sm" id="btnNew" title="Start a new exam">＋ <span class="lbl">New</span></button>
+  <button class="btn sm" id="btnOpen" title="Open a saved .exam.json project">📂 <span class="lbl">Open</span></button>
+  <button class="btn sm" id="btnSave" title="Save the project to a (new) file">💾 <span class="lbl">Save as…</span></button>
   <span class="dl-wrap">
-    <button class="btn primary" id="btnDownload">⬇ Download PDF</button><button class="btn primary dl-caret" id="dlMenuBtn" title="More download options">▾</button>
+    <button class="btn primary" id="btnDownload">⬇ <span class="lbl-m">PDF</span><span class="lbl">Download PDF</span></button><button class="btn primary dl-caret" id="dlMenuBtn" title="More download options">▾</button>
     <div class="dl-menu hidden" id="dlMenu">
       <button data-dl="full"><b>Full exam</b><span>Cover page + all questions</span></button>
       <button data-dl="large"><b>Large-print exam</b><span>16 pt, double spacing (accommodations)</span></button>
@@ -649,7 +715,8 @@ x = 3
   </div>
 </div>
 
-<div class="updbar hidden" id="updBar">A new version of 🐝 BEE is ready. <button class="btn sm primary" id="updGo">Update now</button></div>
+<div class="updbar hidden" id="updBar"><span class="upd-hex" aria-hidden="true">🍯</span><span><b>Fresh honey in the hive!</b><br><small>A new version of 🐝 BEE is ready — your work stays safe.</small></span><button class="btn sm primary" id="updGo">🐝 Update now</button></div>
+<button class="pvfab" id="pvFab" title="Jump to the preview">👁 <span>Preview</span></button>
 <div class="wm" aria-hidden="true">🐝 BEE · © Jishnu</div>
 <!-- VERSIONS -->
 <div class="modal" id="verModal">
@@ -1664,6 +1731,9 @@ function buildPDF(opt){
   const M = computeMeta();
   const LARGE = opt.large != null ? !!opt.large : !!D.largePrint;
   const doc = new jsPDF({ unit: "mm", format: D.paper === "letter" ? "letter" : "a4", compress: true });
+  // PDF fonts can't draw emoji (🐝, 😀…): drop them instead of printing garbage
+  const noEmoji = t => typeof t === "string" ? t.replace(/[\u{1F000}-\u{1FAFF}\u{FE0F}\u{200D}]/gu, "").replace(/\s{2,}(?=\S)/g, m => m.length > 2 ? m : " ") : Array.isArray(t) ? t.map(noEmoji) : t;
+  ["text", "getTextWidth", "splitTextToSize", "getStringUnitWidth"].forEach(fn => { const orig = doc[fn].bind(doc); doc[fn] = (t, ...rest) => orig(noEmoji(t), ...rest); });
   const PW = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight();
   const ACC = hexRgb(D.accent), ACC_D = shade(ACC, .28), ACC_L = tint(ACC, .82), ACC_XL = tint(ACC, .92);
   const INK = [38, 34, 28], MUTED = [118, 110, 98], RULE = [196, 190, 178];
@@ -3585,6 +3655,16 @@ $("#stContinueFile").onclick = async () => {
     $("#startModal").classList.remove("open");
   }catch(e){ toast("Couldn't open " + h.name + " — was it moved or deleted?"); }
 };
+
+/* ---------------- phones: jump between the editor and the preview ---------------- */
+(() => {
+  const fab = document.getElementById("pvFab"), pv = document.querySelector(".preview");
+  let lastY = 0;
+  const inPreview = () => { const r = pv.getBoundingClientRect(); return r.top < innerHeight * .5 && r.bottom > innerHeight * .3; };
+  const label = () => { fab.innerHTML = inPreview() ? "✎ <span>Edit</span>" : "👁 <span>Preview</span>"; };
+  fab.onclick = () => { if(inPreview()) window.scrollTo({ top: lastY, behavior: "smooth" }); else { lastY = scrollY; pv.scrollIntoView({ behavior: "smooth", block: "start" }); } };
+  addEventListener("scroll", () => { clearTimeout(fab._t); fab._t = setTimeout(label, 120); }, { passive: true });
+})();
 
 /* ---------------- installed app (PWA) ---------------- */
 let updateRequested = false;

@@ -11,7 +11,7 @@ async def main():
         t=time.time(); await pg.goto('http://localhost:8765/', wait_until='load'); ok("page loads", True, "%.2fs"%(time.time()-t))
         ok("PWA mode on", await pg.evaluate("!!window.__PWA__"))
         man = await pg.evaluate("fetch('manifest.webmanifest').then(r=>r.json())")
-        ok("manifest valid", man['name']=='Exam Builder' and len(man['icons'])==3 and man['display']=='standalone')
+        ok("manifest valid", man['short_name']=='BEE' and len(man['icons'])==3 and man['display']=='standalone')
         await pg.wait_for_function("navigator.serviceWorker.controller !== null || navigator.serviceWorker.ready.then(()=>true)", timeout=30000)
         await pg.evaluate("navigator.serviceWorker.ready")
         await pg.wait_for_timeout(4000)  # background caching of lazy files
