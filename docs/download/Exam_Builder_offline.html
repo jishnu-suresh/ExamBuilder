@@ -98,6 +98,15 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+#saveModal{z-index:60}   /* above the start screen (＋ New) */
+.sv-name{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;background:#fff;overflow:hidden}
+label.f .sv-name input,.sv-name input{flex:1;border:0!important;outline:0;box-shadow:none!important;border-radius:0!important;margin:0!important;padding:9px 10px;font-size:15px;min-width:0;background:transparent!important;width:auto}
+.sv-name span{padding:0 10px;color:var(--muted);font-size:13px;white-space:nowrap}
+.sv-name:focus-within{border-color:var(--acc);box-shadow:0 0 0 3px rgba(212,160,23,.18)}
+.sv-quick{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
+.sv-quick button{font:12.5px system-ui,sans-serif;padding:4px 9px;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+.sv-quick button:hover{border-color:var(--acc)}
+.sv-pdf{display:flex;gap:7px;align-items:center;margin-top:10px;font-size:13.5px}
 .ins-wrap{position:relative;display:inline-block}
 .ins-menu{position:absolute;left:0;top:calc(100% + 4px);z-index:30;min-width:270px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.14);padding:5px}
 .ins-menu.up{top:auto;bottom:calc(100% + 4px)}
@@ -594,6 +603,18 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
 </div>
 
 <!-- EQUATION EDITOR -->
+<div class="modal" id="saveModal">
+  <div class="box" style="max-width:520px">
+    <h3 style="margin:0 0 4px" id="svTitle">💾 Save exam as</h3>
+    <p class="hint" style="margin:0 0 12px" id="svHint"></p>
+    <label class="f">File name
+      <div class="sv-name"><input id="svName" autocomplete="off" spellcheck="false" placeholder="e.g. Grade 7 ELA - Unit 3 Test"><span>.exam.json</span></div>
+    </label>
+    <div class="sv-quick" id="svQuick"></div>
+    <label class="sv-pdf"><input type="checkbox" id="svPdf"> Also download the PDF now</label>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn" data-close>Cancel</button><button class="btn primary" id="svGo">💾 Save</button></div>
+  </div>
+</div>
 <div class="modal" id="molModal">
   <div class="box wide">
     <h3 style="margin:0 0 4px">⌬ Molecule — chemical structure</h3>
@@ -4898,22 +4919,73 @@ async function setHandle(h){
   try{ if(h) await IDB.set("handle", h); else await IDB.del("handle"); }catch(e){}
   updateChip();
 }
-function downloadProject(){
+function downloadProject(name){
   try{ localStorage.setItem("examBuilder.lastDownload", String(Date.now() + 1)); }catch(e){}
   setTimeout(updateChip, 50);
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(snapshot())], { type: "application/json" }));
-  a.download = fileName().replace(/\.pdf$/, "") + ".exam.json";
+  a.download = (name || fileName().replace(/\.pdf$/, "")) + ".exam.json";
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 3000);
 }
-async function saveAs(){
-  if(!FS_OK){ downloadProject(); toast("Project downloaded — open it later with 📂 Open"); return true; }
-  try{
-    const h = await showSaveFilePicker({ suggestedName: (fileName().replace(/\.pdf$/, "") || "exam") + ".exam.json", types: PTYPES });
-    await setHandle(h); await writeProject(true); toast("Saving to " + h.name + " — automatically every minute"); return true;
-  }catch(e){ if(e && e.name === "AbortError") return false; toast("Couldn't save: " + (e.message || e)); return false; }
+// Save as: first BEE's own little dialog (name the file), then the computer's folder picker where the browser has one
+let svResolve = null, svOpts = {};
+// file names: "/" "\\" "|" ":" become " - ", other characters computers refuse are dropped
+const cleanName = t => String(t || "").replace(/\.exam\.json$|\.json$|\.pdf$/i, "")
+  .replace(/\s*[\\/|:]+\s*/g, " - ").replace(/[*?"<>]+/g, "").replace(/(\s-\s*)+(?=-|$)/g, "").replace(/(\s-\s)+/g, " - ")
+  .replace(/\s+/g, " ").replace(/^[\s.-]+|[\s.-]+$/g, "").slice(0, 120);
+function saveAs(opts){
+  opts = opts || {};
+  return new Promise(res => {
+    if(svResolve) svResolve(false);
+    svResolve = res; svOpts = opts;
+    const SD = (opts.state || S).d;
+    const base = opts.isNew ? "" : (cleanName(proj.name || "") || cleanName(fileName()) || "exam");
+    $("#svTitle").textContent = opts.isNew ? "🐝 Name your new exam" : "💾 Save exam as";
+    $("#svHint").innerHTML = FS_OK
+      ? "Next, choose the folder. BEE then keeps this file up to date by itself every minute."
+      : "It goes to your <b>Downloads</b> folder. Open it again later with 📂 Open.";
+    $("#svName").value = base;
+    const today = new Date().toISOString().slice(0, 10);
+    const quick = [
+      [cleanName([SD.subject, SD.title].filter(Boolean).join(" - ")), "subject + title"],
+      [cleanName([SD.subject, SD.title, SD.className].filter(Boolean).join(" - ")), "with class"],
+      ["+date", "＋ " + today], ["+v", "＋ version"], ["+copy", "＋ copy"]
+    ].filter(([v], i, A) => v && (v.startsWith("+") || A.findIndex(x => x[0] === v) === i));
+    $("#svQuick").innerHTML = quick.map(([v, l]) => `<button type="button" data-v="${esc(v)}" title="${v.startsWith("+") ? "" : esc(v)}">${esc(v.startsWith("+") ? l : v.length > 38 ? v.slice(0, 36) + "…" : v)}</button>`).join("");
+    $("#svPdf").checked = false; $("#svPdf").parentElement.classList.toggle("hidden", !!opts.isNew);
+    $("#svGo").textContent = FS_OK ? "Choose folder & save" : "💾 Save";
+    openModal("#saveModal"); setTimeout(() => { $("#svName").focus(); $("#svName").select(); }, 60);
+  });
 }
+document.getElementById("svQuick").addEventListener("click", e => {
+  const b = e.target.closest("[data-v]"); if(!b) return;
+  const v = b.dataset.v, n = $("#svName"), cur = n.value.trim();
+  if(v === "+date"){ const d = new Date().toISOString().slice(0, 10); n.value = cur.replace(/\s*-?\s*\d{4}-\d{2}-\d{2}$/, "") + " - " + d; }
+  else if(v === "+v"){ const m = cur.match(/\s*-?\s*v(\d+)$/i); n.value = m ? cur.slice(0, m.index) + " - v" + (+m[1] + 1) : cur + " - v2"; }
+  else if(v === "+copy") n.value = /\(copy\)$/i.test(cur) ? cur : cur + " (copy)";
+  else n.value = v;
+  n.focus();
+});
+document.getElementById("svName").addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); $("#svGo").click(); } });
+document.addEventListener("keydown", e => { if(e.key !== "Escape") return; const open = [...document.querySelectorAll(".modal.open")].filter(m => m.id !== "startModal"); const top = open[open.length - 1]; if(top){ e.preventDefault(); top.classList.remove("open"); } });
+document.getElementById("svGo").onclick = async () => {
+  const name = cleanName($("#svName").value) || "exam", pdf = $("#svPdf").checked, res = svResolve; svResolve = null;
+  $("#saveModal").classList.remove("open");
+  let ok = false;
+  if(!FS_OK){ downloadProject(name); toast("Saved " + name + ".exam.json to Downloads — open it later with 📂 Open"); ok = true; }
+  else{
+    try{
+      const h = await showSaveFilePicker({ suggestedName: name + ".exam.json", types: PTYPES });
+      if(svOpts.state) S = svOpts.state;      // a new exam replaces the old one only once its file is chosen
+      await setHandle(h); await writeProject(true); toast("Saving to " + h.name + " — automatically every minute"); ok = true;
+    }catch(e){ if(!(e && e.name === "AbortError")) toast("Couldn't save: " + (e.message || e)); }
+  }
+  if(ok && pdf) download({ name });
+  if(res) res(ok);
+};
+// closing the dialog any other way (Cancel, Esc, clicking outside) = not saved
+new MutationObserver(() => { if(!$("#saveModal").classList.contains("open") && svResolve){ const r = svResolve; svResolve = null; r(false); } }).observe(document.getElementById("saveModal"), { attributes: true, attributeFilter: ["class"] });
 function applyState(o){ S = mergeState(o); refreshDetails(); updateLogoUI(); lastEdited = null; render(); preview(); histReset(); }
 async function openProject(){
   if(!FS_OK){ $("#projIn").click(); return false; }
@@ -4941,11 +5013,12 @@ function freshState(){
   return n;
 }
 async function newProject(){
-  const old = S; S = freshState();
+  const fresh = freshState();
   if(FS_OK){
-    const ok = await saveAs();
-    if(!ok){ S = old; return false; }
-  }else{ await setHandle(null); }
+    const ok = await saveAs({ isNew: true, state: fresh });
+    if(!ok) return false;
+    S = fresh;
+  }else{ await setHandle(null); S = fresh; }
   applyState(S); saveLocal(true);
   return true;
 }
@@ -7038,7 +7111,7 @@ function changed(){
   histSchedule(); saveLocal(); clearTimeout(pvT); $("#status").textContent = "updating…"; pvT = setTimeout(preview, 400); }
 async function download(opt){
   opt = opt || {};
-  const name = fileName().replace(/\.pdf$/, "") + (opt.version ? " - Version " + opt.version : "") + (opt.key ? " (answer key)" : "") + (opt.coverOnly ? " (cover page)" : opt.rubricOnly ? " (rubric)" : opt.noCover ? " (questions)" : "") + ((opt.large || S.d.largePrint) ? " (large print)" : "") + ".pdf";
+  const name = (opt.name || fileName().replace(/\.pdf$/, "")) + (opt.version ? " - Version " + opt.version : "") + (opt.key ? " (answer key)" : "") + (opt.coverOnly ? " (cover page)" : opt.rubricOnly ? " (rubric)" : opt.noCover ? " (questions)" : "") + ((opt.large || S.d.largePrint) ? " (large print)" : "") + ".pdf";
   const miss = missingPics();
   if(miss && !confirm(`${miss === 1 ? "1 picture is" : miss + " pictures are"} still missing (the red boxes in the preview).\n\nDownload anyway? They will print as an empty frame with the description.`)) return;
   try{ await prepareMath(); buildPDF(Object.assign({ final: true }, opt)).save(name); toast("Saved " + name); }

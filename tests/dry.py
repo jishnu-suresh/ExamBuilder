@@ -28,7 +28,9 @@ async def main():
         # A: start modal + new project file
         ok("A1 start screen shown on launch", await pg.is_visible('#startModal'))
         await pg.screenshot(path='dry_start.png')
-        await pg.click('#stNew'); await pg.clock.run_for(500)
+        await pg.click('#stNew'); await pg.clock.run_for(300)
+        ok("A1b name dialog shown first", await pg.is_visible('#saveModal'))
+        await pg.fill('#svName', 'Dry run exam'); await pg.click('#svGo'); await pg.clock.run_for(500)
         ok("A2 new project file created & written", await pg.evaluate("__writes")>=1, await pg.evaluate("Object.keys(__files)"))
         ok("A3 chip shows saved", 'Saved to' in await pg.text_content('#saveChip'), await pg.text_content('#saveChip'))
         await pg.fill('[data-k=subject]','Science Dry Run'); await pg.clock.run_for(1000)
