@@ -12,7 +12,7 @@
   --radius:12px; --shadow:0 1px 2px rgba(60,45,10,.06),0 4px 14px rgba(60,45,10,.05);
 }
 *{box-sizing:border-box}
-html,body{max-width:100%;overflow-x:hidden;margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+html,body{max-width:100%;overflow-x:clip;margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
 h1,h2,h3{font-family:Georgia,"Times New Roman",serif;font-weight:600;margin:0}
 button,input,select,textarea{font:inherit;color:inherit}
 .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:16px;padding:10px 22px;background:rgba(250,247,240,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
@@ -5619,14 +5619,14 @@ function serializeUnits(units){
   const CLOSE = { c: "{/color}", u: "++", x: "~~", b: "**", i: "*" };
   const on = (st, k) => k === "c" ? !!st.c : !!st[k];
   const same = (p, q, k) => k === "c" ? (p.c || "") === (q.c || "") : !!p[k] === !!q[k];
-  // spaces at the edge of a styled stretch only keep colour/underline shared by both neighbours
+  // a space between two words styled alike takes their style, so a phrase gets one pair of markers (**a b c**, not **a** **b** **c**)
   const eff = units.map(x => Object.assign({}, x.st));
   units.forEach((x, k) => {
     if(x.math != null || !/^\s$/.test(x.ch)) return;
     let p = k - 1; while(p >= 0 && units[p].math == null && /^\s$/.test(units[p].ch)) p--;
     let q = k + 1; while(q < units.length && units[q].math == null && /^\s$/.test(units[q].ch)) q++;
     const A = p >= 0 ? units[p].st : {}, B = q < units.length ? units[q].st : {};
-    eff[k] = { b: false, i: false, u: !!(A.u && B.u && x.st.u), x: !!(A.x && B.x && x.st.x), c: (A.c && A.c === B.c && x.st.c === A.c) ? A.c : "" };
+    eff[k] = { b: !!(A.b && B.b), i: !!(A.i && B.i), u: !!(A.u && B.u && x.st.u), x: !!(A.x && B.x && x.st.x), c: (A.c && A.c === B.c && x.st.c === A.c) ? A.c : "" };
   });
   let out = "", cur = { b: false, i: false, u: false, x: false, c: "" };
   const pos = [];
