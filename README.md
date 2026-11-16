@@ -24,7 +24,10 @@ No internet / no install? Download the single-file version: [`docs/download/Exam
 - Questions from: **Paste from AI** (ready-made prompt), photos (offline text reader), .txt/.md files, typing
 - Maths/physics/chemistry/biology: LaTeX `$…$`, visual equation editor, `\ce{}` chemistry, graphs, labelled diagrams, tables
 - MCQ (A–D options, one or multiple answers, 1/2/4 columns), half-width questions, parts with totals
-- Bold / italic / underline / colour, undo/redo, arrange view (drag & drop)
+- Sub-questions (a), (b), (c) with their own marks; answer space as lines, blank space, grid or box; start a question on a new page; line numbers for passages
+- **Answer key** (teacher copy): ✓ correct MCQ options and model answers in red
+- **Versions A, B, C…** at download time: shuffled questions and MCQ options, each with its own answer key
+- Bold / italic / underline / colour, find & replace, undo/redo, arrange view (drag & drop)
 - Accommodations: large print (16 pt, double spacing) download; separate-answer-sheet mode (compact paper)
 - Auto-saves to a project file every minute (Chrome/Edge); double-click `.exam.json` files to open them in the app
 

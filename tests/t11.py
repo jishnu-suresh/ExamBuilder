@@ -60,7 +60,8 @@ async def main():
         p1=(await pages())[0]
         await pg.select_option('[data-k=answerMode]','sheet'); await pg.wait_for_timeout(300)
         dis = await pg.evaluate("[...document.querySelectorAll('.card input[placeholder=sheet]')].length")
-        ok("3a answer-line boxes disabled on cards", dis>=10, dis)
+        nonmcq = await pg.evaluate("__exam.S().items.filter(x=>x.type=='q' && !x.mcq).length")
+        ok("3a answer-space boxes disabled on every written question", dis==nonmcq and dis>=5, f"{dis}/{nonmcq}")
         r=await pages(); open('sheet.pdf','wb').write(base64.b64decode(r[1].split(',',1)[1]))
         ok("3b compact paper not longer", r[0] <= p1, f"{p1} → {r[0]}")
         rl=await pages(True); open('sheet_large.pdf','wb').write(base64.b64decode(rl[1].split(',',1)[1]))

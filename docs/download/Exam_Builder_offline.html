@@ -190,6 +190,22 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .fmtbar .fsep{width:1px;height:18px;background:var(--line);margin:0 3px}
 .fmtbar button[data-fmt=clear]{font:12px system-ui,sans-serif;color:var(--muted)}
 .fmtbar .fhint{font-size:11.5px;color:var(--muted);margin-left:4px}
+.keytog{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;color:#B03A2E;border:1px solid #EBCFC9;border-radius:7px;padding:3px 7px;cursor:pointer;background:#FDF5F3}
+.fr-list{max-height:40vh;overflow:auto;display:flex;flex-direction:column;gap:4px;margin-top:6px}
+.fr-list button{text-align:left;border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 9px;cursor:pointer;font-size:13px}
+.fr-list button:hover{border-color:var(--gold);background:var(--gold-xl)}
+.fr-list mark{background:#FFE58A;padding:0 1px;border-radius:2px}
+.btn.cor{color:#9aa59a}
+.btn.cor.on{background:#2E7D32;border-color:#2E7D32;color:#fff}
+.btn.on-t{background:var(--ink);border-color:var(--ink);color:#fff}
+.ansbox{border:1px dashed #E3B3AB;background:#FDF5F3;border-radius:8px;padding:6px 8px;display:flex;flex-direction:column;gap:4px}
+.ansbox textarea{border:1px solid #EBCFC9;border-radius:7px;padding:6px 9px;font-size:13.5px;min-height:44px;background:#fff}
+.subs{display:flex;flex-direction:column;gap:8px;border-left:3px solid var(--line);padding-left:10px}
+.sub{display:flex;flex-direction:column;gap:5px}
+.sub-row{display:flex;gap:8px;align-items:flex-start}
+.sub-row b{padding-top:6px;min-width:24px}
+.sub-row textarea{flex:1;min-height:40px}
+.sub-ctl input[type=number]{width:64px}
 .opts{display:flex;flex-direction:column;gap:5px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#FFFDF8}
 .opt-row{display:flex;align-items:center;gap:7px}
 .opt-row b{width:18px;color:var(--gold-d)}
@@ -246,6 +262,8 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
       <button data-dl="large"><b>Large-print exam</b><span>16 pt, double spacing (accommodations)</span></button>
       <button data-dl="cover"><b>Cover page only</b><span>Just the front page</span></button>
       <button data-dl="rubric" id="dlRubric" class="hidden"><b>Rubric page only</b><span>The teacher's scoring page</span></button>
+      <button data-dl="key"><b>Answer key</b><span>Teacher copy: correct options ✓ and model answers in red</span></button>
+      <button data-dl="versions"><b>Versions A, B, C…</b><span>Shuffled copies for students sitting side by side</span></button>
       <button data-dl="questions"><b>Questions only</b><span>Without the cover page</span></button>
     </div>
   </span>
@@ -338,6 +356,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
         <button class="btn sm" id="graphGlobal" title="Plot functions or add blank axes / grid paper">📈 Graph</button>
         <button class="btn sm" id="pasteText">📋 Paste questions</button>
         <button class="btn sm open-prompt">🤖 Prompt for your AI</button>
+        <button class="btn sm" id="frBtn" title="Find &amp; replace in all questions (Ctrl/⌘ + H)">🔎 Find &amp; replace</button>
         <button class="btn sm" id="formatHelp">ⓘ Format &amp; maths help</button>
         <span class="sp" style="flex:1"></span>
         <button class="btn sm danger" id="clearAll">Clear all</button>
@@ -364,6 +383,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
       <span class="step">3</span><h2>Preview</h2>
       <span class="status" id="status"></span>
       <span class="zoom"><button class="btn icon" id="zoomOut" title="Zoom out">−</button><span id="zoomLbl">Fit</span><button class="btn icon" id="zoomIn" title="Zoom in">+</button></span>
+      <label class="keytog" title="Preview the answer key (teacher copy)"><input type="checkbox" id="pvKey"> Key</label>
       <button class="btn sm" id="btnOpenTab" title="Open the PDF in a new tab">⤢</button>
       <button class="btn sm" id="btnRefresh">↻ Refresh</button>
       <button class="btn sm primary" id="btnDownload2">⬇ PDF</button>
@@ -432,6 +452,8 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
       <li><b>**bold**</b>, <i>*italic*</i>, and lines starting with <b>- </b> become bullet points.</li>
       <li>Don't know LaTeX? Use <b>∑ Equation</b> — click buttons to build the formula; it writes the LaTeX for you.</li>
       <li>A price like “$5 and $10” stays as normal text. Write <b>\$</b> if a dollar sign is ever mistaken for maths.</li>
+      <li>Sub-questions: lines like <b>(a) Name the gas. [1] {lines: 2}</b> inside a question become parts (a), (b)… with their own marks.</li>
+      <li>Answer key: <b>{correct}</b> after the right MCQ option, and a line <b>Model answer: …</b> under a question or sub-question. Both only appear on the answer key.</li>
       <li>Multiple choice: add <b>{mcq}</b> (one answer, ○ bubbles) or <b>{mcq: multi}</b> (several answers, ☐ boxes); <b>{cols: 2}</b> puts options in 2 columns. Or choose <b>Type</b> on the question card.</li>
       <li>Biology: <b>*Escherichia coli*</b> → italics; <b>▦ Table</b> on a card inserts a table (Punnett squares, results tables); <b>🏷 Label diagram</b> on an image adds label lines for students.</li>
       <li>Chemistry examples: <b>\ce{H2SO4}</b>, <b>\ce{Na+ + Cl- -> NaCl}</b>, <b>\ce{N2 + 3H2 &lt;=&gt; 2NH3}</b>, <b>\ce{CaCO3 v}</b>.</li>
@@ -619,6 +641,38 @@ x = 3
 
 <div class="updbar hidden" id="updBar">A new version of Exam Builder is ready. <button class="btn sm primary" id="updGo">Update now</button></div>
 <div class="wm" aria-hidden="true">© Jishnu</div>
+<!-- VERSIONS -->
+<div class="modal" id="verModal">
+  <div class="box">
+    <h3>Print versions A, B, C…</h3>
+    <p class="hint" style="margin:4px 0 10px">Each version has the same questions in a different order, so students sitting side by side get different papers. Your exam itself doesn't change — the shuffling only happens in the downloaded PDFs, and it is the same every time (Version B is always the same Version B).</p>
+    <div class="fields"><label class="f">Number of versions<select id="verN"><option>2</option><option selected>3</option><option>4</option></select></label></div>
+    <div class="checks" style="flex-direction:column;gap:8px;margin-top:10px">
+      <label><input type="checkbox" id="verQ" checked> Shuffle the order of the questions inside each part</label>
+      <label><input type="checkbox" id="verO" checked> Shuffle the MCQ options (“All / None of the above” stay last)</label>
+      <label><input type="checkbox" id="verK" checked> Also download an answer key for each version</label>
+      <label><input type="checkbox" id="verL"> Large print (16 pt, double spacing)</label>
+    </div>
+    <p class="hint" style="margin:10px 0 0">Questions never move past a part heading or a text/passage, so they stay with the reading, table or picture they belong to. Your browser may ask once to allow several downloads.</p>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" data-close>Cancel</button><button class="btn primary" id="verGo">Download versions</button></div>
+  </div>
+</div>
+
+<!-- FIND & REPLACE -->
+<div class="modal" id="frModal">
+  <div class="box">
+    <h3>Find &amp; replace</h3>
+    <div class="fields" style="margin-top:8px">
+      <label class="f">Find<input id="frFind" autocomplete="off"></label>
+      <label class="f">Replace with<input id="frRep" autocomplete="off"></label>
+    </div>
+    <div class="checks"><label><input type="checkbox" id="frCase"> Match case</label><label><input type="checkbox" id="frWord"> Whole words only</label></div>
+    <div class="hint" id="frInfo" style="margin-top:8px"></div>
+    <div class="fr-list" id="frList"></div>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" data-close>Close</button><button class="btn primary" id="frGo" disabled>Replace all</button></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>/** @license
@@ -4727,7 +4781,10 @@ function finishBlock(b){
   let lines = b.lines.slice();
   while(lines.length && !lines[lines.length - 1].trim()) lines.pop();
   while(lines.length && !lines[0].trim()) lines.shift();
-  let text = lines.join("\n");
+  // tags for the question itself are read from its stem only — not from its (a), (b)… sub-question lines
+  const firstSub = b.type === "q" ? lines.findIndex(l => RE_SUB.test(l) && !!takeMarks(l.replace(RE_LINES, " ").replace(/\s+$/, "")).marks) : -1;
+  const tail = firstSub > 0 ? "\n" + lines.slice(firstSub).join("\n") : "";
+  let text = (firstSub > 0 ? lines.slice(0, firstSub) : lines).join("\n");
   let ansLines = "";
   const lm = text.match(RE_LINES);
   if(lm){ ansLines = lm[1]; text = text.replace(RE_LINES, " ").replace(/[ \t]+\n/g, "\n").trim(); }
@@ -4739,18 +4796,58 @@ function finishBlock(b){
   const cm = text.match(RE_COLS);
   if(cm){ optCols = cm[1]; text = text.replace(RE_COLS, " ").replace(/[ \t]+\n/g, "\n").trim(); }
   let marks = "";
+  if(firstSub > 0){
+    const st = takeMarks(text.split("\n")[0]); if(st.marks){ marks = st.marks; text = [st.s].concat(text.split("\n").slice(1)).join("\n"); }
+    const q = { id: nid(), type: "q", text: text + tail, marks, lines: ansLines, img: null, mcq, optCols, width };
+    if(mcq) extractOptions(q);
+    splitSubsAndAnswers(q);
+    return q;
+  }
   if(b.type === "q" || b.type === "section"){
     const ls = text.split("\n");
     let r = takeMarks(ls[0]);
     if(r.marks){ ls[0] = r.s; marks = r.marks; }
-    else if(ls.length > 1){ r = takeMarks(ls[ls.length - 1]); if(r.marks){ ls[ls.length - 1] = r.s; marks = r.marks; } }
+    else if(ls.length > 1 && !RE_SUB.test(ls[ls.length - 1]) && !RE_ANSWER.test(ls[ls.length - 1]) && !ls.some(l => RE_ANSWER.test(l))){ r = takeMarks(ls[ls.length - 1]); if(r.marks){ ls[ls.length - 1] = r.s; marks = r.marks; } }
     text = ls.join("\n").trim();
   }
   if(b.type === "section") return { id: nid(), type: "section", text: text.replace(/^#+\s*/, "").replace(/^\*\*|\*\*$/g, ""), marks: marks };
   if(b.type === "note") return text ? { id: nid(), type: "note", text, img: null } : null;
   const q = { id: nid(), type: "q", text, marks, lines: ansLines, img: null, mcq, optCols, width };
   if(mcq) extractOptions(q);
+  splitSubsAndAnswers(q);
   return q;
+}
+const RE_SUB = /^\s*\(([a-h])\)\s*(.*)$/i;
+const RE_ANSWER = /^\s*(?:model answer|answer key|mark scheme|marking points?)\s*:\s*(.*)$/i;
+// pull "Model answer: …" lines out of a text block
+function takeAnswer(lines){
+  const k = lines.findIndex(l => RE_ANSWER.test(l));
+  if(k < 0) return { lines, answer: "" };
+  const ans = [lines[k].match(RE_ANSWER)[1]].concat(lines.slice(k + 1)).join("\n").trim();
+  return { lines: lines.slice(0, k), answer: ans };
+}
+// "(a) … [2]" lines inside a question become sub-questions with their own marks
+function splitSubsAndAnswers(q){
+  let ls = String(q.text || "").split("\n");
+  const starts = [];
+  ls.forEach((l, i) => { const m = l.match(RE_SUB); if(m){ const clean = l.replace(RE_LINES, " "); if(takeMarks(clean.replace(/\s+$/, "")).marks) starts.push(i); } });
+  if(!q.mcq && starts.length){
+    const stem = ls.slice(0, starts[0]);
+    q.subs = starts.map((st, k) => {
+      const block = ls.slice(st, k + 1 < starts.length ? starts[k + 1] : ls.length);
+      let first = block[0].replace(RE_SUB, "$2");
+      let lines = "";
+      const lm = first.match(RE_LINES); if(lm){ lines = lm[1]; first = first.replace(RE_LINES, " "); }
+      const mk = takeMarks(first.replace(/\s+$/, ""));
+      const ta = takeAnswer([mk.s].concat(block.slice(1)));
+      return { id: nid(), text: ta.lines.join("\n").trim(), marks: mk.marks, lines, space: "lines", answer: ta.answer };
+    });
+    ls = stem;
+    if(q.marks && q.subs.some(sb => num(sb.marks) > 0)) q.marks = "";
+  }
+  const ta = takeAnswer(ls);
+  q.text = ta.lines.join("\n").replace(/\s+$/, "");
+  if(ta.answer) q.answer = ta.answer;
 }
 function parseText(txt){
   txt = txt.replace(/\r\n?/g, "\n").replace(/\t/g, "    ").replace(/^﻿/, "");
@@ -4848,7 +4945,7 @@ function computeMeta(){
       curSec = { item: it, qsum: 0 }; secs.push(curSec);
     }else if(it.type === "q"){
       n++; meta[it.id] = n;
-      if(curSec) curSec.qsum += num(it.marks); else looseMarks += num(it.marks);
+      if(curSec) curSec.qsum += qMarks(it); else looseMarks += qMarks(it);
     }
   }
   secs.forEach(s => { s.total = s.item.marks !== "" && s.item.marks != null && num(s.item.marks) > 0 ? num(s.item.marks) : s.qsum; meta[s.item.id] = s.total; });
@@ -4933,25 +5030,32 @@ function render(){
         ${fmtBar(it)}
       <textarea data-f="text" placeholder="Instructions, a reading passage, a diagram caption…">${esc(it.text)}</textarea>
         <div class="rich hidden" data-rich></div>
-        ${imgBlock}<div class="row"><button class="btn sm" data-act="eq">∑ Equation</button><button class="btn sm" data-act="graph">📈 ${it.graph ? "Edit graph" : "Graph"}</button>${it.img ? "" : `<button class="btn sm" data-act="addimg">＋ Add image</button>`}</div>
+        ${imgBlock}<div class="row"><button class="btn sm" data-act="eq">∑ Equation</button><button class="btn sm" data-act="graph">📈 ${it.graph ? "Edit graph" : "Graph"}</button>${it.img ? "" : `<button class="btn sm" data-act="addimg">＋ Add image</button>`}
+        <span class="grow"></span><button class="btn sm ${it.lineNums ? "on-t" : ""}" data-act="linenums" title="Number every 5th line (for reading passages)">№ Line numbers</button><button class="btn sm ${it.newPage ? "on-t" : ""}" data-act="newpage" title="Start on a new page">⤓ New page</button></div>
       </div></div>`;
     }
     return `<div class="card" data-id="${it.id}"><div class="badge">${meta[it.id]}</div><div class="body">
       <div class="row"><span class="kind">Question ${meta[it.id]}</span>${tools}</div>
       ${fmtBar(it)}
       <textarea data-f="text" placeholder="${it.img ? "Optional text above the image…" : "Type the question… maths: $x^2+1$ · or use ∑ Equation"}">${esc(it.text)}</textarea>
-      ${it.mcq ? `<div class="opts">${(it.options || []).map((o, oi) => `<div class="opt-row" data-oi="${oi}"><b>${LETTERS[oi].toUpperCase()}.</b><input type="text" data-opt="${oi}" value="${esc(o)}" placeholder="Option ${LETTERS[oi].toUpperCase()} — maths: $x^2$"><button class="btn icon danger" data-act="optdel" data-oi="${oi}" title="Remove option">✕</button></div>`).join("")}
+      ${it.mcq ? `<div class="opts">${(it.options || []).map((o, oi) => `<div class="opt-row" data-oi="${oi}"><b>${LETTERS[oi].toUpperCase()}.</b><input type="text" data-opt="${oi}" value="${esc(o)}" placeholder="Option ${LETTERS[oi].toUpperCase()} — maths: $x^2$"><button class="btn icon cor ${(it.correct || []).includes(oi) ? "on" : ""}" data-act="correct" data-oi="${oi}" title="Mark as the correct answer (for the answer key)">✓</button><button class="btn icon danger" data-act="optdel" data-oi="${oi}" title="Remove option">✕</button></div>`).join("")}
         <div class="opt-add"><button class="btn sm" data-act="optadd">＋ Add option</button><span class="hint">Press Enter in an option to add the next one</span></div></div>` : ""}
       <div class="rich hidden" data-rich></div>
       ${imgBlock}
+      ${subsBlock(it)}
+      ${it.mcq ? "" : ansBlock(it, null)}
       <div class="row">
-        <label>Marks <input type="number" min="0" step="0.5" data-f="marks" value="${esc(it.marks)}"></label>
-        ${S.d.answerMode === "sheet" ? `<label title="Students answer on a separate sheet — change this under Exam details">Answer lines <input type="number" disabled value="" placeholder="sheet" style="opacity:.5"></label>` : `<label>Answer lines <input type="number" min="0" max="40" data-f="lines" value="${esc(it.lines)}"></label>`}
+        ${(it.subs || []).some(sb => num(sb.marks) > 0) ? `<label title="The sum of the sub-question marks">Marks <input type="number" disabled value="${fmt(qMarks(it))}" style="opacity:.7"></label>` : `<label>Marks <input type="number" min="0" step="0.5" data-f="marks" value="${esc(it.marks)}"></label>`}
+        ${it.mcq ? "" : spaceCtl(it, "data-f")}
         <label>Part <select data-part>${partOpts(it.id)}</select></label>
         <label>Width <select data-f="width">${opt("", "Full", it.width)}${opt("half", "Half · 2 per row", it.width)}</select></label>
         <label>Type <select data-f="mcq">${opt("", "Written", it.mcq)}${opt("single", "MCQ · one answer", it.mcq)}${opt("multi", "MCQ · multiple answers", it.mcq)}</select></label>
         ${it.mcq || /^\s*\(?[a-hA-H][\).]/m.test(qText(it)) ? `<label>Options <select data-f="optCols">${opt("", "1 per line", it.optCols)}${opt("2", "2 columns", it.optCols)}${opt("4", "4 columns", it.optCols)}</select></label>` : ""}
         <span class="grow"></span>
+        <button class="btn sm ${it.newPage ? "on-t" : ""}" data-act="newpage" title="Start this question on a new page">⤓ New page</button>
+        <button class="btn sm ${it.lineNums ? "on-t" : ""}" data-act="linenums" title="Number every 5th line of the question text">№ Line numbers</button>
+        ${it.mcq ? "" : `<button class="btn sm" data-act="subadd" title="Add (a), (b), (c)… parts with their own marks">＋ Sub-question</button>`}
+        ${it.mcq || (it.answer || "").trim() || it._ans ? "" : `<button class="btn sm" data-act="showans" title="Model answer for the answer key (teacher copy)">✎ Model answer</button>`}
         <button class="btn sm" data-act="table" title="Insert a table (data table, Punnett square…)">▦ Table</button>
         <button class="btn sm" data-act="eq" title="Insert an equation">∑ Equation</button>
         <button class="btn sm" data-act="graph" title="Plot a graph or add axes">📈 ${it.graph ? "Edit graph" : "Graph"}</button>
@@ -4962,6 +5066,38 @@ function render(){
   list.querySelectorAll("textarea").forEach(autoGrow);
   list.querySelectorAll(".card").forEach(c => { const it = S.items.find(x => x.id === c.dataset.id); if(it && it.type !== "section") updateRich(c, it); });
   if(S.d.rubricOn && !document.activeElement.closest?.("#rubricBox")) renderRubric();
+}
+// answer space selector + size (for a question or a sub-question)
+function spaceCtl(o, attr, sid){
+  if(S.d.answerMode === "sheet") return `<label title="Students answer on a separate sheet — change this under Exam details">Answer space <input type="number" disabled placeholder="sheet" style="opacity:.5;width:64px"></label>`;
+  const a = sid ? `data-sub="${sid}" data-sf` : attr;
+  const k = o.space || "lines";
+  return `<label>Answer <select ${a}="space">${[["lines", "Lines"], ["blank", "Blank space"], ["grid", "Grid"], ["box", "Box"]].map(([v, l]) => `<option value="${v}" ${k === v ? "selected" : ""}>${l}</option>`).join("")}</select>
+    <input type="number" min="0" max="40" ${a}="lines" value="${esc(o.lines || "")}" title="${k === "lines" ? "Number of lines" : "Height, in answer-line heights"}" placeholder="${k === "lines" ? "lines" : "size"}"></label>`;
+}
+function ansBlock(it, sb){
+  const o = sb || it, show = (o.answer || "").trim() || o._ans;
+  if(!show) return "";
+  const a = sb ? `data-sub="${sb.id}" data-sf="answer"` : `data-f="answer"`;
+  return `<div class="ansbox"><span class="kind" style="color:#B03A2E">✎ Model answer · only on the answer key</span><textarea ${a} placeholder="Model answer or marking points — shown in red on the answer key">${esc(o.answer || "")}</textarea></div>`;
+}
+function subsBlock(it){
+  const subs = it.subs || [];
+  if(!subs.length) return "";
+  return `<div class="subs">${subs.map((sb, k) => `<div class="sub" data-sid="${sb.id}">
+      <div class="sub-row"><b>(${LETTERS[k]})</b>
+        <textarea data-sub="${sb.id}" data-sf="text" placeholder="Sub-question (${LETTERS[k]})…">${esc(sb.text || "")}</textarea></div>
+      <div class="row sub-ctl">
+        <label>Marks <input type="number" min="0" step="0.5" data-sub="${sb.id}" data-sf="marks" value="${esc(sb.marks || "")}"></label>
+        ${spaceCtl(sb, null, sb.id)}
+        <span class="grow"></span>
+        ${(sb.answer || "").trim() || sb._ans ? "" : `<button class="btn sm" data-act="subans" data-sid="${sb.id}">✎ Model answer</button>`}
+        <button class="btn icon" data-act="subup" data-sid="${sb.id}" title="Move up" ${k === 0 ? "disabled" : ""}>↑</button>
+        <button class="btn icon danger" data-act="subdel" data-sid="${sb.id}" title="Remove">✕</button>
+      </div>
+      ${ansBlock(it, sb)}
+    </div>`).join("")}
+    <button class="btn sm" data-act="subadd">＋ Add (${LETTERS[subs.length]})</button></div>`;
 }
 function autoGrow(t){ t.style.height = "auto"; t.style.height = Math.min(420, t.scrollHeight + 2) + "px"; }
 
@@ -4976,6 +5112,22 @@ function onListInput(e){
     if(it.imgWrap && (it.imgSize || 100) > 60) it.imgSize = 40;     // a sensible size for text beside a picture
     render(); changed(); return;
   }
+  if(e.target.dataset.sub){
+    const sb = (it.subs || []).find(x => x.id === e.target.dataset.sub); if(!sb) return;
+    const f = e.target.dataset.sf; sb[f] = e.target.value;
+    if(e.target.tagName === "TEXTAREA") autoGrow(e.target);
+    if(f === "space"){ render(); changed(); return; }
+    if(f === "marks"){
+      // keep the question's own marks box in step (it shows the sum when the parts carry marks) — without redrawing, so typing isn't interrupted
+      const mi = card.querySelector('input[data-f=marks]') || card.querySelector('input[title^="The sum"]');
+      const sum = it.subs.some(x => num(x.marks) > 0);
+      if(mi){ mi.disabled = sum; mi.style.opacity = sum ? .7 : 1; mi.value = sum ? fmt(qMarks(it)) : (it.marks || ""); mi.title = sum ? "The sum of the sub-question marks" : ""; if(sum) mi.removeAttribute("data-f"); else mi.setAttribute("data-f", "marks"); }
+      refreshTotals();
+    }
+    clearTimeout(card._rt); card._rt = setTimeout(() => updateRich(card, it), 250);
+    changed(); return;
+  }
+  if(e.target.dataset.f === "space"){ it.space = e.target.value; render(); changed(); return; }
   if(e.target.dataset.opt != null){ ensureOptions(it); it.options[+e.target.dataset.opt] = e.target.value; clearTimeout(card._rt); card._rt = setTimeout(() => updateRich(card, it), 250); changed(); return; }
   const f = e.target.dataset.f; if(!f) return;
   it[f] = f === "imgSize" ? +e.target.value : e.target.value;
@@ -4987,13 +5139,15 @@ function onListInput(e){
   if(f === "optCols" || f === "width"){ updateRich(card, it); changed(); return; }
   if(e.target.tagName === "TEXTAREA"){ autoGrow(e.target); clearTimeout(card._rt); card._rt = setTimeout(() => updateRich(card, it), 250); }
   if(f === "imgSize") e.target.nextElementSibling.textContent = e.target.value + "%";
-  if(f === "marks"){ // update totals without re-rendering inputs
-    const { auto, total, qCount, secs, meta } = computeMeta();
-    $("#autoTotalHint").textContent = "auto: " + fmt(auto);
-    $("#summary").innerHTML = `<span><b>${qCount}</b> question${qCount === 1 ? "" : "s"}</span><span><b>${secs.length}</b> part${secs.length === 1 ? "" : "s"}</span><span>Total <b>${fmt(total)}</b> marks</span>`;
-    secs.forEach(s => { const inp = document.querySelector(`.card[data-id="${s.item.id}"] input[data-f=marks]`); if(inp) inp.placeholder = fmt(meta[s.item.id]); });
-  }
+  if(f === "marks") refreshTotals();
   changed();
+}
+// update totals without re-rendering inputs
+function refreshTotals(){
+  const { auto, total, qCount, secs, meta } = computeMeta();
+  $("#autoTotalHint").textContent = "auto: " + fmt(auto);
+  $("#summary").innerHTML = `<span><b>${qCount}</b> question${qCount === 1 ? "" : "s"}</span><span><b>${secs.length}</b> part${secs.length === 1 ? "" : "s"}</span><span>Total <b>${fmt(total)}</b> marks</span>`;
+  secs.forEach(s => { const inp = document.querySelector(`.card[data-id="${s.item.id}"] input[data-f=marks]`); if(inp) inp.placeholder = fmt(meta[s.item.id]); });
 }
 async function onListClick(e){
   const b = e.target.closest("[data-act]"); if(!b) return;
@@ -5007,6 +5161,14 @@ async function onListClick(e){
     case "del": S.items.splice(i, 1); break;
     case "rmimg": it.img = null; delete it.graph; delete it.labels; break;
     case "align": it.imgAlign = b.dataset.v; break;
+    case "newpage": it.newPage = !it.newPage; break;
+    case "linenums": it.lineNums = !it.lineNums; break;
+    case "correct": { ensureOptions(it); const oi = +b.dataset.oi; let c = new Set(it.correct || []); if(c.has(oi)) c.delete(oi); else { if(it.mcq !== "multi") c = new Set(); c.add(oi); } it.correct = [...c].sort((a, b2) => a - b2); break; }
+    case "showans": it._ans = true; render(); setTimeout(() => { const t = document.querySelector(`.card[data-id="${it.id}"] textarea[data-f=answer]`); if(t) t.focus(); }, 30); return;
+    case "subadd": { it.subs = it.subs || []; const sb = { id: nid(), text: "", marks: "", lines: "", space: "lines", answer: "" }; it.subs.push(sb); render(); changed(); setTimeout(() => { const t = document.querySelector(`.card[data-id="${it.id}"] textarea[data-sub="${sb.id}"][data-sf=text]`); if(t) t.focus(); }, 30); return; }
+    case "subdel": { const k = (it.subs || []).findIndex(x => x.id === b.dataset.sid); if(k >= 0) it.subs.splice(k, 1); if(!it.subs.length) delete it.subs; break; }
+    case "subup": { const k = (it.subs || []).findIndex(x => x.id === b.dataset.sid); if(k > 0) [it.subs[k - 1], it.subs[k]] = [it.subs[k], it.subs[k - 1]]; break; }
+    case "subans": { const sb = (it.subs || []).find(x => x.id === b.dataset.sid); if(sb) sb._ans = true; render(); setTimeout(() => { const t = document.querySelector(`.card[data-id="${it.id}"] textarea[data-sub="${b.dataset.sid}"][data-sf=answer]`); if(t) t.focus(); }, 30); return; }
     case "sec2col": { const all = window.__secAllHalf(it.id); window.__secQs(it.id).forEach(q => q.width = all ? "" : "half"); toast(all ? "Part set back to one column" : "Questions in this part now print two per row"); lastEdited = it.id; break; }
     case "optadd": ensureOptions(it); it.options.push(""); lastEdited = it.id; render(); changed(); focusOpt(it.id, it.options.length - 1); return;
     case "optdel": it.options.splice(+b.dataset.oi, 1); break;
@@ -5027,18 +5189,36 @@ const OPT_LINE = /^\s*(?:\(?[a-hA-H]\)|[a-hA-H][\.\)]|\(?(?:i|ii|iii|iv|v|vi|vii
 const OPT_LETTER = /^\s*\(?([a-hA-H])[\).]\s*/;
 const LETTERS = "abcdefghijklmnop";
 // question text as printed: stem + MCQ options
-function qText(it){
+function qText(it, key){
   if(!it || !Array.isArray(it.options) || !it.options.length) return (it && it.text) || "";
-  const opts = it.options.filter(o => String(o || "").trim());
+  const cor = new Set(it.correct || []);
+  const opts = it.options.map((o, i) => [o, i]).filter(([o]) => String(o || "").trim());
   if(!opts.length) return it.text || "";
-  return (it.text || "").replace(/\s+$/, "") + "\n" + opts.map((o, i) => LETTERS[i].toUpperCase() + ". " + o).join("\n");
+  return (it.text || "").replace(/\s+$/, "") + "\n" + opts.map(([o, i], k) => {
+    const L = LETTERS[k].toUpperCase() + ". ";
+    return key && cor.has(i) ? "{color:#C0392B}**" + L + o + "  ✓**{/color}" : L + o;
+  }).join("\n");
+}
+// marks of a question: the sum of its sub-questions when they carry marks
+function qMarks(it){
+  if(it && Array.isArray(it.subs) && it.subs.some(sb => num(sb.marks) > 0)) return it.subs.reduce((a, sb) => a + num(sb.marks), 0);
+  return num(it && it.marks);
 }
 // pull "a) … b) …" lines out of the text into separate options
 function extractOptions(it){
   const keep = [], opts = [];
-  String(it.text || "").split("\n").forEach(l => { if(OPT_LETTER.test(l) && /^\s*\(?[a-hA-H][\).](\s|$)/.test(l)) opts.push(l.replace(OPT_LETTER, "").trim()); else keep.push(l); });
+  const cor = [];
+  String(it.text || "").split("\n").forEach(l => {
+    if(OPT_LETTER.test(l) && /^\s*\(?[a-hA-H][\).](\s|$)/.test(l)){
+      let o = l.replace(OPT_LETTER, "").trim();
+      // "{correct}", "(correct)", "[correct]" or a trailing ✓ marks the right answer
+      if(/\{\s*correct\s*\}|\((?:correct)\)|\[(?:correct)\]|\s*[✓✔]\s*$/i.test(o)){ cor.push(opts.length); o = o.replace(/\s*(\{\s*correct\s*\}|\(correct\)|\[correct\]|[✓✔])\s*/ig, " ").trim(); }
+      opts.push(o);
+    } else keep.push(l);
+  });
   it.text = keep.join("\n").replace(/\s+$/, "");
   it.options = opts.length ? opts : ["", "", "", ""];
+  if(cor.length) it.correct = cor;
 }
 function ensureOptions(it){ if(it.type === "q" && it.mcq && !Array.isArray(it.options)) extractOptions(it); }
 const RE_COLOR_OPEN = /^\{color:\s*(#[0-9a-fA-F]{3,8}|[a-zA-Z]+)\s*\}/;
@@ -5155,7 +5335,7 @@ function parseRich(text, base){
   const para = l => {
     let s = l.replace(/\s+$/, ""), ind = 0, bullet = false;
     if(/^\s*[-•]\s+|^\s*\*\s+/.test(s)){ bullet = true; ind = 5; s = s.replace(/^\s*[-•*]\s+/, ""); }
-    const opt = !bullet && OPT_LINE.test(s);
+    const opt = !bullet && OPT_LINE.test(s.replace(/^\s*(\{color:[^}]*\}|\*\*|\*|\+\+)+/, ""));   // formatting before "A." still counts as an option
     if(opt) ind = 5;
     return { type: "para", runs: parseInline(s.trim(), base), ind, bullet, opt };
   };
@@ -5281,10 +5461,12 @@ async function prepareMath(){
   if(!FONT_R && window.__PWA__){ try{ await ensureFonts(); }catch(e){ console.warn(e); } }
   await mathReady;
   const jobs = [];
+  const want = (t, base) => { if(!t || !(hasRich(t) || base)) return; eachMath(parseRich(t, base), (tex, disp) => { const m = texSVG(tex, disp); if(m.svg && !m.png && !m.err) jobs.push(mathPNG(m).catch(e => { m.err = true; m.errMsg = "Couldn't draw this equation"; })); }); };
   for(const it of S.items){
-    const t = qText(it);
-    if(!t || !(hasRich(t) || fmtOf(it))) continue;
-    eachMath(parseRich(t, fmtOf(it)), (tex, disp) => { const m = texSVG(tex, disp); if(m.svg && !m.png && !m.err) jobs.push(mathPNG(m).catch(e => { m.err = true; m.errMsg = "Couldn't draw this equation"; })); });
+    want(qText(it), fmtOf(it));
+    if(it.options && (it.correct || []).length) want(qText(it, true), fmtOf(it));
+    want(it.answer, null);
+    (it.subs || []).forEach(sb => { want(sb.text, null); want(sb.answer, null); });
   }
   await Promise.all(jobs);
 }
@@ -5314,9 +5496,11 @@ function updateRich(card, it){
   const T = qText(it);
   const blocks = (hasRich(T) || it.mcq || fmtOf(it)) && mathOK ? parseRich(T, fmtOf(it)) : [];
   const rich = ((it.mcq || fmtOf(it)) && blocks.length) || blocks.some(b => b.type === "display" || b.type === "table" || b.bullet || (b.runs || []).some(r => r.t === "math" || r.b || r.i || r.u || r.c));
-  if(!rich){ box.classList.add("hidden"); box.innerHTML = ""; return; }
+  const subs = it.subs || [];
+  const subRich = subs.some(sb => hasRich(sb.text));
+  if(!rich && !subRich){ box.classList.add("hidden"); box.innerHTML = ""; return; }
   box.classList.remove("hidden");
-  box.innerHTML = richHTML(T, it);
+  box.innerHTML = (rich ? richHTML(T, it) : "") + subs.map((sb, k) => `<div style="margin-top:4px"><b>(${LETTERS[k]})</b> ${mathOK ? richHTML(sb.text || "") : esc(sb.text || "")}${num(sb.marks) > 0 ? ` <span style="color:var(--muted)">[${fmt(num(sb.marks))}]</span>` : ""}</div>`).join("");
 }
 
 /* ---------------- PDF ---------------- */
@@ -5350,10 +5534,15 @@ function buildPDF(opt){
   // fonts
   const allText = [D.title, D.subtitle, D.year, D.subject, D.duration, D.teacher, D.className, D.date, D.instructions, D.school, ...S.items.map(i => qText(i).replace(/\$\$[\s\S]*?\$\$|\$[^$\n]*\$/g, ""))].join("\n");
   let SANS = "helvetica", SERIF = "times";
-  if(needsUnicode(allText)){
+  const uni = needsUnicode(allText);
+  let HAS_DJV = false;
+  if((uni || opt.key) && FONT_R){
     doc.addFileToVFS("DejaVuSans.ttf", FONT_R); doc.addFont("DejaVuSans.ttf", "DejaVu", "normal");
     doc.addFileToVFS("DejaVuSans-Bold.ttf", FONT_B); doc.addFont("DejaVuSans-Bold.ttf", "DejaVu", "bold");
     doc.addFileToVFS("DejaVuSans-Oblique.ttf", FONT_I); doc.addFont("DejaVuSans-Oblique.ttf", "DejaVu", "italic");
+    HAS_DJV = true;
+  }
+  if(uni && HAS_DJV){
     SANS = "DejaVu";
     if(needsUnicode((D.title || "") + (D.school || ""))) SERIF = "DejaVu";
   }
@@ -5410,6 +5599,8 @@ function buildPDF(opt){
   if(M.total > 0) pills.push(["TOTAL", fmt(M.total) + " points"]);
   if(LARGE) pills.push(["FORMAT", "Large print"]);
   if(D.answerMode === "sheet") pills.push(["ANSWERS", "Separate sheet"]);
+  if(opt.version) pills.unshift(["VERSION", opt.version]);
+  if(opt.key) pills.unshift(["ANSWER KEY", "Teacher copy"]);
 
   function cover(P, draw){
     let y = COVER_TOP;
@@ -5672,7 +5863,10 @@ function buildPDF(opt){
     }
     const right = PW - MR;
     let rx = right;
-    if(D.nameEveryPage){
+    if(opt.key){
+      font(SANS, "bold", 8, [192, 57, 43]); const kl = "ANSWER KEY · TEACHER COPY";
+      const kw = doc.getTextWidth(kl) + kl.length * .4; doc.text(kl, right - kw, 19.5, { charSpace: .4 }); rx = right - kw - 6;
+    }else if(D.nameEveryPage){
       font(SANS, "bold", 7.5, MUTED); const lab = "NAME"; const lw2 = doc.getTextWidth(lab) + 2.5;
       const lineW = 46; rx = right - lineW - lw2;
       doc.text(lab, rx, 19.5, { charSpace: .5 });
@@ -5680,10 +5874,11 @@ function buildPDF(opt){
       rx -= 6;
     }
     font(SANS, "normal", 8.5, MUTED);
-    const label = [D.subject, D.title].filter(Boolean).join("  ·  ");
+    const label = [D.subject, D.title, opt.version ? "Version " + opt.version : ""].filter(Boolean).join("  ·  ");
     if(label){
       const maxW = rx - hx;
-      if(maxW > 15){ const s = fitText(label, maxW); doc.text(s, D.nameEveryPage ? hx : right, 19.5, { align: D.nameEveryPage ? "left" : "right" }); }
+      const leftAl = D.nameEveryPage || opt.key;
+      if(maxW > 15){ const s = fitText(label, maxW); doc.text(s, leftAl ? hx : right, 19.5, { align: leftAl ? "left" : "right" }); }
     }
     doc.setDrawColor(...ACC); doc.setLineWidth(.35); doc.line(ML, 24, PW - MR, 24);
   }
@@ -5719,7 +5914,8 @@ function buildPDF(opt){
       r.s.split(/(\s+)/).forEach(p => {
         if(!p) return;
         if(/^\s+$/.test(p)){ if(cur.length){ words.push(cur); cur = []; } return; }
-        cur.push({ t: "text", s: p, st, w: tw(p), u: !!r.u, c: r.c || "" });
+        if(HAS_DJV && SANS !== "DejaVu" && needsUnicode(p)){ doc.setFont("DejaVu", st === "normal" ? "normal" : "bold"); cur.push({ t: "text", s: p, st, djv: true, w: tw(p), u: !!r.u, c: r.c || "" }); setSt(st); }
+        else cur.push({ t: "text", s: p, st, w: tw(p), u: !!r.u, c: r.c || "" });
       });
     }
     if(cur.length) words.push(cur);
@@ -5753,7 +5949,7 @@ function buildPDF(opt){
     return rows.map((r, ri) => {
       let asc = TASC, desc = LH - TASC;
       r.forEach(w => w.forEach(p => { if(p.t === "math"){ asc = Math.max(asc, p.asc + .7); desc = Math.max(desc, p.desc + .7); } }));
-      return { h: asc + desc, asc, dx: (wrap && wrap.narrow && rowN[ri]) ? wrap.narrow.dx : 0, width: r.reduce((a, w) => a + w.reduce((x, p) => x + p.w, 0), 0) + SP * Math.max(0, r.length - 1), draw(x, y, color){
+      return { h: asc + desc, asc, txt: true, dx: (wrap && wrap.narrow && rowN[ri]) ? wrap.narrow.dx : 0, width: r.reduce((a, w) => a + w.reduce((x, p) => x + p.w, 0), 0) + SP * Math.max(0, r.length - 1), draw(x, y, color){
         doc.setFontSize(fs); doc.setTextColor(...(color || INK));
         let cx = x + (b.ind || 0);
         if(b.bullet && ri === 0){ setSt("bold"); doc.text("•", x + 1, y + asc); }
@@ -5769,7 +5965,7 @@ function buildPDF(opt){
           w.forEach(p => {
             if(p.t === "math") doc.addImage(p.m.png, "PNG", cx, y + asc - p.asc, p.w, p.asc + p.desc, mAlias(p.m), "FAST");
             else {
-              setSt(p.st);
+              if(p.djv) doc.setFont("DejaVu", p.st === "normal" ? "normal" : "bold"); else setSt(p.st);
               const tc = p.err ? [180, 60, 40] : p.c ? hexRgb(cssHex(p.c)) : (color || INK);
               doc.setTextColor(...tc);
               doc.text(p.s, cx, y + asc);
@@ -5868,6 +6064,38 @@ function buildPDF(opt){
     const ANS = Math.max(8.2, fs * mmPt * (SPC >= 2 ? 2.4 : 1.95));
     const pageAvail = BOTTOM - TOP;
     // a question (or text item) as a list of stackable parts
+    const KEY = !!opt.key, KEYC = [192, 57, 43], KEYBG = [253, 240, 237];
+    // answer space: lines | blank | grid | box, n "line heights" tall, from x0 to x1
+    function spaceParts(kind, n, x0, x1){
+      n = Math.max(0, Math.min(60, Math.round(num(n)))); if(!n) return [];
+      if(!kind || kind === "lines"){
+        const out = [{ h: 2, draw: () => {} }];
+        for(let k = 0; k < n; k++) out.push({ h: ANS, draw: yy => { doc.setDrawColor(...RULE); doc.setLineWidth(.22); doc.line(x0, yy + ANS, x1, yy + ANS); } });
+        return out;
+      }
+      const H = Math.min(n * ANS, pageAvail - 12);
+      return [{ h: H + 4, draw: yy => {
+        const y0 = yy + 2;
+        if(kind === "grid"){
+          doc.setDrawColor(222, 218, 210); doc.setLineWidth(.15);
+          for(let gx = x0; gx <= x1 + .01; gx += 5) doc.line(gx, y0, gx, y0 + H);
+          for(let gy = y0; gy <= y0 + H + .01; gy += 5) doc.line(x0, gy, x1, gy);
+          doc.setDrawColor(...RULE); doc.setLineWidth(.3); doc.rect(x0, y0, x1 - x0, H, "S");
+        }else if(kind === "box"){ doc.setDrawColor(...RULE); doc.setLineWidth(.35); doc.roundedRect(x0, y0, x1 - x0, H, 1.5, 1.5, "S"); }
+      } }];
+    }
+    // answer-key box (teacher copy): model answer in red, at least as tall as the student's space
+    function answerParts(text, x0, x1, minH){
+      const ls = layoutRich(text, x1 - x0 - 8, null);
+      const out = [{ h: 6.5, draw: yy => { doc.setFillColor(...KEYBG); doc.rect(x0, yy + 1.5, x1 - x0, 5, "F"); doc.setFillColor(...KEYC); doc.rect(x0, yy + 1.5, 1.2, 5, "F"); font(SANS, "bold", 7, KEYC); doc.text("MODEL ANSWER", x0 + 4, yy + 5.2, { charSpace: .6 }); } }];
+      ls.forEach(l => out.push({ h: l.h, draw: yy => { doc.setFillColor(...KEYBG); doc.rect(x0, yy, x1 - x0, l.h, "F"); doc.setFillColor(...KEYC); doc.rect(x0, yy, 1.2, l.h, "F"); if(l.draw){ font(SANS, "normal", fs, KEYC); l.draw(x0 + 4 + (l.dx || 0), yy, KEYC); } } }));
+      let h = out.reduce((a, p) => a + p.h, 0);
+      if(h < minH) out.push({ h: minH - h, draw: yy => { doc.setFillColor(...KEYBG); doc.rect(x0, yy, x1 - x0, minH - h, "F"); doc.setFillColor(...KEYC); doc.rect(x0, yy, 1.2, minH - h, "F"); } });
+      out.push({ h: 1.5, draw: () => {} });
+      return out;
+    }
+    const spaceH = (kind, n) => spaceParts(kind, n, 0, 10).reduce((a, p) => a + p.h, 0);
+    // a question (or text item) as a list of stackable parts
     function qBlock(it, X, W){
       const isQ = it.type === "q";
       const half = W < CW - 1;
@@ -5877,13 +6105,21 @@ function buildPDF(opt){
       let img = it.img ? imgDims(it, tw) : null;
       const WGAP = 5;
       const al = it.imgAlign || "left";
-      const wrap = !!(img && it.imgWrap && al !== "center" && qText(it).trim());
+      const T = qText(it, KEY);
+      const wrap = !!(img && it.imgWrap && al !== "center" && T.trim());
       if(wrap && tw - img.w - WGAP < tw * .3){ const nw = tw * .7 - WGAP; img = { w: nw, h: img.h * nw / img.w }; }   // keep at least 30% for the text
       const narrow = wrap ? { w: tw - img.w - WGAP, h: img.h + 1, dx: al === "left" ? img.w + WGAP : 0 } : null;
-      const lines = layoutRich(qText(it), tw, it, narrow);
-      const nAns = isQ && !SHEET ? Math.max(0, Math.min(60, Math.round(num(it.lines)))) : 0;
+      const lines = layoutRich(T, tw, it, narrow);
       const parts = [];
-      lines.forEach(l => parts.push({ h: l.h, draw: yy => { if(l.draw){ font(SANS, "normal", fs, INK); l.draw(tx + (l.dx || 0), yy); } } }));
+      let lineNo = 0;
+      lines.forEach(l => {
+        const showNo = it.lineNums && l.txt && (++lineNo % 5 === 0);
+        const no = lineNo;
+        parts.push({ h: l.h, draw: yy => {
+          if(l.draw){ font(SANS, "normal", fs, INK); l.draw(tx + (l.dx || 0), yy); }
+          if(showNo){ font(SANS, "normal", Math.max(7, fs - 3.5), MUTED); doc.text(String(no), X - 2.4, yy + (l.asc || TASC), { align: "right" }); }
+        } });
+      });
       if(wrap){
         // the picture sits at the top beside the text; reserve its height if the text is shorter
         const textH = lines.reduce((a, l) => a + l.h, 0);
@@ -5897,10 +6133,33 @@ function buildPDF(opt){
           doc.addImage(it.img.src, imgFmt(it.img.src), ix, yy + pad, img.w, img.h, "img_" + it.id, "FAST");
         } });
       }
-      if(nAns){
-        parts.push({ h: 2, draw: () => {} });
-        for(let k = 0; k < nAns; k++) parts.push({ h: ANS, draw: yy => { doc.setDrawColor(...RULE); doc.setLineWidth(.22); doc.line(tx, yy + ANS, X + W, yy + ANS); } });
+      // the question's own answer space (or, in the answer key, its model answer)
+      if(isQ){
+        const sp = SHEET ? [] : spaceParts(it.space, it.lines, tx, X + W);
+        if(KEY && (it.answer || "").trim()) parts.push(...answerParts(it.answer, tx, X + W, sp.reduce((a, p) => a + p.h, 0) - 3));
+        else parts.push(...sp);
       }
+      // sub-questions (a), (b), (c)…
+      const subs = isQ && Array.isArray(it.subs) ? it.subs : [];
+      subs.forEach((sb, k) => {
+        const lab = "(" + LETTERS[k] + ")", SI = Math.max(8, fs * .72);
+        const sx = tx + SI, sw = tw - SI;
+        const sl = layoutRich(sb.text || "", sw, null);
+        parts.push({ h: 2.5, draw: () => {} });
+        const base0 = sl[0] && sl[0].asc ? sl[0].asc : TASC;
+        if(!sl.length) sl.push({ h: LH, asc: TASC });
+        sl.forEach((l, li) => parts.push({ h: l.h, draw: yy => {
+          if(l.draw){ font(SANS, "normal", fs, INK); l.draw(sx + (l.dx || 0), yy); }
+          if(li === 0){
+            font(SANS, "bold", fs, INK); doc.text(lab, tx, yy + base0);
+            const mk = num(sb.marks);
+            if(D.showMarks && mk > 0){ font(SANS, "normal", fs - 1.5, MUTED); doc.text("[" + fmt(mk) + "]", X + W, yy + base0, { align: "right" }); }
+          }
+        } }));
+        const sp = SHEET ? [] : spaceParts(sb.space, sb.lines, sx, X + W);
+        if(KEY && (sb.answer || "").trim()) parts.push(...answerParts(sb.answer, sx, X + W, sp.reduce((a, p) => a + p.h, 0) - 3));
+        else parts.push(...sp);
+      });
       if(!parts.length) parts.push({ h: LH, draw: () => {} });
       if(isQ){
         const base0 = lines[0] && lines[0].asc && !lines[0].gap ? lines[0].asc : TASC;
@@ -5908,8 +6167,9 @@ function buildPDF(opt){
         parts[0].draw = yy => {
           fd(yy);
           font(SANS, "bold", fs, ACC_D); doc.text(M.meta[it.id] + ".", X, yy + base0);
-          const mk = num(it.marks);
-          if(D.showMarks && mk > 0){ font(SANS, "normal", fs - 1.5, MUTED); doc.text("[" + fmt(mk) + (half ? "]" : (mk === 1 ? " mark]" : " marks]")), X + W, yy + base0, { align: "right" }); }
+          const mk = qMarks(it);
+          // with sub-questions the marks are shown on each part; otherwise next to the question
+          if(D.showMarks && mk > 0 && !subs.some(sb => num(sb.marks) > 0)){ font(SANS, "normal", fs - 1.5, MUTED); doc.text("[" + fmt(mk) + (half ? "]" : (mk === 1 ? " mark]" : " marks]")), X + W, yy + base0, { align: "right" }); }
         };
       }
       const h = parts.reduce((a, p) => a + p.h, 0);
@@ -5942,10 +6202,11 @@ function buildPDF(opt){
         y += h + (COMPACT ? 4.5 : 6);
         continue;
       }
+      if(it.newPage && y > TOP + 1) newPage();
       // half-width questions sit side by side, two per row
       if(it.type === "q" && it.width === "half"){
         const nx = items[idx + 1];
-        const pair = nx && nx.type === "q" && nx.width === "half" ? [it, nx] : [it];
+        const pair = nx && nx.type === "q" && nx.width === "half" && !nx.newPage ? [it, nx] : [it];
         const GAP = 8, colW = (CW - GAP) / 2;
         const blocks = pair.map((q, k) => qBlock(q, ML + k * (colW + GAP), colW));
         const h = Math.max(...blocks.map(b => b.h));
@@ -6045,7 +6306,7 @@ async function preview(){
   pvBusy = true;
   try{
     await prepareMath();
-    const doc = buildPDF();
+    const doc = buildPDF({ key: !!(document.getElementById("pvKey") || {}).checked });
     lastBytes = doc.output("arraybuffer");
     const pg = (lastEdited && doc.__pageOf && doc.__pageOf[lastEdited]) || (lastEdited === null ? 1 : 0);
     await showPreview(lastBytes, pg);
@@ -6061,7 +6322,7 @@ $("#btnOpenTab").onclick = () => { if(!lastBytes) return; const u = URL.createOb
 let pvResizeT; new ResizeObserver(() => { clearTimeout(pvResizeT); pvResizeT = setTimeout(() => { if(lastBytes) showPreview(lastBytes, 0); }, 250); }).observe(document.getElementById("pv"));
 /* undo / redo — app-wide history of the whole exam */
 const H = { stack: [], idx: -1, t: null, restoring: false };
-function cloneItem(it){ const c = Object.assign({}, it); if(Array.isArray(it.options)) c.options = it.options.slice(); if(it.fmt) c.fmt = Object.assign({}, it.fmt); return c; }
+function cloneItem(it){ const c = Object.assign({}, it); if(Array.isArray(it.options)) c.options = it.options.slice(); if(Array.isArray(it.correct)) c.correct = it.correct.slice(); if(it.fmt) c.fmt = Object.assign({}, it.fmt); if(Array.isArray(it.subs)) c.subs = it.subs.map(x => Object.assign({}, x)); return c; }
 function snapSig(d, items){ return JSON.stringify({ d, items: items.map(i => Object.assign({}, i, { img: i.img ? i.img.src.length + ":" + i.img.w + ":" + i.img.h : null, labels: i.labels ? JSON.stringify(i.labels.pts) : 0, graph: i.graph ? JSON.stringify(i.graph) : 0 })) }); }
 function snapOf(){ const d = JSON.parse(JSON.stringify(S.d)), items = S.items.map(cloneItem); return { d, logo: S.logo, items, sig: snapSig(d, items) }; }
 function updUndoBtns(){ const u = document.getElementById("btnUndo"), r = document.getElementById("btnRedo"); if(u) u.disabled = !(H.idx > 0 || H.t); if(r) r.disabled = !(H.idx < H.stack.length - 1); }
@@ -6105,7 +6366,7 @@ function changed(){
   histSchedule(); saveLocal(); clearTimeout(pvT); $("#status").textContent = "updating…"; pvT = setTimeout(preview, 400); }
 async function download(opt){
   opt = opt || {};
-  const name = fileName().replace(/\.pdf$/, "") + (opt.coverOnly ? " (cover page)" : opt.rubricOnly ? " (rubric)" : opt.noCover ? " (questions)" : "") + ((opt.large || S.d.largePrint) ? " (large print)" : "") + ".pdf";
+  const name = fileName().replace(/\.pdf$/, "") + (opt.version ? " - Version " + opt.version : "") + (opt.key ? " (answer key)" : "") + (opt.coverOnly ? " (cover page)" : opt.rubricOnly ? " (rubric)" : opt.noCover ? " (questions)" : "") + ((opt.large || S.d.largePrint) ? " (large print)" : "") + ".pdf";
   try{ await prepareMath(); buildPDF(opt).save(name); toast("Saved " + name); }
   catch(e){ console.error(e); toast("Couldn't create the PDF: " + e.message); }
 }
@@ -6247,7 +6508,9 @@ const PAL = {
 const eq = { target: null, sel: null, tab: "visual", mf: null };
 let lastTA = null;
 document.addEventListener("focusout", e => {
-  const t = e.target; if(t && t.matches && t.matches('.card textarea[data-f=text]')) lastTA = { id: t.closest(".card").dataset.id, s: t.selectionStart, e: t.selectionEnd };
+  const t = e.target;
+  if(t && t.matches && t.matches('.card textarea[data-f=text], .card textarea[data-f=answer], .card textarea[data-sub]'))
+    lastTA = { id: t.closest(".card").dataset.id, f: t.dataset.f || t.dataset.sf, sid: t.dataset.sub || null, s: t.selectionStart, e: t.selectionEnd };
 });
 function buildPalette(){
   const set = eq.tab === "chem" ? PAL.chem : PAL.maths;
@@ -6325,13 +6588,22 @@ function ensureMF(){
   }
   return mf;
 }
+// read/write the text box an equation goes into
+function tfSel(id, t){ return t && t.sid ? `.card[data-id="${id}"] textarea[data-sub="${t.sid}"][data-sf="${t.f}"]` : `.card[data-id="${id}"] textarea[data-f="${(t && t.f) || "text"}"]`; }
+function tfGet(it, t){ if(t && t.sid){ const sb = (it.subs || []).find(x => x.id === t.sid); return sb ? (sb[t.f] || "") : ""; } return it[(t && t.f) || "text"] || ""; }
+function tfSet(it, t, v){ if(t && t.sid){ const sb = (it.subs || []).find(x => x.id === t.sid); if(sb) sb[t.f] = v; } else it[(t && t.f) || "text"] = v; }
 function openEq(targetId){
   eq.mf = ensureMF();
   // where will it go?
-  eq.target = null; eq.sel = null;
-  let ta = targetId ? document.querySelector(`.card[data-id="${targetId}"] textarea[data-f=text]`) : null;
-  if(ta){ eq.target = targetId; eq.sel = (lastTA && lastTA.id === targetId) ? [lastTA.s, lastTA.e] : [ta.value.length, ta.value.length]; }
-  else if(lastTA && S.items.some(x => x.id === lastTA.id)){ eq.target = lastTA.id; eq.sel = [lastTA.s, lastTA.e]; ta = document.querySelector(`.card[data-id="${lastTA.id}"] textarea[data-f=text]`); }
+  eq.target = null; eq.sel = null; eq.tf = null;
+  let ta = null;
+  if(targetId){
+    eq.target = targetId;
+    if(lastTA && lastTA.id === targetId){ eq.tf = lastTA.f ? { f: lastTA.f, sid: lastTA.sid } : null; eq.sel = [lastTA.s, lastTA.e]; ta = document.querySelector(tfSel(targetId, eq.tf)); }
+    else { ta = document.querySelector(tfSel(targetId, null)); eq.sel = ta ? [ta.value.length, ta.value.length] : null; }
+  }else if(lastTA && S.items.some(x => x.id === lastTA.id)){
+    eq.target = lastTA.id; eq.tf = lastTA.f ? { f: lastTA.f, sid: lastTA.sid } : null; eq.sel = [lastTA.s, lastTA.e]; ta = document.querySelector(tfSel(lastTA.id, eq.tf));
+  }
   // editing an existing equation?
   let pre = "", disp = false;
   if(ta && eq.sel && eq.sel[1] > eq.sel[0]){
@@ -6351,12 +6623,12 @@ function insertEq(){
   const disp = document.querySelector('input[name=eqMode]:checked').value === "display";
   const it = eq.target && S.items.find(x => x.id === eq.target);
   if(it){
-    const v = it.text || ""; const [a, b] = eq.sel || [v.length, v.length];
+    const v = tfGet(it, eq.tf); const [a, b] = eq.sel || [v.length, v.length];
     let ins = disp ? "$$" + tex + "$$" : "$" + tex + "$";
     if(disp){ if(a > 0 && v[a - 1] !== "\n") ins = "\n" + ins; if(b < v.length && v[b] !== "\n") ins += "\n"; }
     else { if(a > 0 && !/\s/.test(v[a - 1])) ins = " " + ins; }
-    it.text = v.slice(0, a) + ins + v.slice(b);
-    lastTA = { id: it.id, s: a + ins.length, e: a + ins.length };
+    tfSet(it, eq.tf, v.slice(0, a) + ins + v.slice(b));
+    lastTA = { id: it.id, f: eq.tf ? eq.tf.f : "text", sid: eq.tf ? eq.tf.sid : null, s: a + ins.length, e: a + ins.length };
   }else{
     S.items.push({ id: nid(), type: "q", text: disp ? "$$" + tex + "$$" : "$" + tex + "$", marks: "", lines: "", img: null });
   }
@@ -6550,6 +6822,8 @@ FORMAT RULES
 5. If students must write the answer on the paper, add ruled answer lines after the marks:  [6] {lines: 8}
 6. Multiple-choice options and sub-questions each go on their own line:  a) …   b) …   or   i) …   ii) …
    For multiple-choice questions add {mcq} after the marks (one correct answer) or {mcq: multi} (more than one correct answer). Add {cols: 2} or {cols: 4} to lay short options out in columns.
+   Sub-questions with their own marks start with (a), (b), (c) and end with their marks:  (a) Name the gas. [1] {lines: 2}
+   Short one-line questions can be printed two per row: add {half}.
 7. Maths: LaTeX between single dollar signs inside sentences, e.g.  $x^2 + 3x - 4 = 0$,  $\\frac{3}{4}$,  $\\sqrt{2}$,  $90^\\circ$
 8. Important equations on their own line between double dollar signs:  $$\\int_0^1 x^2\\,dx$$
 9. Chemistry with mhchem:  $\\ce{H2SO4}$,  $\\ce{2H2 + O2 -> 2H2O}$,  $\\ce{N2 + 3H2 <=> 2NH3}$
@@ -6559,6 +6833,7 @@ FORMAT RULES
 13. **bold** and *italic* are allowed. Do not use any other Markdown (no # headings, no horizontal rules, no numbered-list auto-formatting).
 14. Diagrams, graphs or pictures that cannot be typed: write  [diagram: short description]  on its own line where they belong.
 15. Copy the wording exactly and keep the original numbering. Do NOT add answers or solutions unless I ask for them.
+16. ONLY if I ask for an answer key: put {correct} after each correct MCQ option, and after a question or sub-question add a line starting with "Model answer:" followed by the answer or marking points.
 
 EXAMPLE OUTPUT
 Part I: Algebra [8]
@@ -6602,7 +6877,7 @@ function curSel(card){
   const ta = card.querySelector("textarea[data-f=text]"); if(!ta) return null;
   if(document.activeElement === ta) return { ta, a: ta.selectionStart, e: ta.selectionEnd };
   if(fmtSel && fmtSel.id === card.dataset.id) return { ta, a: fmtSel.a, e: fmtSel.e };
-  if(lastTA && lastTA.id === card.dataset.id) return { ta, a: lastTA.s, e: lastTA.e };
+  if(lastTA && lastTA.id === card.dataset.id && !lastTA.sid && (!lastTA.f || lastTA.f === "text")) return { ta, a: lastTA.s, e: lastTA.e };
   return { ta, a: 0, e: 0 };
 }
 function applyToggle(card, it, key, val){
@@ -6649,7 +6924,7 @@ $("#list").addEventListener("mousedown", e => { if(e.target.closest(".fmtbar but
 $("#list").addEventListener("pointerdown", e => {
   const lab = e.target.closest(".fmtbar .custom"); if(!lab) return;
   const card = lab.closest(".card"), ta = card.querySelector("textarea[data-f=text]");
-  if(ta) fmtSel = document.activeElement === ta ? { id: card.dataset.id, a: ta.selectionStart, e: ta.selectionEnd } : (lastTA && lastTA.id === card.dataset.id ? { id: card.dataset.id, a: lastTA.s, e: lastTA.e } : { id: card.dataset.id, a: 0, e: 0 });
+  if(ta) fmtSel = document.activeElement === ta ? { id: card.dataset.id, a: ta.selectionStart, e: ta.selectionEnd } : (lastTA && lastTA.id === card.dataset.id && !lastTA.sid && (!lastTA.f || lastTA.f === "text") ? { id: card.dataset.id, a: lastTA.s, e: lastTA.e } : { id: card.dataset.id, a: 0, e: 0 });
 });
 $("#list").addEventListener("click", e => {
   const btn = e.target.closest(".fmtbar button[data-fmt]"); if(!btn) return;
@@ -6753,6 +7028,106 @@ $("#rubricBox").addEventListener("click", e => {
   rbChanged(true);
 });
 
+/* ---------------- versions A, B, C… (only at download time) ---------------- */
+function seededRnd(str){
+  let h = 1779033703 ^ str.length;
+  for(let i = 0; i < str.length; i++){ h = Math.imul(h ^ str.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; }
+  return () => { h = Math.imul(h ^ h >>> 16, 2246822507); h = Math.imul(h ^ h >>> 13, 3266489909); h ^= h >>> 16; return (h >>> 0) / 4294967296; };
+}
+function shuffleArr(a, r){ for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const KEEP_LAST = /^(all|none|both|neither)\b.*\b(above|these|options|answers)\b|^both\b.+\band\b|^neither\b.+\bnor\b/i;
+function versionItems(items, label, shufQ, shufO){
+  const r = seededRnd(label + "|" + (S.d.title || "") + "|" + (S.d.subject || "") + "|" + items.length);
+  const out = items.map(cloneItem);
+  if(shufQ){
+    // only runs of consecutive questions are shuffled: nothing moves past a part heading or a text/passage
+    for(let i = 0; i < out.length;){
+      if(out[i].type !== "q"){ i++; continue; }
+      let j = i; while(j < out.length && out[j].type === "q") j++;
+      if(j - i > 1){ const seg = shuffleArr(out.slice(i, j), r); out.splice(i, j - i, ...seg); }
+      i = j;
+    }
+  }
+  if(shufO) out.forEach(it => {
+    if(it.type !== "q" || !it.mcq || !Array.isArray(it.options)) return;
+    const idx = it.options.map((o, i) => i).filter(i => String(it.options[i] || "").trim());
+    const fixed = idx.filter(i => KEEP_LAST.test(String(it.options[i]).replace(/\$[^$]*\$/g, "x").trim()));
+    const order = shuffleArr(idx.filter(i => !fixed.includes(i)), r).concat(fixed);
+    const cor = new Set(it.correct || []);
+    it.options = order.map(i => it.options[i]);
+    it.correct = order.map((i, k) => cor.has(i) ? k : -1).filter(k => k >= 0);
+  });
+  return out;
+}
+$("#verGo").onclick = async () => {
+  const n = +$("#verN").value, shufQ = $("#verQ").checked, shufO = $("#verO").checked, keys = $("#verK").checked, large = $("#verL").checked;
+  $("#verModal").classList.remove("open");
+  try{
+    await prepareMath();
+    const base = fileName().replace(/\.pdf$/, "") + (large ? " (large print)" : "");
+    for(let v = 0; v < n; v++){
+      const L = "ABCD"[v];
+      const saved = S.items;
+      S.items = versionItems(saved, L, shufQ, shufO);
+      try{
+        buildPDF({ version: L, large }).save(base + " - Version " + L + ".pdf");
+        if(keys){ await new Promise(r => setTimeout(r, 350)); buildPDF({ version: L, key: true, large }).save(base + " - Version " + L + " (answer key).pdf"); }
+      }finally{ S.items = saved; }
+      await new Promise(r => setTimeout(r, 450));
+    }
+    toast("Downloaded " + n + " versions" + (keys ? " with answer keys" : ""));
+  }catch(e){ console.error(e); toast("Couldn't create the versions: " + e.message); }
+};
+
+/* ---------------- find & replace ---------------- */
+function frFields(){
+  // every editable text in the exam: [item, label, getter, setter]
+  const out = [], { meta } = computeMeta();
+  S.items.forEach(it => {
+    const tag = it.type === "section" ? "Part" : it.type === "note" ? "Text" : "Q" + meta[it.id];
+    out.push([it, tag, () => it.text || "", v => { it.text = v; }]);
+    (it.options || []).forEach((o, i) => out.push([it, tag + " · option " + LETTERS[i].toUpperCase(), () => it.options[i] || "", v => { it.options[i] = v; }]));
+    if(it.answer) out.push([it, tag + " · model answer", () => it.answer || "", v => { it.answer = v; }]);
+    (it.subs || []).forEach((sb, k) => {
+      out.push([it, tag + "(" + LETTERS[k] + ")", () => sb.text || "", v => { sb.text = v; }]);
+      if(sb.answer) out.push([it, tag + "(" + LETTERS[k] + ") · model answer", () => sb.answer || "", v => { sb.answer = v; }]);
+    });
+  });
+  return out;
+}
+function frRegex(){
+  const f = $("#frFind").value; if(!f) return null;
+  let src = f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  if($("#frWord").checked) src = "(?<![\\p{L}\\p{N}_])" + src + "(?![\\p{L}\\p{N}_])";
+  return new RegExp(src, "gu" + ($("#frCase").checked ? "" : "i"));
+}
+function frSearch(){
+  const re = frRegex(), list = $("#frList");
+  if(!re){ $("#frInfo").textContent = ""; list.innerHTML = ""; $("#frGo").disabled = true; return; }
+  let total = 0; const hits = [];
+  frFields().forEach(([it, tag, get]) => {
+    const t = get(); const m = t.match(re); if(!m) return;
+    total += m.length;
+    if(hits.length < 60){ const k = t.search(re); const a = Math.max(0, k - 30), b = Math.min(t.length, k + 60);
+      hits.push([it.id, tag, (a ? "…" : "") + esc(t.slice(a, b)).replace(new RegExp(re.source, re.flags.replace("g", "") + "g"), x => "<mark>" + x + "</mark>") + (b < t.length ? "…" : "")]); }
+  });
+  $("#frInfo").textContent = total ? total + " match" + (total === 1 ? "" : "es") + " in " + hits.length + (hits.length >= 60 ? "+" : "") + " place" + (hits.length === 1 ? "" : "s") : "No matches";
+  list.innerHTML = hits.map(([id, tag, html]) => `<button data-go="${id}"><b>${esc(tag)}</b> · ${html}</button>`).join("");
+  $("#frGo").disabled = !total;
+}
+function openFind(){ openModal("#frModal"); setTimeout(() => { $("#frFind").focus(); $("#frFind").select(); }, 30); frSearch(); }
+["frFind", "frCase", "frWord"].forEach(id => document.getElementById(id).addEventListener(id === "frFind" ? "input" : "change", frSearch));
+$("#frBtn").onclick = openFind;
+$("#frList").addEventListener("click", e => { const b = e.target.closest("[data-go]"); if(!b) return; $("#frModal").classList.remove("open"); lastEdited = b.dataset.go; focusItem(b.dataset.go); });
+$("#frGo").onclick = () => {
+  const re = frRegex(); if(!re) return;
+  const rep = $("#frRep").value; let n = 0;
+  frFields().forEach(([it, tag, get, set]) => { const t = get(); const nt = t.replace(re, () => { n++; return rep; }); if(nt !== t) set(nt); });
+  render(); changed(); frSearch();
+  toast("Replaced " + n + " time" + (n === 1 ? "" : "s") + " — Ctrl/⌘ + Z to undo");
+};
+document.addEventListener("keydown", e => { if((e.ctrlKey || e.metaKey) && !e.shiftKey && (e.key || "").toLowerCase() === "h"){ e.preventDefault(); openFind(); } });
+
 /* ---------------- quick-add helpers ---------------- */
 function focusItem(id, selectAll){
   const c = document.querySelector(`.card[data-id="${id}"]`); if(!c) return;
@@ -6777,10 +7152,11 @@ function insertTable(it){
   const R = Math.min(30, Math.max(1, +m[1])), C = Math.min(10, Math.max(1, +m[2]));
   const row = "|" + "   |".repeat(C);
   const tbl = [row, "|" + "---|".repeat(C)].concat(Array(Math.max(0, R - 1)).fill(row)).join("\n");
-  const v = it.text || "";
+  const tf = lastTA && lastTA.id === it.id && lastTA.f ? { f: lastTA.f, sid: lastTA.sid } : null;
+  const v = tfGet(it, tf);
   const pos = lastTA && lastTA.id === it.id ? lastTA.e : v.length;
   const before = v.slice(0, pos), after = v.slice(pos);
-  it.text = before + (before && !before.endsWith("\n") ? "\n" : "") + tbl + (after && !after.startsWith("\n") ? "\n" : "") + after;
+  tfSet(it, tf, before + (before && !before.endsWith("\n") ? "\n" : "") + tbl + (after && !after.startsWith("\n") ? "\n" : "") + after);
   render(); changed(); focusItem(it.id);
   toast("Table added — type inside the cells (between the | bars). Empty cells stay blank for students.");
 }
@@ -6797,7 +7173,7 @@ function renderArrange(){
     if(it.type === "section") return `<div class="tile sec" data-id="${it.id}">§ ${esc(it.text || "Part")}<span class="mk">${fmt(meta[it.id] || 0)} pts</span></div>`;
     if(it.type === "note") return `<div class="tile note" data-id="${it.id}"><div class="n">¶ <span style="font-weight:500;color:var(--muted)">Text</span></div><div class="t">${esc(plainSnippet(it.text)) || (it.img ? "🖼 image" : "")}</div></div>`;
     seq++;
-    return `<div class="tile" data-id="${it.id}" title="Position ${seq}"><div class="n"><span class="hx">${meta[it.id]}</span>${it.img ? "🖼" : ""}${it.mcq ? (it.mcq === "multi" ? "☐" : "○") : ""}</div><div class="t">${esc(plainSnippet(it.text)) || "(image only)"}</div>${num(it.marks) > 0 ? `<span class="mk">${fmt(num(it.marks))}</span>` : ""}</div>`;
+    return `<div class="tile" data-id="${it.id}" title="Position ${seq}"><div class="n"><span class="hx">${meta[it.id]}</span>${it.img ? "🖼" : ""}${it.mcq ? (it.mcq === "multi" ? "☐" : "○") : ""}</div><div class="t">${esc(plainSnippet(it.text)) || "(image only)"}</div>${qMarks(it) > 0 ? `<span class="mk">${fmt(qMarks(it))}</span>` : ""}${(it.subs || []).length ? `<span style="font-size:11px"> (a–${LETTERS[it.subs.length - 1]})</span>` : ""}</div>`;
   }).join("");
 }
 function openArrange(){
@@ -6924,7 +7300,7 @@ $("#pasteCopyPrompt").onclick = async e => { e.preventDefault(); try{ await navi
 $("#pasteClip").onclick = async () => { try{ const t = await navigator.clipboard.readText(); if(t){ $("#pasteArea").value = t; pasteCount(); } else toast("The clipboard is empty"); }catch(_){ toast("Click in the box and press Ctrl+V (⌘+V on Mac)"); $("#pasteArea").focus(); } };
 function pasteCount(){
   const it = parseText($("#pasteArea").value || "");
-  const q = it.filter(x => x.type === "q").length, p = it.filter(x => x.type === "section").length, m = it.reduce((a, x) => a + (x.type === "q" ? num(x.marks) : 0), 0);
+  const q = it.filter(x => x.type === "q").length, p = it.filter(x => x.type === "section").length, m = it.reduce((a, x) => a + (x.type === "q" ? qMarks(x) : 0), 0);
   $("#pasteCount").textContent = it.length ? `Found ${q} question${q === 1 ? "" : "s"}${p ? " in " + p + " part" + (p === 1 ? "" : "s") : ""}${m ? " · " + fmt(m) + " marks" : ""}` : "";
 }
 $("#pasteArea").addEventListener("input", pasteCount);
@@ -6996,9 +7372,10 @@ document.addEventListener("click", e => { if(!e.target.closest(".dl-wrap")) $("#
 $("#dlMenu").addEventListener("click", e => {
   const b = e.target.closest("[data-dl]"); if(!b) return;
   $("#dlMenu").classList.add("hidden");
-  ({ full: () => download(), large: () => download({ large: true }), cover: () => download({ coverOnly: true }), rubric: () => download({ rubricOnly: true }), questions: () => download({ noCover: true }) })[b.dataset.dl]();
+  ({ full: () => download(), large: () => download({ large: true }), cover: () => download({ coverOnly: true }), rubric: () => download({ rubricOnly: true }), questions: () => download({ noCover: true }), key: () => download({ key: true }), versions: () => openModal("#verModal") })[b.dataset.dl]();
 }); $("#btnDownload2").onclick = () => download();
 $("#btnRefresh").onclick = preview;
+$("#pvKey").addEventListener("change", () => preview());
 
 $("#btnLogo").onclick = () => $("#logoIn").click();
 $("#logoIn").addEventListener("change", async e => {
