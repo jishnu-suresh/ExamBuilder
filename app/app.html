@@ -98,6 +98,10 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+.card.has-miss{border-color:#C0392B;box-shadow:0 0 0 2px rgba(192,57,43,.18)}
+.miss{margin:6px 0;padding:8px 10px;border:1.5px dashed #C0392B;background:#FDECEA;color:#8E2B20;border-radius:8px;font-size:13px}
+.miss .d{font-style:italic;margin:2px 0 0 4px}.miss .row{margin-top:6px;gap:6px}
+.picmiss{margin:4px 0;padding:6px 8px;border:1.5px dashed #C0392B;background:#FDECEA;color:#8E2B20;border-radius:6px;font-size:12.5px}
 .lbl-m{display:none}
 .pvfab{display:none}
 /* ================= phones & small tablets ================= */
@@ -524,7 +528,7 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
 |---|---|---|---|
 | Distance (m) | 0 | 4 | 16 |</pre>
     <ul style="margin:6px 0 0 18px;padding:0">
-      <li><b>**bold**</b>, <i>*italic*</i>, and lines starting with <b>- </b> become bullet points.</li>
+      <li><b>**bold**</b>, <i>*italic*</i>, <u>++underline++</u>, <s>~~strikethrough~~</s>, and lines starting with <b>- </b> become bullet points.</li>
       <li>Don't know LaTeX? Use <b>∑ Equation</b> — click buttons to build the formula; it writes the LaTeX for you.</li>
       <li>A price like “$5 and $10” stays as normal text. Write <b>\$</b> if a dollar sign is ever mistaken for maths.</li>
       <li>Sub-questions: lines like <b>(a) Name the gas. [1] {lines: 2}</b> inside a question become parts (a), (b)… with their own marks.</li>
@@ -978,7 +982,7 @@ function takeMarks(str){
   let m = str.match(RE_MARKS_SQ) || str.match(RE_MARKS_PAR);
   // ignore brackets that sit inside maths ($…$): odd number of unescaped $ before them
   if(m && dollarCount(str.slice(0, m.index)) % 2 === 0)
-    return { s: str.slice(0, m.index).replace(/\s+$/, "").replace(/\*\*$/, ""), marks: m[1] };
+    { const t = str.slice(0, m.index).replace(/\s+$/, ""); return { s: (t.match(/\*\*/g) || []).length % 2 ? t.replace(/\*\*$/, "") : t, marks: m[1] }; }   // keep a closing ** that pairs with an opening one
   return { s: str, marks: "" };
 }
 function finishBlock(b){
@@ -1053,7 +1057,115 @@ function splitSubsAndAnswers(q){
   q.text = ta.lines.join("\n").replace(/\s+$/, "");
   if(ta.answer) q.answer = ta.answer;
 }
+/* ---------------- exam details + rubric found in pasted AI text ---------------- */
+const DETAIL_KEYS = [[/^(?:exam\s+)?title$/i, "title"], [/^sub-?title$/i, "subtitle"], [/^subject|course$/i, "subject"],
+  [/^(?:academic\s+|school\s+)?year$/i, "year"], [/^duration|time(?:\s+allowed)?$/i, "duration"], [/^teacher(?:\s+name)?$/i, "teacher"],
+  [/^class(?:\s*\/\s*grade)?|grade$/i, "className"], [/^school$/i, "school"]];
+const cleanCell = c => String(c || "").replace(/\*\*|~~/g, "").replace(/^\s*\*|\*\s*$/g, "").trim();
+function extractExtras(txt){
+  const L = String(txt || "").replace(/\r\n?/g, "\n").split("\n");
+  const drop = new Set(), details = {}; let rubric = null;
+  const isQ = l => RE_Q.test(l) || RE_QONLY.test(l) || (RE_SEC.test(l) && !/rubric|scoring|marking|grading/i.test(l));
+  // 1) exam details: only in the header, before the first part or question
+  for(let i = 0; i < L.length && !isQ(L[i]); i++){
+    const raw = L[i].trim(); if(!raw || /^\s*```/.test(raw)) continue;
+    const t = cleanCell(raw);
+    // student fill-in lines (Name: ____ Date: ____) — the cover page already has them
+    if(/^(?:student\s+)?name\s*:/i.test(t) && /_{3,}/.test(t)){ drop.add(i); continue; }
+    const im = t.match(/^instructions?(?:\s+for\s+the\s+exam)?\s*:\s*(.*)$/i);
+    if(im){
+      drop.add(i); const out = [];
+      if(im[1].trim()) out.push(...im[1].trim().split(/(?<=[.!?])\s+(?=[A-Z])/));
+      while(i + 1 < L.length && L[i + 1].trim() && !isQ(L[i + 1]) && /^\s*[-•*]\s+|^\s*\d+[.)]\s+/.test(L[i + 1]) && !im[1].trim()){ i++; drop.add(i); out.push(L[i].replace(/^\s*(?:[-•*]|\d+[.)])\s+/, "").trim()); }
+      if(out.length) details.instructions = out.join("\n");
+      continue;
+    }
+    const km = t.match(/^([A-Za-z][A-Za-z /-]{1,24}?)\s*:\s*(.+)$/);
+    if(km && !/_{3,}/.test(km[2])){ const hit = DETAIL_KEYS.find(([re]) => re.test(km[1].trim())); if(hit){ details[hit[1]] = km[2].trim(); drop.add(i); } }
+  }
+  // 1b) an unlabelled header block at the very top (title / year / subject / duration / teacher, one per line)
+  if(!Object.keys(details).some(k => k !== "instructions")){
+    let i0 = 0; while(i0 < L.length && (!L[i0].trim() || /^\s*```/.test(L[i0]))) i0++;
+    let i1 = i0; while(i1 < L.length && L[i1].trim() && !drop.has(i1)) i1++;
+    const blk = L.slice(i0, i1).map(cleanCell);
+    if(blk.length >= 3 && blk.length <= 7 && blk.every(t => t.length <= 60 && !/[.?!:|\[\]{}$]$/.test(t) && !RE_Q.test(t) && !RE_SEC.test(t) && !/_{3,}/.test(t))){
+      const D = {}; const rest = [];
+      blk.forEach((t, k) => {
+        if(k === 0) D.title = t;
+        else if(!D.year && /^(?:\d{4}\s*[-–\/]\s*\d{2,4}|\d{4})$/.test(t)) D.year = t;
+        else if(!D.duration && /^\d+(?:[:.,]\d+)?\s*(?:hrs?|hours?|h|mins?|minutes?)\b/i.test(t)) D.duration = t;
+        else if(!D.teacher && (/^(?:mr|mrs|ms|miss|mx|dr|prof)\.?\s/i.test(t) || /^[A-Z][a-zà-ÿ'’-]+(?:\s+[A-Z][a-zA-Zà-ÿ'’-]+){1,2}$/.test(t) && k === blk.length - 1)) D.teacher = t;
+        else rest.push(t);
+      });
+      if(rest.length <= 2 && (D.year || D.duration || D.teacher)){
+        if(rest[0]) D.subject = rest[0]; if(rest[1]) D.subtitle = rest[1];
+        Object.assign(details, D); for(let d = i0; d < i1; d++) drop.add(d);
+      }
+    }
+  }
+  // 2) rubric: a heading with rubric / scoring / marking / grading, then a table (or "- name | desc | pts" lines)
+  for(let i = 0; i < L.length && !rubric; i++){
+    const t = cleanCell(L[i].replace(/^\s*#+\s*/, ""));
+    if(!t || t.length > 90 || RE_Q.test(L[i]) || !/\b(rubric|scoring|marking|grading|mark\s*scheme)\b/i.test(t)) continue;
+    let j = i + 1; while(j < L.length && !L[j].trim()) j++;
+    if(j >= L.length || !/^\s*\||^\s*[-•*].*\||^\s*group\s*:/i.test(L[j])) continue;
+    const rows = []; let k = j, header = null;
+    for(; k < L.length; k++){
+      const l = L[k].trim(); if(!l) break;
+      if(/^group\s*:/i.test(l)){ rows.push({ group: cleanCell(l.replace(/^group\s*:/i, "")) }); continue; }
+      if(!l.includes("|")) break;
+      if(/^\|?\s*:?-{2,}/.test(l)) continue;
+      const cells = l.replace(/^[-•*]\s+/, "").replace(/^\||\|$/g, "").split("|").map(cleanCell);
+      if(header === null && /^\s*\|/.test(l) && /^\|?\s*:?-{2,}/.test((L[k + 1] || "").trim())){ header = cells; continue; }
+      rows.push({ cells });
+    }
+    const R = { title: t.replace(/^rubric\s*:\s*/i, "").replace(/[:\s]+$/, "") || "Rubric (for Teacher)", showParts: false, showTotal: false, showGrade: false, showComments: false, showDesc: false, groups: [] };
+    if(/^rubric$/i.test(R.title)) R.title = "Rubric (for Teacher)";
+    const SUB = /^(?:[A-H][.)]|\(?[a-h]\)|[ivx]{1,4}[.)]|Q(?:uestion)?\s*\d+|\d+[.)])\s/i;
+    let loose = null, cur = null, n = 0;
+    for(const r of rows){
+      if(r.group != null){ cur = { heading: r.group, items: [] }; R.groups.push(cur); loose = null; continue; }
+      const c = r.cells; if(!c.length || !c[0]) continue;
+      const last = c.length > 1 ? c[c.length - 1] : "", name = c[0];
+      const pm = last.match(/(\d+(?:[.,]\d+)?)\s*(?:pts?|points?|marks?)?\s*$/i);
+      if(/^total\b/i.test(name) || /^total\s+exam\s+grade|grade\s*%?$/i.test(name)){ if(/grade/i.test(name) || /%/.test(last)) R.showGrade = true; else R.showTotal = true; continue; }
+      if(/%/.test(last) && !pm) { R.showGrade = true; continue; }
+      const it = { name, desc: c.length > 2 ? c.slice(1, -1).filter(Boolean).join(" — ") : "", pts: pm ? pm[1].replace(",", ".") : "" };
+      if(it.desc) R.showDesc = true;
+      n++;
+      if(rows.some(x => x.group != null)){ (cur || (cur = R.groups[R.groups.push({ heading: "", items: [] }) - 1])).items.push(it); continue; }
+      // a part row followed by sub-rows (A., B., Question 1…) becomes a group; other rows stand alone
+      if(SUB.test(name) && cur){ cur.items.push(it); cur._used = true; continue; }
+      if(cur && !cur._used){ cur.heading = ""; cur.items = [cur._self]; }
+      cur = { heading: name, items: [], _self: it }; R.groups.push(cur);
+    }
+    if(cur && !cur._used && cur._self){ cur.heading = ""; cur.items = [cur._self]; }
+    // merge neighbouring single rows into one heading-less group, tidy up
+    const G = []; R.groups.forEach(g => { delete g._used; delete g._self; if(!g.heading && G.length && !G[G.length - 1].heading) G[G.length - 1].items.push(...g.items); else G.push(g); });
+    R.groups = G.filter(g => g.heading || g.items.length);
+    if(!n) continue;
+    if(!R.showTotal && !R.showGrade){ R.showTotal = true; R.showGrade = true; }
+    rubric = R;
+    for(let d = i; d < k; d++) drop.add(d);
+  }
+  return { text: L.filter((_, i) => !drop.has(i)).join("\n"), details, rubric };
+}
+// fill in the exam details and the rubric page; returns a few words for the toast
+function applyExtras(X){
+  const said = [];
+  const keys = Object.keys(X.details || {});
+  if(keys.length){ keys.forEach(k => S.d[k] = X.details[k]); refreshDetails(); said.push("exam details filled in"); }
+  if(X.rubric){
+    const had = S.d.rubricOn && S.d.rubric && rbSum(S.d.rubric) > 0;
+    if(!had || confirm("The pasted text has a rubric (“" + X.rubric.title + "”).\nReplace your current rubric with it?")){
+      S.d.rubric = X.rubric; S.d.rubricOn = true; renderRubric();
+      said.push("rubric page switched on (" + X.rubric.groups.reduce((a, g) => a + g.items.length, 0) + " rows)");
+    }
+  }
+  return said;
+}
 function parseText(txt){
+  txt = extractExtras(txt).text;
   txt = txt.replace(/\r\n?/g, "\n").replace(/\t/g, "    ").replace(/^﻿/, "");
   const raw = txt.split("\n").filter(l => !/^\s*```/.test(l));
   const hasNumbered = raw.some(l => RE_Q.test(l) || RE_QONLY.test(l));
@@ -1130,7 +1242,9 @@ async function handleFiles(files){
       }else{
         const txt = await f.text();
         const items = parseText(txt);
-        if(!items.length){ toast(f.name + " looks empty"); continue; }
+        const said = applyExtras(extractExtras(txt));
+        if(said.length) setTimeout(() => toast(said.join(" · ")), 1600);
+        if(!items.length){ if(!said.length) toast(f.name + " looks empty"); continue; }
         S.items.push(...items); added += items.length;
       }
     }catch(e){ toast(e.message || ("Couldn't read " + f.name)); }
@@ -1233,6 +1347,7 @@ function render(){
         <div class="row"><span class="kind">Text / passage (not numbered)</span>${tools}</div>
         ${fmtBar(it)}
       <textarea data-f="text" placeholder="Instructions, a reading passage, a diagram caption…">${esc(it.text)}</textarea>
+        <div class="miss hidden" data-miss></div>
         <div class="rich hidden" data-rich></div>
         ${imgBlock}<div class="row"><button class="btn sm" data-act="eq">∑ Equation</button><button class="btn sm" data-act="graph">📈 ${it.graph ? "Edit graph" : "Graph"}</button>${it.img ? "" : `<button class="btn sm" data-act="addimg">＋ Add image</button>`}
         <span class="grow"></span><button class="btn sm ${it.lineNums ? "on-t" : ""}" data-act="linenums" title="Number every 5th line (for reading passages)">№ Line numbers</button><button class="btn sm ${it.newPage ? "on-t" : ""}" data-act="newpage" title="Start on a new page">⤓ New page</button></div>
@@ -1242,6 +1357,7 @@ function render(){
       <div class="row"><span class="kind">Question ${meta[it.id]}</span>${tools}</div>
       ${fmtBar(it)}
       <textarea data-f="text" placeholder="${it.img ? "Optional text above the image…" : "Type the question… maths: $x^2+1$ · or use ∑ Equation"}">${esc(it.text)}</textarea>
+      <div class="miss hidden" data-miss></div>
       ${it.mcq ? `<div class="opts">${(it.options || []).map((o, oi) => `<div class="opt-row" data-oi="${oi}"><b>${LETTERS[oi].toUpperCase()}.</b><input type="text" data-opt="${oi}" value="${esc(o)}" placeholder="Option ${LETTERS[oi].toUpperCase()} — maths: $x^2$"><button class="btn icon cor ${(it.correct || []).includes(oi) ? "on" : ""}" data-act="correct" data-oi="${oi}" title="Mark as the correct answer (for the answer key)">✓</button><button class="btn icon danger" data-act="optdel" data-oi="${oi}" title="Remove option">✕</button></div>`).join("")}
         <div class="opt-add"><button class="btn sm" data-act="optadd">＋ Add option</button><span class="hint">Press Enter in an option to add the next one</span></div></div>` : ""}
       <div class="rich hidden" data-rich></div>
@@ -1384,6 +1500,7 @@ async function onListClick(e){
     case "graph": openGraph(it.id); return;
     case "rot": b.disabled = true; it.img = await rotateImg(it.img); delete it.graph; delete it.labels; break;
     case "addimg": pendingImgTarget = it.id; $("#fileIn").accept = "image/*"; $("#fileIn").click(); return;
+    case "rmpic": if(picsOf(it.text).length) it.text = dropFirstPic(it.text); else { const sb = (it.subs || []).find(x => picsOf(x.text).length); if(sb) sb.text = dropFirstPic(sb.text); } break;
   }
   render(); changed();
 }
@@ -1430,8 +1547,8 @@ function mathColor(tex, col){ return col ? "{\\color{" + col + "}" + tex + "}" :
 // One scanner for inline Markdown + maths, shared by the PDF/preview renderer and the B/I/U/colour buttons.
 // Returns content units (characters or whole maths pieces), each with the style in force.
 function scanInline(s){
-  const units = []; let b = false, it = false, u = false; const cols = [];
-  const st = () => ({ b, i: it, u, c: cols.length ? cols[cols.length - 1] : "" });
+  const units = []; let b = false, it = false, u = false, x = false; const cols = [];
+  const st = () => ({ b, i: it, u, x, c: cols.length ? cols[cols.length - 1] : "" });
   for(let i = 0; i < s.length;){
     const c = s[i], n = s[i + 1];
     if(c === "{"){
@@ -1454,6 +1571,7 @@ function scanInline(s){
       if(found > 0){ units.push({ r: i, raw: s.slice(i, found + 1), math: s.slice(i + 1, found).trim(), st: st() }); i = found + 1; continue; }
     }
     if(c === "*" && n === "*" && (b || s.indexOf("**", i + 2) > 0)){ b = !b; i += 2; continue; }
+    if(c === "~" && n === "~" && (x || (s[i + 2] && !/\s/.test(s[i + 2]) && s.indexOf("~~", i + 3) > 0))){ x = !x; i += 2; continue; }
     if(c === "*" && (it ? !/\s/.test(s[i - 1] || " ") : (n && !/\s/.test(n) && /(^|[^\w])$/.test(s.slice(0, i)) && /[^\s]\*/.test(s.slice(i + 1))))){ it = !it; i++; continue; }
     units.push({ r: i, raw: c, ch: c, st: st() }); i++;
   }
@@ -1465,18 +1583,18 @@ function parseInline(s, base){
   for(const un of scanInline(s)){
     const c = un.st.c || base.c || "";
     if(un.math != null){ runs.push({ t: "math", tex: mathColor(un.math, c), display: !!un.display }); continue; }
-    const sty = { b: un.st.b || !!base.b, i: un.st.i || !!base.i, u: un.st.u || !!base.u, c };
+    const sty = { b: un.st.b || !!base.b, i: un.st.i || !!base.i, u: un.st.u || !!base.u, x: un.st.x || !!base.x, c };
     const last = runs[runs.length - 1];
-    if(last && last.t === "text" && last.b === sty.b && last.i === sty.i && last.u === sty.u && last.c === sty.c) last.s += un.ch;
+    if(last && last.t === "text" && last.b === sty.b && last.i === sty.i && last.u === sty.u && last.x === sty.x && last.c === sty.c) last.s += un.ch;
     else runs.push(Object.assign({ t: "text", s: un.ch }, sty));
   }
   return runs;
 }
 // Write units back as canonical markers: colour ⊃ underline ⊃ bold ⊃ italic, markers hugging the words.
 function serializeUnits(units){
-  const LV = ["c", "u", "b", "i"];
-  const OPEN = { c: v => "{color:" + v + "}", u: () => "++", b: () => "**", i: () => "*" };
-  const CLOSE = { c: "{/color}", u: "++", b: "**", i: "*" };
+  const LV = ["c", "u", "x", "b", "i"];
+  const OPEN = { c: v => "{color:" + v + "}", u: () => "++", x: () => "~~", b: () => "**", i: () => "*" };
+  const CLOSE = { c: "{/color}", u: "++", x: "~~", b: "**", i: "*" };
   const on = (st, k) => k === "c" ? !!st.c : !!st[k];
   const same = (p, q, k) => k === "c" ? (p.c || "") === (q.c || "") : !!p[k] === !!q[k];
   // spaces at the edge of a styled stretch only keep colour/underline shared by both neighbours
@@ -1486,9 +1604,9 @@ function serializeUnits(units){
     let p = k - 1; while(p >= 0 && units[p].math == null && /^\s$/.test(units[p].ch)) p--;
     let q = k + 1; while(q < units.length && units[q].math == null && /^\s$/.test(units[q].ch)) q++;
     const A = p >= 0 ? units[p].st : {}, B = q < units.length ? units[q].st : {};
-    eff[k] = { b: false, i: false, u: !!(A.u && B.u && x.st.u), c: (A.c && A.c === B.c && x.st.c === A.c) ? A.c : "" };
+    eff[k] = { b: false, i: false, u: !!(A.u && B.u && x.st.u), x: !!(A.x && B.x && x.st.x), c: (A.c && A.c === B.c && x.st.c === A.c) ? A.c : "" };
   });
-  let out = "", cur = { b: false, i: false, u: false, c: "" };
+  let out = "", cur = { b: false, i: false, u: false, x: false, c: "" };
   const pos = [];
   const trans = nx => {
     let k = LV.findIndex(L => !same(cur, nx, L)); if(k < 0) return;
@@ -1497,7 +1615,7 @@ function serializeUnits(units){
     cur = Object.assign({}, nx);
   };
   units.forEach((x, k) => { trans(eff[k]); pos.push(out.length); out += x.raw; });
-  trans({ b: false, i: false, u: false, c: "" });
+  trans({ b: false, i: false, u: false, x: false, c: "" });
   return { text: out, pos };
 }
 // Toggle a style on [a, e) of the raw text. Returns null when nothing (non-space) is selected.
@@ -1512,7 +1630,7 @@ function toggleFmtRange(text, a, e, key, val){
   else turnOn = !sel.every(x => x.st[key]);
   parsed.forEach(P => P.units.forEach(x => {
     const ra = P.off + x.r, rb = ra + x.raw.length; if(!(ra < e && rb > a)) return;
-    if(key === "clear") x.st = { b: false, i: false, u: false, c: "" };
+    if(key === "clear") x.st = { b: false, i: false, u: false, x: false, c: "" };
     else if(key === "c") x.st.c = turnOn ? val : "";
     else x.st[key] = turnOn;
   }));
@@ -1531,7 +1649,7 @@ function selStyle(text, a, e){
   lines.forEach(l => { scanInline(l).forEach(x => { const ra = off + x.r; if(ra < e && ra + x.raw.length > a && (x.math != null || !/^\s$/.test(x.ch))) sel.push(x); }); off += l.length + 1; });
   if(!sel.length) return null;
   const c0 = sel[0].st.c;
-  return { b: sel.every(x => x.st.b), i: sel.every(x => x.st.i), u: sel.every(x => x.st.u), c: sel.every(x => x.st.c === c0) ? c0 : "" };
+  return { b: sel.every(x => x.st.b), i: sel.every(x => x.st.i), u: sel.every(x => x.st.u), x: sel.every(x => x.st.x), c: sel.every(x => x.st.c === c0) ? c0 : "" };
 }
 function parseRich(text, base){
   const lines = String(text || "").replace(/\t/g, "    ").split("\n");
@@ -1546,6 +1664,7 @@ function parseRich(text, base){
   for(let i = 0; i < lines.length; i++){
     const l = lines[i], t = l.trim();
     if(!t){ blocks.push({ type: "gap" }); continue; }
+    const pm = l.match(RE_PIC); if(pm){ blocks.push({ type: "pic", desc: pm[1].trim() }); continue; }
     const open = t.startsWith("$$") ? "$$" : t.startsWith("\\[") ? "\\[" : null;
     if(open){
       const close = open === "$$" ? "$$" : "\\]";
@@ -1598,9 +1717,14 @@ function eachMath(blocks, fn){
     else if(b.type === "table") b.rows.forEach(r => r.forEach(runs));
   });
 }
-const hasRich = t => /\$|\\\(|\\\[|\*\*|\*[^\s*]|^\s*\||\\ce\{|\+\+\S|\{color:/m.test(t || "");
+// a picture the AI could only describe: [diagram: …] / [image: …] / [photo: …] on its own line
+const RE_PIC = /^\s*\[\s*(?:diagram|image|picture|figure|fig\.?|graph|photo|photograph|map|chart|illustration|drawing)\s*[:\-–]\s*([^\]]*)\]\s*$/i;
+const picsOf = t => String(t || "").split("\n").map(l => l.match(RE_PIC)).filter(Boolean).map(m => m[1].trim());
+const dropFirstPic = t => { const L = String(t || "").split("\n"); const k = L.findIndex(l => RE_PIC.test(l)); if(k >= 0){ L.splice(k, 1); if(k < L.length && !L[k].trim() && (k === 0 || !L[k - 1].trim())) L.splice(k, 1); } return L.join("\n"); };
+const missingPics = () => S.items.reduce((a, it) => a + (it.type === "section" ? 0 : picsOf(it.text).length + (it.subs || []).reduce((b, sb) => b + picsOf(sb.text).length, 0)), 0);
+const hasRich = t => /\$|\\\(|\\\[|\*\*|\*[^\s*]|^\s*\||\\ce\{|\+\+\S|~~\S|\{color:/m.test(t || "");
 // whole-question formatting chosen on the card (bold / italic / underline / colour)
-const fmtOf = it => (it && it.fmt && (it.fmt.b || it.fmt.i || it.fmt.u || it.fmt.c)) ? it.fmt : null;
+const fmtOf = it => (it && it.fmt && (it.fmt.b || it.fmt.i || it.fmt.u || it.fmt.x || it.fmt.c)) ? it.fmt : null;
 
 /* math rendering cache (MathJax → SVG → PNG) */
 const MATH = new Map();
@@ -1680,10 +1804,11 @@ function strHash(s){ let h = 5381; for(let i = 0; i < s.length; i++) h = ((h << 
 function richHTML(text, q){
   const runsH = rs => rs.map(r => {
     if(r.t === "math"){ const m = texSVG(r.tex, !!r.display); return m.err ? `<span class="err" title="${esc(m.errMsg)}">⚠ ${esc(r.tex)}</span>` : m.svg; }
-    let h = esc(r.s); if(r.b) h = "<b>" + h + "</b>"; if(r.i) h = "<i>" + h + "</i>"; if(r.u) h = "<u>" + h + "</u>"; if(r.c) h = `<span style="color:${esc(cssHex(r.c))}">` + h + "</span>"; return h;
+    let h = esc(r.s); if(r.b) h = "<b>" + h + "</b>"; if(r.i) h = "<i>" + h + "</i>"; if(r.u) h = "<u>" + h + "</u>"; if(r.x) h = "<s>" + h + "</s>"; if(r.c) h = `<span style="color:${esc(cssHex(r.c))}">` + h + "</span>"; return h;
   }).join("");
   return parseRich(text, fmtOf(q)).map(b => {
     if(b.type === "gap") return "<div style='height:.5em'></div>";
+    if(b.type === "pic") return `<div class="picmiss">🖼 Picture missing: <i>${esc(b.desc)}</i></div>`;
     if(b.type === "display"){ const m = texSVG(b.tex, true); return `<div class="disp">${m.err ? `<span class="err" title="${esc(m.errMsg)}">⚠ ${esc(b.tex)} — ${esc(m.errMsg)}</span>` : m.svg}</div>`; }
     if(b.type === "table") return "<table>" + b.rows.map((r, i) => "<tr>" + r.map(c => (b.header && i === 0 ? "<th>" : "<td>") + runsH(c) + (b.header && i === 0 ? "</th>" : "</td>")).join("") + "</tr>").join("") + "</table>";
     const mk = "";
@@ -1695,11 +1820,21 @@ function mathErrors(text){
   eachMath(parseRich(text), (tex, d) => { const m = texSVG(tex, d); if(m.err) errs.push(tex + " → " + m.errMsg); });
   return errs;
 }
+function updateMiss(card, it){
+  const el = card.querySelector("[data-miss]"); if(!el) return;
+  const P = picsOf(it.text).concat(...(it.subs || []).map(sb => picsOf(sb.text)));
+  card.classList.toggle("has-miss", P.length > 0); el.classList.toggle("hidden", !P.length);
+  if(!P.length){ el.innerHTML = ""; return; }
+  el.innerHTML = `<div><b>🖼 ${P.length === 1 ? "A picture is missing" : P.length + " pictures are missing"}</b> — the AI could only describe ${P.length === 1 ? "it" : "them"}:
+    ${P.map(d => `<div class="d">“${esc(d || "picture")}”</div>`).join("")}</div>
+    <div class="row">${it.img ? "" : `<button class="btn sm" data-act="addimg">＋ Add the picture</button>`}<button class="btn sm" data-act="rmpic" title="Delete the [diagram: …] line">Remove the placeholder</button></div>`;
+}
 function updateRich(card, it){
+  updateMiss(card, it);
   const box = card.querySelector("[data-rich]"); if(!box) return;
   const T = qText(it);
   const blocks = (hasRich(T) || it.mcq || fmtOf(it)) && mathOK ? parseRich(T, fmtOf(it)) : [];
-  const rich = ((it.mcq || fmtOf(it)) && blocks.length) || blocks.some(b => b.type === "display" || b.type === "table" || b.bullet || (b.runs || []).some(r => r.t === "math" || r.b || r.i || r.u || r.c));
+  const rich = ((it.mcq || fmtOf(it)) && blocks.length) || blocks.some(b => b.type === "display" || b.type === "table" || b.bullet || (b.runs || []).some(r => r.t === "math" || r.b || r.i || r.u || r.x || r.c));
   const subs = it.subs || [];
   const subRich = subs.some(sb => hasRich(sb.text));
   if(!rich && !subRich){ box.classList.add("hidden"); box.innerHTML = ""; return; }
@@ -1725,6 +1860,7 @@ function shade(rgb, t){ return rgb.map(v => Math.round(v * (1 - t))); }
 function imgFmt(src){ return /^data:image\/png/i.test(src) ? "PNG" : "JPEG"; }
 
 function buildPDF(opt){
+  const FINAL = !!(opt && opt.final);   // downloads: placeholders print as a plain grey frame, not red
   opt = opt || {};
   const { jsPDF } = window.jspdf;
   const D = S.d;
@@ -1985,6 +2121,7 @@ function buildPDF(opt){
       const its = (g.items || []).filter(it => (it.name || "").trim() || num(it.pts) > 0);
       if(!its.length && !(g.heading || "").trim()) return;
       if((g.heading || "").trim()) rows.push({ k: "head", label: g.heading.trim(), pts: its.reduce((a, it) => a + num(it.pts), 0) });
+      else if(R.groups.length > 1){ its.forEach(it => rows.push({ k: "part", label: (it.name || "").trim(), pts: num(it.pts) })); return; }
       its.forEach(it => rows.push({ k: "crit", label: (it.name || "").trim(), desc: R.showDesc ? (it.desc || "").trim() : "", pts: num(it.pts) }));
     });
     const total = R.showParts && M.secs.length ? M.total : rbSum(R);
@@ -2121,8 +2258,8 @@ function buildPDF(opt){
       r.s.split(/(\s+)/).forEach(p => {
         if(!p) return;
         if(/^\s+$/.test(p)){ if(cur.length){ words.push(cur); cur = []; } return; }
-        if(HAS_DJV && SANS !== "DejaVu" && needsUnicode(p)){ doc.setFont("DejaVu", st === "normal" ? "normal" : "bold"); cur.push({ t: "text", s: p, st, djv: true, w: tw(p), u: !!r.u, c: r.c || "" }); setSt(st); }
-        else cur.push({ t: "text", s: p, st, w: tw(p), u: !!r.u, c: r.c || "" });
+        if(HAS_DJV && SANS !== "DejaVu" && needsUnicode(p)){ doc.setFont("DejaVu", st === "normal" ? "normal" : "bold"); cur.push({ t: "text", s: p, st, djv: true, w: tw(p), u: !!r.u, x: !!r.x, c: r.c || "" }); setSt(st); }
+        else cur.push({ t: "text", s: p, st, w: tw(p), u: !!r.u, x: !!r.x, c: r.c || "" });
       });
     }
     if(cur.length) words.push(cur);
@@ -2169,6 +2306,7 @@ function buildPDF(opt){
           if(wi) cx += SP;
           // underline continues across the space between two underlined words
           if(wi && w[0].u && r[wi - 1][r[wi - 1].length - 1].u){ const uc = w[0].c ? hexRgb(cssHex(w[0].c)) : (color || INK); doc.setDrawColor(...uc); doc.setLineWidth(Math.max(.18, fs * .018)); doc.line(cx - SP, y + asc + fs * mmPt * .14, cx, y + asc + fs * mmPt * .14); }
+          if(wi && w[0].x && r[wi - 1][r[wi - 1].length - 1].x){ const xc = w[0].c ? hexRgb(cssHex(w[0].c)) : (color || INK); doc.setDrawColor(...xc); doc.setLineWidth(Math.max(.18, fs * .018)); doc.line(cx - SP, y + asc - fs * mmPt * .27, cx, y + asc - fs * mmPt * .27); }
           w.forEach(p => {
             if(p.t === "math") doc.addImage(p.m.png, "PNG", cx, y + asc - p.asc, p.w, p.asc + p.desc, mAlias(p.m), "FAST");
             else {
@@ -2176,6 +2314,7 @@ function buildPDF(opt){
               const tc = p.err ? [180, 60, 40] : p.c ? hexRgb(cssHex(p.c)) : (color || INK);
               doc.setTextColor(...tc);
               doc.text(p.s, cx, y + asc);
+              if(p.x){ doc.setDrawColor(...tc); doc.setLineWidth(Math.max(.18, fs * .018)); doc.line(cx, y + asc - fs * mmPt * .27, cx + p.w, y + asc - fs * mmPt * .27); }
               if(p.u){ doc.setDrawColor(...tc); doc.setLineWidth(Math.max(.18, fs * .018)); doc.line(cx, y + asc + fs * mmPt * .14, cx + p.w, y + asc + fs * mmPt * .14); }
               doc.setTextColor(...(color || INK));
             }
@@ -2252,6 +2391,18 @@ function buildPDF(opt){
         continue;
       }
       if(b.type === "table"){ add([layoutTable(b, bw)]); continue; }
+      if(b.type === "pic"){
+        const ph = 30, pw = Math.min(bw, 110);
+        add([{ h: ph + 4, asc: TASC, draw(x, y){
+          const red = [192, 57, 43], grey = [150, 150, 150], col = FINAL ? grey : red;
+          if(!FINAL){ doc.setFillColor(253, 236, 234); doc.roundedRect(x, y + 2, pw, ph, 1.5, 1.5, "F"); }
+          doc.setDrawColor(...col); doc.setLineWidth(.35); doc.setLineDashPattern([1.6, 1.2], 0); doc.roundedRect(x, y + 2, pw, ph, 1.5, 1.5, "S"); doc.setLineDashPattern([], 0);
+          font(SANS, "bold", 9, col); doc.text(FINAL ? "Diagram" : "PICTURE MISSING — add it in BEE", x + 4, y + 8);
+          font(SANS, "italic", 8.5, col); doc.splitTextToSize(b.desc || "", pw - 8).slice(0, 4).forEach((l, k) => doc.text(l, x + 4, y + 13 + k * 4));
+          doc.setTextColor(...INK);
+        } }]);
+        continue;
+      }
       add(narrow && isNarrow() ? layoutPara(b, width, { narrow, acc }) : layoutPara(b, bw));
     }
     flush(); note();
@@ -2574,7 +2725,9 @@ function changed(){
 async function download(opt){
   opt = opt || {};
   const name = fileName().replace(/\.pdf$/, "") + (opt.version ? " - Version " + opt.version : "") + (opt.key ? " (answer key)" : "") + (opt.coverOnly ? " (cover page)" : opt.rubricOnly ? " (rubric)" : opt.noCover ? " (questions)" : "") + ((opt.large || S.d.largePrint) ? " (large print)" : "") + ".pdf";
-  try{ await prepareMath(); buildPDF(opt).save(name); toast("Saved " + name); }
+  const miss = missingPics();
+  if(miss && !confirm(`${miss === 1 ? "1 picture is" : miss + " pictures are"} still missing (the red boxes in the preview).\n\nDownload anyway? They will print as an empty frame with the description.`)) return;
+  try{ await prepareMath(); buildPDF(Object.assign({ final: true }, opt)).save(name); toast("Saved " + name); }
   catch(e){ console.error(e); toast("Couldn't create the PDF: " + e.message); }
 }
 
@@ -3022,27 +3175,44 @@ $("#graphGlobal").onclick = () => openGraph(null);
 const USER_AI_PROMPT = `You are helping a teacher prepare an exam. Convert the exam material I give you (a photo, a PDF, pasted text, or my description of the exam I want) into plain text in EXACTLY the format below, so it can be pasted into an exam-building tool. Reply with only the formatted exam inside a single code block — no comments before or after.
 
 FORMAT RULES
-1. Part headings on their own line, e.g.:  Part I: Algebra   — add the part's total marks if known:  Part I: Algebra [20]
-2. Instructions or reading passages that are not questions: plain paragraphs.
-3. Every question starts on a new line with its number:  1. Question text
-4. Marks go at the END of the question's first line in square brackets:  1. Solve the equation. [3]
-5. If students must write the answer on the paper, add ruled answer lines after the marks:  [6] {lines: 8}
-6. Multiple-choice options and sub-questions each go on their own line:  a) …   b) …   or   i) …   ii) …
+1. Start with the exam details you can find, one per line, using exactly these labels (leave out any you don't know):
+   Title: …   Subtitle: …   Subject: …   Year: …   Duration: …   Teacher: …   Class: …
+   Then  Instructions:  followed by one instruction per line, each starting with "- ".
+   Do NOT copy student fill-in lines (Name: ____ Date: ____) — the tool prints its own.
+2. If the material has a rubric, scoring table or marking criteria (or I ask for one), put it right after the details: a line  Rubric: <title of the rubric page>  then a Markdown table with the columns  | Criterion | Points |  (add a Description column in the middle if there are descriptions). One row per criterion; for a part with sub-criteria, give the part row first and then its sub-rows starting with A., B. or Question 1, Question 2. End with  | TOTAL | n |  and, if the original has it,  | TOTAL EXAM GRADE | % |.
+3. Part headings on their own line, e.g.:  Part I: Algebra   — add the part's total marks if known:  Part I: Algebra [20]
+4. Instructions or reading passages that are not questions: plain paragraphs.
+5. Every question starts on a new line with its number:  1. Question text
+6. Marks go at the END of the question's first line in square brackets:  1. Solve the equation. [3]
+7. If students must write the answer on the paper, add ruled answer lines after the marks:  [6] {lines: 8}
+8. Multiple-choice options and sub-questions each go on their own line:  a) …   b) …   or   i) …   ii) …
    For multiple-choice questions add {mcq} after the marks (one correct answer) or {mcq: multi} (more than one correct answer). Add {cols: 2} or {cols: 4} to lay short options out in columns.
    Sub-questions with their own marks start with (a), (b), (c) and end with their marks:  (a) Name the gas. [1] {lines: 2}
    Short one-line questions can be printed two per row: add {half}.
-7. Maths: LaTeX between single dollar signs inside sentences, e.g.  $x^2 + 3x - 4 = 0$,  $\\frac{3}{4}$,  $\\sqrt{2}$,  $90^\\circ$
-8. Important equations on their own line between double dollar signs:  $$\\int_0^1 x^2\\,dx$$
-9. Chemistry with mhchem:  $\\ce{H2SO4}$,  $\\ce{2H2 + O2 -> 2H2O}$,  $\\ce{N2 + 3H2 <=> 2NH3}$
-10. Units:  $9.8\\,\\mathrm{m/s^2}$
-11. Tables: Markdown tables (| a | b |, with a |---|---| line under the header row).
-12. Biology: scientific names in italics (*Homo sapiens*), Punnett squares and data as Markdown tables, temperatures as $37^\\circ\\mathrm{C}$, sizes as $10\\,\\mu\\mathrm{m}$.
-13. **bold** and *italic* are allowed. Do not use any other Markdown (no # headings, no horizontal rules, no numbered-list auto-formatting).
-14. Diagrams, graphs or pictures that cannot be typed: write  [diagram: short description]  on its own line where they belong.
-15. Copy the wording exactly and keep the original numbering. Do NOT add answers or solutions unless I ask for them.
-16. ONLY if I ask for an answer key: put {correct} after each correct MCQ option, and after a question or sub-question add a line starting with "Model answer:" followed by the answer or marking points.
+9. Maths: LaTeX between single dollar signs inside sentences, e.g.  $x^2 + 3x - 4 = 0$,  $\\frac{3}{4}$,  $\\sqrt{2}$,  $90^\\circ$
+10. Important equations on their own line between double dollar signs:  $$\\int_0^1 x^2\\,dx$$
+11. Chemistry with mhchem:  $\\ce{H2SO4}$,  $\\ce{2H2 + O2 -> 2H2O}$,  $\\ce{N2 + 3H2 <=> 2NH3}$
+12. Units:  $9.8\\,\\mathrm{m/s^2}$
+13. Tables: Markdown tables (| a | b |, with a |---|---| line under the header row).
+14. Biology: scientific names in italics (*Homo sapiens*), Punnett squares and data as Markdown tables, temperatures as $37^\\circ\\mathrm{C}$, sizes as $10\\,\\mu\\mathrm{m}$.
+15. Text styles: **bold**, *italic*, ++underline++ and ~~strikethrough~~ — keep every one that appears in the original. Do not use any other Markdown (no # headings, no horizontal rules, no numbered-list auto-formatting).
+16. EVERY picture, photo, diagram, graph, map or chart that cannot be typed: write  [diagram: short description]  on its own line exactly where it belongs (include any caption or credit in the description). Never skip a picture.
+17. Copy the wording exactly and keep the original numbering. Do NOT add answers or solutions unless I ask for them.
+18. ONLY if I ask for an answer key: put {correct} after each correct MCQ option, and after a question or sub-question add a line starting with "Model answer:" followed by the answer or marking points.
 
 EXAMPLE OUTPUT
+Title: Unit 3 Test
+Subject: Mathematics
+Duration: 45 minutes
+Instructions:
+- Answer all questions.
+- Show your working. If you make a mistake, ~~cross it out~~ neatly.
+Rubric: Scoring by Section (for Teacher)
+| Criterion | Points |
+|---|---|
+| Part I: Algebra | 8 |
+| Presentation | 2 |
+| TOTAL | 10 |
 Part I: Algebra [8]
 Answer all questions. Show your working.
 1. Solve $2x + 5 = 17$. [2] {lines: 3}
@@ -3050,7 +3220,8 @@ Answer all questions. Show your working.
 a) $x - 3$
 b) $x + 9$
 c) $x - 9$
-3. Evaluate: [5] {lines: 6}
+3. Look at the graph and evaluate the area under it: [5] {lines: 6}
+[diagram: graph of y = 3x² + 1 from x = 0 to x = 2, area shaded]
 $$\\int_0^2 (3x^2 + 1)\\,dx$$
 
 Here is the exam material:
@@ -3071,6 +3242,7 @@ function fmtBar(it){
     <button type="button" data-fmt="b" class="${f.b ? "on" : ""}" title="Bold"><b>B</b></button>
     <button type="button" data-fmt="i" class="${f.i ? "on" : ""}" title="Italic"><i>I</i></button>
     <button type="button" data-fmt="u" class="${f.u ? "on" : ""}" title="Underline"><u>U</u></button>
+    <button type="button" data-fmt="x" class="${f.x ? "on" : ""}" title="Strikethrough"><s>S</s></button>
     <span class="fsep"></span>
     ${SWATCHES.map(([c, n]) => `<button type="button" data-fmt="color" data-c="${c}" class="sw ${f.c === c ? "on" : ""}" title="${n} text" style="--c:${c}"></button>`).join("")}
     <label class="sw custom ${f.c && !SWATCHES.some(x => x[0] === f.c) ? "on" : ""}" title="Other colour…" style="--c:${f.c && !SWATCHES.some(x => x[0] === f.c) ? f.c : "#fff"}"><input type="color" data-fmt="colorpick" value="${f.c || "#1F5FBF"}"></label>
@@ -3096,11 +3268,11 @@ function applyToggle(card, it, key, val){
   lastTA = { id: it.id, s: r.a, e: r.e };
   return true;
 }
-function stripFmt(t){ return t.replace(/\{\/?color[^}]*\}/g, "").replace(/\*\*|\+\+/g, "").replace(/(^|[^\w*])\*([^\s*][^*]*?)\*(?!\*)/g, "$1$2"); }
+function stripFmt(t){ return t.replace(/\{\/?color[^}]*\}/g, "").replace(/\*\*|\+\+|~~/g, "").replace(/(^|[^\w*])\*([^\s*][^*]*?)\*(?!\*)/g, "$1$2"); }
 function onFmt(btn, card, it, colorVal){
   const k = btn.dataset.fmt;
   it.fmt = it.fmt || {};
-  if(k === "b" || k === "i" || k === "u"){
+  if(k === "b" || k === "i" || k === "u" || k === "x"){
     if(!applyToggle(card, it, k)) it.fmt[k] = !it.fmt[k];
   }else if(k === "color" || k === "colorpick"){
     const c = colorVal || btn.dataset.c;
@@ -3118,7 +3290,7 @@ function refreshFmtBar(card, it){
   const ta = card.querySelector("textarea[data-f=text]");
   let f = it.fmt || {};
   if(ta && document.activeElement === ta && ta.selectionEnd > ta.selectionStart){ const ss = selStyle(ta.value, ta.selectionStart, ta.selectionEnd); if(ss) f = ss; }
-  bar.querySelectorAll("button[data-fmt=b],button[data-fmt=i],button[data-fmt=u]").forEach(x => x.classList.toggle("on", !!f[x.dataset.fmt]));
+  bar.querySelectorAll("button[data-fmt=b],button[data-fmt=i],button[data-fmt=u],button[data-fmt=x]").forEach(x => x.classList.toggle("on", !!f[x.dataset.fmt]));
   bar.querySelectorAll("button[data-fmt=color]").forEach(x => x.classList.toggle("on", !!f.c && f.c.toLowerCase() === x.dataset.c.toLowerCase()));
   const cu = bar.querySelector(".custom"); if(cu){ const custom = f.c && !SWATCHES.some(x => x[0].toLowerCase() === f.c.toLowerCase()); cu.classList.toggle("on", !!custom); cu.style.setProperty("--c", custom ? cssHex(f.c) : "#fff"); }
 }
@@ -3277,8 +3449,8 @@ $("#verGo").onclick = async () => {
       const saved = S.items;
       S.items = versionItems(saved, L, shufQ, shufO);
       try{
-        buildPDF({ version: L, large }).save(base + " - Version " + L + ".pdf");
-        if(keys){ await new Promise(r => setTimeout(r, 350)); buildPDF({ version: L, key: true, large }).save(base + " - Version " + L + " (answer key).pdf"); }
+        buildPDF({ version: L, large, final: true }).save(base + " - Version " + L + ".pdf");
+        if(keys){ await new Promise(r => setTimeout(r, 350)); buildPDF({ version: L, key: true, large, final: true }).save(base + " - Version " + L + " (answer key).pdf"); }
       }finally{ S.items = saved; }
       await new Promise(r => setTimeout(r, 450));
     }
@@ -3506,9 +3678,10 @@ $("#tileFile").onclick = () => { pendingImgTarget = null; $("#fileIn").accept = 
 $("#pasteCopyPrompt").onclick = async e => { e.preventDefault(); try{ await navigator.clipboard.writeText(USER_AI_PROMPT); toast("Prompt copied — paste it into your AI chat"); }catch(_){ $("#pasteModal").classList.remove("open"); openModal("#promptModal"); } };
 $("#pasteClip").onclick = async () => { try{ const t = await navigator.clipboard.readText(); if(t){ $("#pasteArea").value = t; pasteCount(); } else toast("The clipboard is empty"); }catch(_){ toast("Click in the box and press Ctrl+V (⌘+V on Mac)"); $("#pasteArea").focus(); } };
 function pasteCount(){
-  const it = parseText($("#pasteArea").value || "");
+  const it = parseText($("#pasteArea").value || ""), X = extractExtras($("#pasteArea").value || "");
   const q = it.filter(x => x.type === "q").length, p = it.filter(x => x.type === "section").length, m = it.reduce((a, x) => a + (x.type === "q" ? qMarks(x) : 0), 0);
-  $("#pasteCount").textContent = it.length ? `Found ${q} question${q === 1 ? "" : "s"}${p ? " in " + p + " part" + (p === 1 ? "" : "s") : ""}${m ? " · " + fmt(m) + " marks" : ""}` : "";
+  const pics = it.reduce((a, x) => a + picsOf(x.text).length, 0);
+  $("#pasteCount").textContent = it.length ? `Found ${q} question${q === 1 ? "" : "s"}${p ? " in " + p + " part" + (p === 1 ? "" : "s") : ""}${m ? " · " + fmt(m) + " marks" : ""}${X.rubric ? " · a rubric" : ""}${Object.keys(X.details).length ? " · exam details" : ""}${pics ? " · " + pics + " missing picture" + (pics > 1 ? "s" : "") : ""}` : "";
 }
 $("#pasteArea").addEventListener("input", pasteCount);
 ["dragenter", "dragover"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
@@ -3523,7 +3696,7 @@ $("#fileIn").addEventListener("change", async e => {
   const files = [...e.target.files]; e.target.value = "";
   if(pendingImgTarget && files[0]){
     const it = S.items.find(x => x.id === pendingImgTarget); pendingImgTarget = null;
-    try{ it.img = await imageFileToData(files[0]); it.imgSize = 100; render(); changed(); }catch(err){ toast(err.message); }
+    try{ it.img = await imageFileToData(files[0]); it.imgSize = 100; if(picsOf(it.text).length){ it.text = dropFirstPic(it.text); toast("Picture added — the red placeholder is gone"); } render(); changed(); }catch(err){ toast(err.message); }
     return;
   }
   handleFiles(files);
@@ -3567,9 +3740,14 @@ function focusLast(){ const L = S.items[S.items.length - 1]; if(L) lastEdited = 
 function focusLast0(){ const c = $("#list").lastElementChild; if(c){ c.scrollIntoView({ behavior: "smooth", block: "center" }); const f = c.querySelector("textarea,input[type=text]"); if(f) setTimeout(() => f.focus(), 250); } }
 $("#pasteText").onclick = () => { $("#pasteArea").value = ""; $("#pasteCount").textContent = ""; openModal("#pasteModal"); setTimeout(() => $("#pasteArea").focus(), 50); };
 $("#pasteGo").onclick = () => {
-  const items = parseText($("#pasteArea").value);
-  if(!items.length){ toast("Nothing to add"); return; }
-  S.items.push(...items); lastEdited = items[0].id; $("#pasteModal").classList.remove("open"); render(); changed(); toast("Added " + items.length + " items");
+  const raw = $("#pasteArea").value, items = parseText(raw), X = extractExtras(raw);
+  if(!items.length && !X.rubric && !Object.keys(X.details).length){ toast("Nothing to add"); return; }
+  const said = applyExtras(X);
+  S.items.push(...items); if(items.length) lastEdited = items[0].id; $("#pasteModal").classList.remove("open"); render(); changed();
+  const pics = items.reduce((a, x) => a + picsOf(x.text).length, 0);
+  toast(["Added " + items.length + " items"].concat(said, pics ? [pics + " missing picture" + (pics > 1 ? "s" : "") + " marked in red"] : []).join(" · "));
+  const firstMiss = items.find(x => picsOf(x.text).length);
+  if(firstMiss) setTimeout(() => { const c = $("#list").querySelector(`.card[data-id="${firstMiss.id}"]`); if(c) c.scrollIntoView({ behavior: "smooth", block: "center" }); }, 400);
 };
 $("#formatHelp").onclick = () => openModal("#helpModal");
 $("#clearAll").onclick = () => { if(!S.items.length) return; if(confirm("Remove all questions? (Exam details are kept.)")){ S.items = []; render(); changed(); } };
