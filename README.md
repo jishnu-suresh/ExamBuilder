@@ -15,7 +15,8 @@ Safari (Mac): *File → Add to Dock* also works, but Safari can't auto-save to a
 No internet / no install? Download the single-file version: [`docs/download/Exam_Builder_offline.html`](docs/download/Exam_Builder_offline.html) — double-click it to run.
 
 ## Try it with the demo files
-- [`demo.exam.json`](docs/demo/demo.exam.json) — a complete sample exam: open it with **📂 Open** (or on the start screen)
+- [`demo_all_features.exam.json`](docs/demo/demo_all_features.exam.json) — **every feature in one exam** (cover, rubric page, sub-questions, answer key, all answer spaces…): open it with **📂 Open**
+- [`demo.exam.json`](docs/demo/demo.exam.json) — a shorter sample exam
 - [`demo_AI_answer.txt`](docs/demo/demo_AI_answer.txt) — copy its text into **🤖 Paste from AI**
 - [`demo_worksheet_photo.jpg`](docs/demo/demo_worksheet_photo.jpg) — choose *Read the text (offline)*, then **📷 Add photos**
 
