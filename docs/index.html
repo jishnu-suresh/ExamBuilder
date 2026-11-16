@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Exam Builder · The Hive Academy</title>
+<title>BEE · Build • Edit • Evaluate</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#FAF7F0">
-<meta name="application-name" content="Exam Builder">
+<meta name="application-name" content="BEE">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Exam Builder">
+<meta name="apple-mobile-web-app-title" content="BEE">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <script>window.__PWA__ = true;</script>
@@ -25,6 +25,15 @@ button,input,select,textarea{font:inherit;color:inherit}
 .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:16px;padding:10px 22px;background:rgba(250,247,240,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
 .topbar img{height:34px}
 .topbar h1{font-size:19px;color:var(--gold-d);letter-spacing:.2px}
+.brand{display:flex;align-items:baseline;gap:7px}
+.brand .bee{font-size:22px;line-height:1;align-self:center;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.bee-name{font:800 22px/1 Georgia,"Times New Roman",serif;letter-spacing:2.5px;color:var(--ink)}
+.bee-tag{font:600 11px/1 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:1.4px;text-transform:uppercase;color:var(--gold-d)}
+@media (max-width:1180px){.topbar .bee-tag{display:none}}
+.start-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin:2px 0 2px}
+.start-brand .bee{font-size:40px;line-height:1;font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif}
+.start-brand .bee-name{font-size:40px;letter-spacing:6px}
+.start-tag{text-align:center;font:600 12.5px system-ui,sans-serif;letter-spacing:2.2px;text-transform:uppercase;color:var(--gold-d);margin-bottom:6px}
 .topbar .sp{flex:1}
 .btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:#fff;border-radius:9px;padding:7px 13px;cursor:pointer;white-space:nowrap;transition:background .15s,border-color .15s}
 .btn:hover{border-color:var(--gold);background:var(--gold-xl)}
@@ -253,10 +262,10 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 
 <header class="topbar">
   <img id="topLogo" alt="">
-  <h1>Exam Builder</h1>
+  <h1 class="brand"><span class="bee" aria-hidden="true">🐝</span><span class="bee-name">BEE</span><span class="bee-tag">Build&nbsp;•&nbsp;Edit&nbsp;•&nbsp;Evaluate</span></h1>
   <button class="savechip" id="saveChip" title="Your project is saved automatically every minute">…</button>
   <span class="sp"></span>
-  <button class="btn sm hidden" id="btnInstall" title="Install Exam Builder as an app on this computer">⤓ Install app</button>
+  <button class="btn sm hidden" id="btnInstall" title="Install BEE as an app on this computer">⤓ Install app</button>
   <button class="btn sm icon" id="btnUndo" title="Undo (Ctrl/⌘ + Z)" disabled>↶</button>
   <button class="btn sm icon" id="btnRedo" title="Redo (Ctrl/⌘ + Shift + Z, or Ctrl + Y)" disabled>↷</button>
   <button class="btn sm" id="btnNew" title="Start a new exam">＋ New</button>
@@ -631,8 +640,9 @@ x = 3
 <!-- START / PROJECT FILE -->
 <div class="modal" id="startModal" data-sticky>
   <div class="box start-box">
-    <img id="startLogo" alt="" style="height:46px;display:block;margin:0 auto 8px">
-    <h3 style="text-align:center">Welcome to Exam Builder</h3>
+    <img id="startLogo" alt="" style="height:30px;display:block;margin:0 auto 10px;opacity:.9">
+    <div class="start-brand"><span class="bee">🐝</span><span class="bee-name">BEE</span></div>
+    <div class="start-tag">Build&nbsp;•&nbsp;Edit&nbsp;•&nbsp;Evaluate</div>
     <p class="hint" style="text-align:center;margin:4px 0 14px">Each exam is a project file. It's saved automatically every minute, so your work is never lost.</p>
     <div class="start-opts">
       <button class="start-btn primary hidden" id="stContinueFile"><b id="stFileName">Continue</b><span>Reopen your last project file and keep saving to it</span></button>
@@ -641,13 +651,13 @@ x = 3
       <button class="start-btn" id="stOpen"><b>📂 Open a saved exam</b><span>An .exam.json project file</span></button>
     </div>
     <p class="hint" id="stNote" style="margin:12px 0 0"></p>
-    <p style="text-align:center;margin:14px 0 0;font:italic 12px Georgia,serif;color:var(--muted)">Exam Builder © Jishnu</p>
+    <p style="text-align:center;margin:14px 0 0;font:italic 12px Georgia,serif;color:var(--muted)">🐝 BEE · Build • Edit • Evaluate · © Jishnu</p>
     <p style="text-align:center;margin:6px 0 0"><a href="#" id="stSkip" style="color:var(--muted);font-size:13px">Continue without a project file</a></p>
   </div>
 </div>
 
-<div class="updbar hidden" id="updBar">A new version of Exam Builder is ready. <button class="btn sm primary" id="updGo">Update now</button></div>
-<div class="wm" aria-hidden="true">© Jishnu</div>
+<div class="updbar hidden" id="updBar">A new version of 🐝 BEE is ready. <button class="btn sm primary" id="updGo">Update now</button></div>
+<div class="wm" aria-hidden="true">🐝 BEE · © Jishnu</div>
 <!-- VERSIONS -->
 <div class="modal" id="verModal">
   <div class="box">
@@ -1684,7 +1694,7 @@ function buildPDF(opt){
   const mmPt = .3528;
   const hasLogo = !!(S.logo && S.logo.src);
 
-  doc.setProperties({ title: [D.subject, D.title].filter(Boolean).join(" — ") || "Exam", author: D.teacher || D.school || "", creator: "Exam Builder © Jishnu" });
+  doc.setProperties({ title: [D.subject, D.title].filter(Boolean).join(" — ") || "Exam", author: D.teacher || D.school || "", creator: "BEE · Build • Edit • Evaluate · © Jishnu" });
 
   /* --- decorative primitives --- */
   function hexagon(cx, cy, r, style){
@@ -3588,7 +3598,7 @@ let updateRequested = false;
 if(window.__PWA__){
   let installEvt = null;
   window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; $("#btnInstall").classList.remove("hidden"); });
-  window.addEventListener("appinstalled", () => { $("#btnInstall").classList.add("hidden"); toast("Exam Builder is installed — find it in your apps"); });
+  window.addEventListener("appinstalled", () => { $("#btnInstall").classList.add("hidden"); toast("🐝 BEE is installed — find it in your apps"); });
   $("#btnInstall").onclick = async () => { if(!installEvt) return; installEvt.prompt(); try{ await installEvt.userChoice; }catch(_){} installEvt = null; $("#btnInstall").classList.add("hidden"); };
   if("serviceWorker" in navigator){
     navigator.serviceWorker.register("sw.js").then(reg => {

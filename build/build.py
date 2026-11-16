@@ -77,14 +77,59 @@ def icon(size, pad, bg, name, round_=False):
         im.putalpha(mask)
     im.save(os.path.join(OUT, "icons", name))
 BG = (250, 247, 240, 255)
-icon(192, .14, BG, "icon-192.png", True); icon(512, .14, BG, "icon-512.png", True)
-icon(512, .24, BG, "maskable-512.png"); icon(180, .12, BG, "apple-touch-icon.png"); icon(32, .06, (0, 0, 0, 0), "favicon-32.png")
+# app icon: a honey hexagon with a bee (drawn from the Noto Color Emoji font when available)
+from PIL import ImageDraw, ImageFont
+import math
+def bee_img(px):
+    """An original, crisp bee drawn with shapes (supersampled), px wide."""
+    S = 1000; im = Image.new("RGBA", (S, S), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    ink = (43, 36, 30, 255); yel = (255, 196, 37, 255)
+    # wings (behind the body)
+    d.ellipse([300, 120, 560, 470], fill=(225, 240, 255, 235), outline=ink, width=26)
+    d.ellipse([500, 150, 760, 470], fill=(225, 240, 255, 235), outline=ink, width=26)
+    # body with stripes, clipped to the body ellipse
+    body = Image.new("L", (S, S), 0); ImageDraw.Draw(body).ellipse([170, 360, 860, 820], fill=255)
+    stripes = Image.new("RGBA", (S, S), yel); sd = ImageDraw.Draw(stripes)
+    for x0 in (390, 560, 730): sd.rectangle([x0, 0, x0 + 85, S], fill=ink)
+    im.paste(stripes, (0, 0), body)
+    d.ellipse([170, 360, 860, 820], outline=ink, width=30)
+    # stinger, head, eye, antennae
+    d.polygon([(850, 560), (960, 600), (850, 640)], fill=ink)
+    d.ellipse([60, 420, 330, 690], fill=ink)
+    d.ellipse([170, 480, 245, 555], fill=(255, 255, 255, 255))
+    d.line([(150, 440), (90, 300), (40, 280)], fill=ink, width=26, joint="curve")
+    d.line([(230, 425), (230, 280), (190, 240)], fill=ink, width=26, joint="curve")
+    d.ellipse([10, 255, 70, 315], fill=ink); d.ellipse([160, 210, 220, 270], fill=ink)
+    im = im.crop(im.getbbox())
+    w = px; h = int(im.height * px / im.width)
+    return im.resize((w, h), Image.LANCZOS)
+def bee_icon(size, pad, name, rounded=True, hexagon=True):
+    S4 = size * 4
+    im = Image.new("RGBA", (S4, S4), (0, 0, 0, 0)); d = ImageDraw.Draw(im)
+    if rounded: d.rounded_rectangle([0, 0, S4 - 1, S4 - 1], radius=S4 // 5, fill=BG)
+    else: d.rectangle([0, 0, S4, S4], fill=BG)
+    c = S4 / 2; r = S4 * (0.5 - pad)
+    if hexagon:
+        pts = [(c + r * math.cos(math.pi / 3 * k), c + r * math.sin(math.pi / 3 * k)) for k in range(6)]
+        d.polygon(pts, fill=(240, 196, 64, 255))
+        r2 = r * .86; pts2 = [(c + r2 * math.cos(math.pi / 3 * k), c + r2 * math.sin(math.pi / 3 * k)) for k in range(6)]
+        d.polygon(pts2, fill=(252, 226, 120, 255))
+    im = im.resize((size, size), Image.LANCZOS)
+    b = bee_img(int(size * (1 - 2 * pad) * (.78 if hexagon else .98)))
+    if b: im.alpha_composite(b, ((size - b.width) // 2, (size - b.height) // 2 + int(size * .01)))
+    im.save(os.path.join(OUT, "icons", name))
+bee_icon(192, .08, "icon-192.png"); bee_icon(512, .08, "icon-512.png")
+bee_icon(512, .2, "maskable-512.png", rounded=False); bee_icon(180, .08, "apple-touch-icon.png")
+bee_icon(32, .02, "favicon-32.png", rounded=False, hexagon=False)
+fav = Image.open(os.path.join(OUT, "icons", "favicon-32.png")).convert("RGBA")
+fav2 = Image.new("RGBA", fav.size, (0, 0, 0, 0)); b = bee_img(30)
+if b: fav2.alpha_composite(b, ((32 - b.width) // 2, (32 - b.height) // 2)); fav2.save(os.path.join(OUT, "icons", "favicon-32.png"))
 
 manifest = {
-    "name": "Exam Builder", "short_name": "Exam Builder", "id": "./", "start_url": "./", "scope": "./",
+    "name": "BEE — Build • Edit • Evaluate", "short_name": "BEE", "id": "./", "start_url": "./", "scope": "./",
     "display": "standalone", "display_override": ["window-controls-overlay", "standalone"],
     "background_color": "#FAF7F0", "theme_color": "#FAF7F0",
-    "description": "Create formatted exam papers (PDF) from typed questions, photos, maths, science and AI output. Works offline.",
+    "description": "BEE — Build, Edit, Evaluate. Create formatted exam papers (PDF) from typed questions, photos, maths, science and AI output. Works offline.",
     "icons": [{"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
               {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png"},
               {"src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}],
@@ -96,9 +141,9 @@ open(os.path.join(OUT, "manifest.webmanifest"), "w").write(json.dumps(manifest, 
 
 head = """<link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#FAF7F0">
-<meta name="application-name" content="Exam Builder">
+<meta name="application-name" content="BEE">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="Exam Builder">
+<meta name="apple-mobile-web-app-title" content="BEE">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <script>window.__PWA__ = true;</script>"""

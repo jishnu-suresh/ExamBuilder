@@ -1,6 +1,6 @@
 {
-  "name": "Exam Builder",
-  "short_name": "Exam Builder",
+  "name": "BEE \u2014 Build \u2022 Edit \u2022 Evaluate",
+  "short_name": "BEE",
   "id": "./",
   "start_url": "./",
   "scope": "./",
@@ -11,7 +11,7 @@
   ],
   "background_color": "#FAF7F0",
   "theme_color": "#FAF7F0",
-  "description": "Create formatted exam papers (PDF) from typed questions, photos, maths, science and AI output. Works offline.",
+  "description": "BEE \u2014 Build, Edit, Evaluate. Create formatted exam papers (PDF) from typed questions, photos, maths, science and AI output. Works offline.",
   "icons": [
     {
       "src": "icons/icon-192.png",

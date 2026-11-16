@@ -1,4 +1,4 @@
-# Exam Builder
+# 🐝 BEE — Build • Edit • Evaluate
 
 Make clean, formatted exam papers (PDF) from typed questions, pasted AI output, photos, maths, science and graphs.
 Everything runs on the teacher's own computer — exams and student details never leave it.
@@ -8,7 +8,7 @@ Everything runs on the teacher's own computer — exams and student details neve
 ## Install it as an app (Windows, Mac, Ubuntu)
 1. Open the link above in **Chrome** or **Edge**.
 2. Click **⤓ Install app** in the top bar (or the install icon at the right of the address bar).
-3. Exam Builder now has its own window and icon (Start menu / Dock / app grid) and works **offline**.
+3. BEE now has its own window and icon (Start menu / Dock / app grid) and works **offline**.
 4. Updates arrive automatically — when a new version is ready, a bar says *“A new version is ready — Update now”*.
 
 Safari (Mac): *File → Add to Dock* also works, but Safari can't auto-save to a project file — use Chrome/Edge for that.
