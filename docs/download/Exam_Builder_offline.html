@@ -139,6 +139,24 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .dl-menu button span{font-size:12px;color:var(--muted)}
 .dl-menu button:hover{background:var(--gold-xl)}
 .updbar{position:fixed;left:50%;transform:translateX(-50%);top:62px;z-index:60;background:var(--ink);color:#fff;border-radius:10px;padding:8px 10px 8px 14px;display:flex;align-items:center;gap:10px;font-size:13.5px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.switch{margin-left:auto;position:relative;display:inline-block;width:42px;height:24px;flex:none}
+.switch input{opacity:0;width:0;height:0}
+.switch span{position:absolute;inset:0;background:#D8D2C4;border-radius:24px;cursor:pointer;transition:background .15s}
+.switch span::before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:transform .15s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+.switch input:checked+span{background:var(--ink)}
+.switch input:checked+span::before{transform:translateX(18px)}
+.rb-top{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin:8px 0 10px}
+.rb-opts{display:flex;flex-wrap:wrap;gap:6px 16px;margin:4px 0 12px;font-size:13px}
+.rb-opts label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.rb-group{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:10px;background:#FFFDF8}
+.rb-ghead{display:flex;gap:6px;align-items:center;margin-bottom:6px}
+.rb-ghead input{flex:1;font-weight:600}
+.rb-row{display:grid;grid-template-columns:1.1fr 1.6fr 64px auto;gap:6px;align-items:center;margin-bottom:5px}
+.rb-row input,.rb-ghead input,.rb-top input,.rb-top select{border:1px solid var(--line);border-radius:7px;padding:5px 8px;font-size:13.5px;min-width:0;background:#fff;width:100%}
+.rb-row input:focus,.rb-ghead input:focus{border-color:var(--gold);outline:none}
+.rb-row .t{display:flex;gap:2px}
+.rb-sum{font-size:12.5px;color:var(--muted);margin:2px 0 6px}
+.rb-sum b{color:var(--ink)}
 .savechip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 11px;font-size:12.5px;color:var(--muted);cursor:pointer;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .savechip.ok{color:#3C6E3C;border-color:#BFD8BF;background:#F4FAF4}
 .savechip.warn{color:#9A5B12;border-color:#E9C98F;background:#FFF8EA}
@@ -227,6 +245,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
       <button data-dl="full"><b>Full exam</b><span>Cover page + all questions</span></button>
       <button data-dl="large"><b>Large-print exam</b><span>16 pt, double spacing (accommodations)</span></button>
       <button data-dl="cover"><b>Cover page only</b><span>Just the front page</span></button>
+      <button data-dl="rubric" id="dlRubric" class="hidden"><b>Rubric page only</b><span>The teacher's scoring page</span></button>
       <button data-dl="questions"><b>Questions only</b><span>Without the cover page</span></button>
     </div>
   </span>
@@ -284,6 +303,13 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
           <label><input type="checkbox" data-k="largePrint"> <b>Accommodation / large print</b> (16 pt, double spacing)</label>
         </div>
       </details>
+    </section>
+
+    <!-- RUBRIC -->
+    <section class="panel rubric-panel">
+      <h2 style="margin-bottom:6px"><span class="step">R</span>Rubric page <span class="hint" style="font:400 12.5px system-ui;margin-left:4px">for the teacher, after the cover</span>
+        <label class="switch" title="Add a rubric page after the cover"><input type="checkbox" id="rbOn"><span></span></label></h2>
+      <div id="rubricBox" class="hidden"></div>
     </section>
 
     <!-- STEP 2 -->
@@ -4846,6 +4872,7 @@ function bindDetails(){
   });
 }
 function refreshDetails(){
+  try{ renderRubric(); }catch(e){}
   document.querySelectorAll("[data-k]").forEach(el => {
     const k = el.dataset.k;
     if(el.type === "checkbox") el.checked = !!S.d[k]; else el.value = S.d[k] ?? "";
@@ -4934,6 +4961,7 @@ function render(){
   }).join("");
   list.querySelectorAll("textarea").forEach(autoGrow);
   list.querySelectorAll(".card").forEach(c => { const it = S.items.find(x => x.id === c.dataset.id); if(it && it.type !== "section") updateRich(c, it); });
+  if(S.d.rubricOn && !document.activeElement.closest?.("#rubricBox")) renderRubric();
 }
 function autoGrow(t){ t.style.height = "auto"; t.style.height = Math.min(420, t.scrollHeight + 2) + "px"; }
 
@@ -5544,8 +5572,93 @@ function buildPDF(opt){
   cover(P, true);
   let y = 0;   // question pages reset this via newPage()
 
+  /* ================= RUBRIC PAGE (teacher) ================= */
+  let rubricPage = 0;
+  if(D.rubricOn && D.rubric && !opt.coverOnly){
+    const R = D.rubric;
+    doc.addPage(); frame(); rubricPage = doc.getNumberOfPages();
+    // rows: parts, group headings, criteria, totals
+    const rows = [];
+    if(R.showParts && M.secs.length){
+      if(M.looseMarks > 0) rows.push({ k: "part", label: "Other questions", pts: M.looseMarks });
+      M.secs.forEach(sx => rows.push({ k: "part", label: stripFmt(sx.item.text || "Part").replace(/\$+([^$]*)\$+/g, "$1"), pts: sx.total }));
+    }
+    (R.groups || []).forEach(g => {
+      const its = (g.items || []).filter(it => (it.name || "").trim() || num(it.pts) > 0);
+      if(!its.length && !(g.heading || "").trim()) return;
+      if((g.heading || "").trim()) rows.push({ k: "head", label: g.heading.trim(), pts: its.reduce((a, it) => a + num(it.pts), 0) });
+      its.forEach(it => rows.push({ k: "crit", label: (it.name || "").trim(), desc: R.showDesc ? (it.desc || "").trim() : "", pts: num(it.pts) }));
+    });
+    const total = R.showParts && M.secs.length ? M.total : rbSum(R);
+    if(R.showTotal) rows.push({ k: "total", label: "TOTAL", pts: total });
+    if(R.showGrade) rows.push({ k: "grade", label: "TOTAL EXAM GRADE", pts: null });
+    const RX = ML, RW = CW, PCOL = 44, LCOL = RW - PCOL;
+    let top = 22;
+    font(SERIF, "bold", LARGE ? 20 : 18, INK); doc.text(fitText(R.title || "Rubric", RW), PW / 2, top + 6, { align: "center" });
+    font(SANS, "normal", 9, MUTED);
+    const sub = [D.subject, D.title, D.className].filter(Boolean).join("  ·  ");
+    if(sub) doc.text(fitText(sub, RW), PW / 2, top + 12.5, { align: "center" });
+    ornament(top + 17.5, 45);
+    top += 24;
+    const commentsH = R.showComments ? 42 : 0;
+    const avail = (PH - 20) - top - 8 - (commentsH ? commentsH + 8 : 0);
+    // row heights: shrink to fit one page
+    const fsBase = LARGE ? 12.5 : 11.5;
+    const rowHeights = sc => rows.map(r => {
+      let h = (r.k === "total" || r.k === "grade" ? 11 : r.k === "head" ? 9.5 : 8.6) * sc;
+      if(r.k === "crit" && r.desc){ font(SANS, "italic", (fsBase - 2.5) * Math.max(.85, sc)); h += doc.splitTextToSize(r.desc, LCOL - 16).length * (fsBase - 2.5) * Math.max(.85, sc) * mmPt * 1.25 + 1; }
+      return h;
+    });
+    let sc = 1, hs = rowHeights(1);
+    const headerH = 10;
+    while(hs.reduce((a, b) => a + b, 0) + headerH > avail && sc > .62){ sc -= .04; hs = rowHeights(sc); }
+    // few rows: make them taller (up to 1.35×) so the table uses the page and leaves room to write scores
+    while(sc < 1.35 && rowHeights(sc + .05).reduce((a, b) => a + b, 0) + headerH <= avail * .92){ sc += .05; hs = rowHeights(sc); }
+    const fsR = fsBase * Math.max(.82, sc);
+    // header row
+    let ry = top;
+    doc.setFillColor(...ACC); doc.rect(RX, ry, RW, headerH, "F");
+    font(SANS, "bold", fsR, [255, 255, 255]);
+    doc.text("Criteria", RX + 4, ry + headerH * .66);
+    doc.text("Points", RX + LCOL + PCOL / 2, ry + headerH * .66, { align: "center" });
+    ry += headerH;
+    const pointsCell = (pts, y0, h, bold) => {
+      const cx = RX + LCOL, by = y0 + h * .66;
+      font(SANS, bold ? "bold" : "normal", fsR, INK);
+      if(pts == null){ doc.setDrawColor(...RULE); doc.setLineWidth(.3); doc.line(cx + 8, by + .8, cx + PCOL - 12, by + .8); doc.text("%", cx + PCOL - 4, by, { align: "right" }); return; }
+      const t = "/ " + fmt(pts);
+      doc.setDrawColor(...RULE); doc.setLineWidth(.3); doc.line(cx + 5, by + .8, cx + PCOL - 4 - doc.getTextWidth(t) - 2, by + .8);
+      doc.text(t, cx + PCOL - 4, by, { align: "right" });
+    };
+    rows.forEach((r, i) => {
+      const h = hs[i];
+      // backgrounds
+      if(r.k === "head"){ doc.setFillColor(...ACC_L); doc.rect(RX, ry, RW, h, "F"); }
+      else if(r.k === "total" || r.k === "grade"){ doc.setFillColor(...ACC_XL); doc.rect(RX, ry, RW, h, "F"); }
+      else if(i % 2 === 0){ doc.setFillColor(...ACC_XL); doc.rect(RX, ry, RW, h, "F"); }
+      const by = ry + Math.min(h, 8.6 * sc) * .66 + (r.k === "total" || r.k === "grade" ? 1.2 : 0);
+      if(r.k === "part"){ font(SANS, "bold", fsR, INK); doc.text(fitText(r.label, LCOL - 8), RX + 4, by); pointsCell(r.pts, ry, Math.min(h, 8.6 * sc), true); }
+      else if(r.k === "head"){ font(SERIF, "bold", fsR + .5, INK); doc.text(fitText(r.label, LCOL - 8), RX + 4, by); font(SANS, "bold", fsR - 1.5, MUTED); doc.text(fmt(r.pts) + " pts", RX + LCOL + PCOL / 2, by, { align: "center" }); }
+      else if(r.k === "crit"){
+        font(SERIF, "italic", fsR + .5, INK); doc.text(fitText(r.label || "—", LCOL - 14), RX + 10, by);
+        if(r.desc){ font(SANS, "italic", (fsBase - 2.5) * Math.max(.85, sc), MUTED); let dy = by + (fsBase - 2.5) * Math.max(.85, sc) * mmPt * 1.35; doc.splitTextToSize(r.desc, LCOL - 16).forEach(l => { doc.text(l, RX + 10, dy); dy += (fsBase - 2.5) * Math.max(.85, sc) * mmPt * 1.25; }); }
+        pointsCell(r.pts, ry, Math.min(h, 8.6 * sc), false);
+      }else{ font(SANS, "bold", fsR + .5, INK); doc.text(r.label, RX + LCOL - 4, by, { align: "right" }); pointsCell(r.pts, ry, h, true); }
+      // lines
+      doc.setDrawColor(...shade(ACC_L, .12)); doc.setLineWidth(.2); doc.line(RX, ry + h, RX + RW, ry + h);
+      ry += h;
+    });
+    doc.setDrawColor(...ACC); doc.setLineWidth(.45); doc.rect(RX, top, RW, ry - top, "S"); doc.line(RX + LCOL, top, RX + LCOL, ry);
+    if(R.showComments){
+      const cy = ry + 8;
+      font(SANS, "bold", 8.5, ACC_D); doc.text("TEACHER COMMENTS", RX, cy + 3, { charSpace: 1 });
+      doc.setDrawColor(...ACC_L); doc.setLineWidth(.35); doc.roundedRect(RX, cy + 6, RW, commentsH - 6, 2, 2, "S");
+      doc.setDrawColor(...RULE); doc.setLineWidth(.2); for(let ly = cy + 15; ly < cy + commentsH - 2; ly += 8) doc.line(RX + 4, ly, RX + RW - 4, ly);
+    }
+  }
+
   /* ================= QUESTION PAGES ================= */
-  const items = opt.coverOnly ? [] : S.items.filter(it => it.type === "section" || (it.text && it.text.trim()) || it.img || it.type === "q");
+  const items = (opt.coverOnly || opt.rubricOnly) ? [] : S.items.filter(it => it.type === "section" || (it.text && it.text.trim()) || it.img || it.type === "q");
   const TOP = 30, BOTTOM = PH - 19;
   let firstQPage = null;
   const pageOf = {};
@@ -5871,9 +5984,13 @@ function buildPDF(opt){
       if(D.year){ doc.setFontSize(7.5); doc.text(D.year, PW - MR, PH - 12.6, { align: "right" }); }
     }
   }
-  if(opt.noCover && doc.getNumberOfPages() > 1){
+  if(rubricPage) pageOf.__rubric = rubricPage;
+  if(opt.rubricOnly && rubricPage){
+    for(let p = doc.getNumberOfPages(); p >= 1; p--) if(p !== rubricPage) doc.deletePage(p);
+  }else if(opt.noCover && doc.getNumberOfPages() > 1){
+    if(rubricPage) doc.deletePage(rubricPage);
     doc.deletePage(1);
-    Object.keys(pageOf).forEach(k => pageOf[k]--);
+    Object.keys(pageOf).forEach(k => pageOf[k] -= rubricPage ? 2 : 1);
   }
   doc.__pageOf = pageOf;
   return doc;
@@ -5946,7 +6063,7 @@ let pvResizeT; new ResizeObserver(() => { clearTimeout(pvResizeT); pvResizeT = s
 const H = { stack: [], idx: -1, t: null, restoring: false };
 function cloneItem(it){ const c = Object.assign({}, it); if(Array.isArray(it.options)) c.options = it.options.slice(); if(it.fmt) c.fmt = Object.assign({}, it.fmt); return c; }
 function snapSig(d, items){ return JSON.stringify({ d, items: items.map(i => Object.assign({}, i, { img: i.img ? i.img.src.length + ":" + i.img.w + ":" + i.img.h : null, labels: i.labels ? JSON.stringify(i.labels.pts) : 0, graph: i.graph ? JSON.stringify(i.graph) : 0 })) }); }
-function snapOf(){ const d = Object.assign({}, S.d), items = S.items.map(cloneItem); return { d, logo: S.logo, items, sig: snapSig(d, items) }; }
+function snapOf(){ const d = JSON.parse(JSON.stringify(S.d)), items = S.items.map(cloneItem); return { d, logo: S.logo, items, sig: snapSig(d, items) }; }
 function updUndoBtns(){ const u = document.getElementById("btnUndo"), r = document.getElementById("btnRedo"); if(u) u.disabled = !(H.idx > 0 || H.t); if(r) r.disabled = !(H.idx < H.stack.length - 1); }
 function histReset(){ clearTimeout(H.t); H.t = null; H.stack = [snapOf()]; H.idx = 0; updUndoBtns(); }
 function histCommit(){
@@ -5963,7 +6080,7 @@ function restoreSnap(sn){
   const ae = document.activeElement, card = ae && ae.closest ? ae.closest(".card") : null;
   const foc = card ? { id: card.dataset.id, f: ae.dataset.f, o: ae.dataset.opt, s: ae.selectionStart } : (ae && ae.dataset && ae.dataset.k ? { k: ae.dataset.k, s: ae.selectionStart } : null);
   H.restoring = true;
-  S.d = Object.assign({}, sn.d); S.logo = sn.logo; S.items = sn.items.map(cloneItem);
+  S.d = JSON.parse(JSON.stringify(sn.d)); S.logo = sn.logo; S.items = sn.items.map(cloneItem);
   refreshDetails(); updateLogoUI(); render(); changed();
   H.restoring = false;
   if(foc){
@@ -5988,7 +6105,7 @@ function changed(){
   histSchedule(); saveLocal(); clearTimeout(pvT); $("#status").textContent = "updating…"; pvT = setTimeout(preview, 400); }
 async function download(opt){
   opt = opt || {};
-  const name = fileName().replace(/\.pdf$/, "") + (opt.coverOnly ? " (cover page)" : opt.noCover ? " (questions)" : "") + ((opt.large || S.d.largePrint) ? " (large print)" : "") + ".pdf";
+  const name = fileName().replace(/\.pdf$/, "") + (opt.coverOnly ? " (cover page)" : opt.rubricOnly ? " (rubric)" : opt.noCover ? " (questions)" : "") + ((opt.large || S.d.largePrint) ? " (large print)" : "") + ".pdf";
   try{ await prepareMath(); buildPDF(opt).save(name); toast("Saved " + name); }
   catch(e){ console.error(e); toast("Couldn't create the PDF: " + e.message); }
 }
@@ -6545,6 +6662,97 @@ $("#list").addEventListener("change", e => {
   onFmt(inp, card, it, inp.value);
 });
 
+/* ---------------- rubric page ---------------- */
+const RUBRIC_PRESETS = {
+  essay: { label: "ELA — Essay writing", title: "Scoring by Section (for Teacher)", groups: [{ heading: "Essay Breakdown of Grade", items: [
+    ["Main Idea", "Clear, focused thesis that answers the prompt", 10], ["Supporting Ideas", "Relevant reasons, examples and evidence", 10], ["Voice", "Engaging, appropriate tone for audience and purpose", 10],
+    ["Word Choice", "Precise, varied vocabulary", 10], ["Sentence Fluency", "Varied sentence structure that reads smoothly", 10], ["Organization", "Logical order, paragraphs, introduction and conclusion", 10],
+    ["Grammar", "Correct verb tense, agreement and sentence structure", 10], ["Spelling & Punctuation", "Accurate spelling, capitals and punctuation", 10],
+    ["Writing Process", "Evidence of planning, drafting and revising", 10], ["Format & Presentation", "Neat, legible, follows the required format", 10]] }] },
+  lab: { label: "Science — Lab report", title: "Lab Report Rubric (for Teacher)", groups: [{ heading: "Lab report", items: [
+    ["Research question & hypothesis", "Testable question and a reasoned prediction", 10], ["Variables & method", "Independent, dependent and controlled variables; clear steps", 15],
+    ["Data collection", "Accurate measurements recorded in a table with units", 15], ["Graphs", "Correct type, labelled axes, units, scale and title", 15],
+    ["Analysis", "Trends and patterns described using the data", 15], ["Conclusion & evaluation", "Answers the question; sources of error and improvements", 20],
+    ["Safety & presentation", "Risks identified; neat and complete report", 10]] }] },
+  maths: { label: "Maths — Problem solving", title: "Problem-Solving Rubric (for Teacher)", groups: [{ heading: "Problem solving", items: [
+    ["Understanding the problem", "Identifies what is given and what is asked", 20], ["Strategy & reasoning", "Chooses a suitable method and justifies steps", 25],
+    ["Accuracy", "Correct calculations and final answer", 25], ["Working shown", "Clear, complete and logical working", 20], ["Communication & notation", "Correct symbols, units and a stated answer", 10]] }] },
+  project: { label: "Presentation / project", title: "Project Rubric (for Teacher)", groups: [{ heading: "Project", items: [
+    ["Content & research", "Accurate, relevant and well researched", 25], ["Organisation", "Clear structure with a logical flow", 20], ["Visuals", "Clear, relevant and well designed", 15],
+    ["Delivery", "Confident, audible, good eye contact", 20], ["Time management", "Within the time limit", 10], ["Questions & answers", "Answers questions with understanding", 10]] }] },
+  blank: { label: "Blank", title: "Rubric (for Teacher)", groups: [{ heading: "Criteria", items: [["", "", 10]] }] }
+};
+function rubricFromPreset(k){
+  const P = RUBRIC_PRESETS[k] || RUBRIC_PRESETS.essay;
+  return { title: P.title, showParts: true, showTotal: true, showGrade: true, showComments: false, showDesc: false,
+    groups: P.groups.map(g => ({ heading: g.heading, items: g.items.map(([name, desc, pts]) => ({ name, desc, pts: String(pts) })) })) };
+}
+function rubric(){ if(!S.d.rubric || !Array.isArray(S.d.rubric.groups)) S.d.rubric = rubricFromPreset("essay"); return S.d.rubric; }
+const rbSum = R => R.groups.reduce((a, g) => a + g.items.reduce((b, it) => b + num(it.pts), 0), 0);
+function renderRubric(){
+  $("#rbOn").checked = !!S.d.rubricOn;
+  $("#rubricBox").classList.toggle("hidden", !S.d.rubricOn);
+  $("#dlRubric").classList.toggle("hidden", !S.d.rubricOn);
+  if(!S.d.rubricOn) return;
+  const R = rubric(), M = computeMeta();
+  const chk = (k, l) => `<label><input type="checkbox" data-rb-opt="${k}" ${R[k] ? "checked" : ""}> ${l}</label>`;
+  $("#rubricBox").innerHTML = `
+    <div class="rb-top">
+      <label class="f">Title of the page<input data-rb="title" value="${esc(R.title)}"></label>
+      <label class="f">Start from a template<select id="rbPreset"><option value="">Choose…</option>${Object.entries(RUBRIC_PRESETS).map(([k, p]) => `<option value="${k}">${esc(p.label)}</option>`).join("")}</select></label>
+    </div>
+    <div class="rb-opts">
+      ${chk("showParts", "List the exam's parts with their points")}${chk("showTotal", "TOTAL row")}${chk("showGrade", "Total exam grade (%) row")}
+      ${chk("showDesc", "Show descriptions (for students)")}${chk("showComments", "Teacher comments box")}
+    </div>
+    ${R.groups.map((g, gi) => `<div class="rb-group" data-gi="${gi}">
+      <div class="rb-ghead"><input data-rb="heading" value="${esc(g.heading)}" placeholder="Group heading, e.g. Essay Breakdown of Grade">
+        <button class="btn icon" data-rba="gup" title="Move group up" ${gi === 0 ? "disabled" : ""}>↑</button>
+        <button class="btn icon danger" data-rba="gdel" title="Remove this group">✕</button></div>
+      ${g.items.map((it, ii) => `<div class="rb-row" data-ii="${ii}">
+        <input data-rb="name" value="${esc(it.name)}" placeholder="Criterion, e.g. Main Idea">
+        <input data-rb="desc" value="${esc(it.desc || "")}" placeholder="Description (optional)">
+        <input data-rb="pts" type="number" min="0" step="0.5" value="${esc(it.pts)}" placeholder="pts">
+        <span class="t"><button class="btn icon" data-rba="up" title="Move up" ${ii === 0 ? "disabled" : ""}>↑</button><button class="btn icon danger" data-rba="del" title="Remove">✕</button></span>
+      </div>`).join("")}
+      <button class="btn sm" data-rba="add">＋ Add criterion</button>
+      <span class="hint" style="margin-left:8px">Group total: <b>${fmt(g.items.reduce((a, it) => a + num(it.pts), 0))}</b></span>
+    </div>`).join("")}
+    <button class="btn sm" data-rba="gadd">＋ Add group</button>
+    <div class="rb-sum" style="margin-top:8px">${R.showParts && M.secs.length ? `TOTAL on the rubric = exam total <b>${fmt(M.total)}</b> (from the parts)` : `TOTAL on the rubric = sum of the criteria <b>${fmt(rbSum(R))}</b>`}</div>`;
+}
+function rbChanged(rerender){ lastEdited = "__rubric"; if(rerender) renderRubric(); changed(); }
+$("#rbOn").addEventListener("change", e => { S.d.rubricOn = e.target.checked; if(S.d.rubricOn) rubric(); lastEdited = "__rubric"; renderRubric(); changed(); });
+$("#rubricBox").addEventListener("input", e => {
+  const R = rubric(), k = e.target.dataset.rb; if(!k) return;
+  const g = e.target.closest(".rb-group"), r = e.target.closest(".rb-row");
+  if(k === "title") R.title = e.target.value;
+  else if(k === "heading") R.groups[+g.dataset.gi].heading = e.target.value;
+  else R.groups[+g.dataset.gi].items[+r.dataset.ii][k] = e.target.value;
+  rbChanged(k === "pts" ? false : false);
+  if(k === "pts"){ const tot = g.querySelector(".hint b"); if(tot) tot.textContent = fmt(R.groups[+g.dataset.gi].items.reduce((a, it) => a + num(it.pts), 0)); }
+});
+$("#rubricBox").addEventListener("change", e => {
+  const R = rubric();
+  if(e.target.dataset.rbOpt){ R[e.target.dataset.rbOpt] = e.target.checked; rbChanged(true); return; }
+  if(e.target.id === "rbPreset" && e.target.value){
+    if(confirm("Replace the current rubric with the “" + RUBRIC_PRESETS[e.target.value].label + "” template?")){ S.d.rubric = rubricFromPreset(e.target.value); rbChanged(true); }
+    else e.target.value = "";
+  }
+});
+$("#rubricBox").addEventListener("click", e => {
+  const b = e.target.closest("[data-rba]"); if(!b) return;
+  const R = rubric(), g = b.closest(".rb-group"), gi = g ? +g.dataset.gi : -1, r = b.closest(".rb-row"), ii = r ? +r.dataset.ii : -1;
+  const a = b.dataset.rba;
+  if(a === "add"){ R.groups[gi].items.push({ name: "", desc: "", pts: "10" }); rbChanged(true); const rows = $("#rubricBox").querySelectorAll(`.rb-group[data-gi="${gi}"] .rb-row`); const last = rows[rows.length - 1]; if(last) last.querySelector("input").focus(); return; }
+  if(a === "del"){ R.groups[gi].items.splice(ii, 1); }
+  if(a === "up" && ii > 0){ const L = R.groups[gi].items; [L[ii - 1], L[ii]] = [L[ii], L[ii - 1]]; }
+  if(a === "gadd"){ R.groups.push({ heading: "", items: [{ name: "", desc: "", pts: "10" }] }); }
+  if(a === "gdel"){ if(!confirm("Remove this whole group?")) return; R.groups.splice(gi, 1); }
+  if(a === "gup" && gi > 0){ [R.groups[gi - 1], R.groups[gi]] = [R.groups[gi], R.groups[gi - 1]]; }
+  rbChanged(true);
+});
+
 /* ---------------- quick-add helpers ---------------- */
 function focusItem(id, selectAll){
   const c = document.querySelector(`.card[data-id="${id}"]`); if(!c) return;
@@ -6788,7 +6996,7 @@ document.addEventListener("click", e => { if(!e.target.closest(".dl-wrap")) $("#
 $("#dlMenu").addEventListener("click", e => {
   const b = e.target.closest("[data-dl]"); if(!b) return;
   $("#dlMenu").classList.add("hidden");
-  ({ full: () => download(), large: () => download({ large: true }), cover: () => download({ coverOnly: true }), questions: () => download({ noCover: true }) })[b.dataset.dl]();
+  ({ full: () => download(), large: () => download({ large: true }), cover: () => download({ coverOnly: true }), rubric: () => download({ rubricOnly: true }), questions: () => download({ noCover: true }) })[b.dataset.dl]();
 }); $("#btnDownload2").onclick = () => download();
 $("#btnRefresh").onclick = preview;
 
@@ -6896,6 +7104,7 @@ if(window.__PWA__){
   if(storedLocal) S = mergeState(storedLocal);
   try{ storedHandle = FS_OK ? (await IDB.get("handle")) || null : null; }catch(e){ storedHandle = null; }
   bindDetails();
+  renderRubric();
   updateLogoUI();
   render();
   updateChip();
