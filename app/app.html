@@ -98,6 +98,8 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+@keyframes jumped{0%{box-shadow:0 0 0 0 rgba(212,160,23,.0)}15%{box-shadow:0 0 0 4px rgba(212,160,23,.55)}100%{box-shadow:0 0 0 0 rgba(212,160,23,0)}}
+.jumped{animation:jumped 1.5s ease-out}
 .card.subpart{border-left:3px solid var(--acc)}.card.subpart .badge{font-weight:800}
 .card.subpart input[data-f=text]{font-weight:700;font-size:15px;color:var(--acc-d,#333)}
 .fmtbar button.sz{font:600 13px Georgia,serif;padding:0 6px}.fmtbar button.sz small{font-size:10px;margin-left:1px}
@@ -2411,6 +2413,8 @@ function buildPDF(opt){
   const TOP = 30, BOTTOM = PH - 19;
   let firstQPage = null;
   const pageOf = {};
+  const regions = [];   // where each item sits: click the preview → jump to it
+  const mark = (id, y0, y1, x0, x1) => regions.push({ id, p: doc.getNumberOfPages(), y0, y1, x0: x0 == null ? 0 : x0, x1: x1 == null ? 1e3 : x1 });
   function header(){
     let hx = ML;
     if(hasLogo){
@@ -2836,7 +2840,7 @@ function buildPDF(opt){
         if(y > TOP + 1 && y + h + 9 + need > BOTTOM) newPage();
         if(y > TOP + 1) y += 3;
         pageOf[it.id] = doc.getNumberOfPages();
-        doc.setFillColor(...ACC_XL); doc.rect(ML, y, CW, h, "F");
+        mark(it.id, y, y + h); doc.setFillColor(...ACC_XL); doc.rect(ML, y, CW, h, "F");
         doc.setFillColor(...ACC); doc.rect(ML, y, 1.6, h, "F");
         const mk = M.meta[it.id];
         font(SANS, "bold", 8.5, ACC_D);
@@ -2862,7 +2866,7 @@ function buildPDF(opt){
         if(y > TOP + 1 && y + hh + need > BOTTOM) newPage();
         if(y > TOP + 1) y += 2.5;
         pageOf[it.id] = doc.getNumberOfPages();
-        const base = y + fs * mmPt * 1.05;
+        const base = y + fs * mmPt * 1.05; mark(it.id, y - 1, y + hh);
         const mk = num(it.marks), mtxt = mk > 0 ? fmt(mk) + (mk === 1 ? PT(" point") : PT(" points")) : "";
         font(SANS, "normal", fs - 1, ACC_D); const mw = mtxt ? doc.getTextWidth(mtxt) + 4 : 0;
         if(mtxt) doc.text(mtxt, ML + CW, base, { align: "right" });
@@ -2880,7 +2884,7 @@ function buildPDF(opt){
         const blocks = pair.map((q, k) => qBlock(q, ML + k * (colW + GAP), colW));
         const h = Math.max(...blocks.map(b => b.h));
         if(y + h > BOTTOM && y > TOP + 1) newPage();
-        blocks.forEach(b => b.drawAll(y));
+        blocks.forEach((b, k) => { mark(pair[k].id, y, y + h, ML + k * (colW + GAP), ML + k * (colW + GAP) + colW); b.drawAll(y); });
         pair.forEach(q => pageOf[q.id] = doc.getNumberOfPages());
         y += h + QGAP; idx += pair.length - 1;
         continue;
@@ -2888,7 +2892,7 @@ function buildPDF(opt){
       const blk = qBlock(it, ML, CW);
       if(blk.h <= pageAvail ? y + blk.h > BOTTOM : y + blk.first > BOTTOM) newPage();
       pageOf[it.id] = doc.getNumberOfPages();
-      blk.parts.forEach(p => { if(y + p.h > BOTTOM && y > TOP + 1) newPage(); p.draw(y); y += p.h; });
+      blk.parts.forEach(p => { if(y + p.h > BOTTOM && y > TOP + 1) newPage(); mark(it.id, y, y + p.h); p.draw(y); y += p.h; });
       y += it.type === "q" ? QGAP : NGAP;
     }
 
@@ -2915,14 +2919,16 @@ function buildPDF(opt){
     }
   }
   if(rubricPage) pageOf.__rubric = rubricPage;
+  if(!opt.rubricOnly && !opt.noCover){ regions.push({ id: "__cover", p: 1, y0: 0, y1: 1e3, x0: 0, x1: 1e3 }); if(rubricPage) regions.push({ id: "__rubric", p: rubricPage, y0: 0, y1: 1e3, x0: 0, x1: 1e3 }); }
   if(opt.rubricOnly && rubricPage){
     for(let p = doc.getNumberOfPages(); p >= 1; p--) if(p !== rubricPage) doc.deletePage(p);
   }else if(opt.noCover && doc.getNumberOfPages() > 1){
     if(rubricPage) doc.deletePage(rubricPage);
     doc.deletePage(1);
     Object.keys(pageOf).forEach(k => pageOf[k] -= rubricPage ? 2 : 1);
+    regions.forEach(r => r.p -= rubricPage ? 2 : 1);
   }
-  doc.__pageOf = pageOf;
+  doc.__pageOf = pageOf; doc.__regions = regions; doc.__size = [PW, PH];
   return doc;
 }
 
@@ -2933,6 +2939,38 @@ function fileName(){
 let lastBytes = null, pvT = null, pvZoom = 1, pvRun = 0, pvShownPages = 0;
 let pvBusy = false, pvAgain = false;
 // Fast in-page preview (pdf.js): renders off-screen, swaps in one go, keeps your scroll position.
+let pvMap = { regions: [], size: [210, 297] };
+// click (or tap) the preview → open that question in the editor, like Overleaf
+function pvLocate(c, ev){
+  const r = c.getBoundingClientRect(), [PW, PH] = pvMap.size;
+  const x = (ev.clientX - r.left) / r.width * PW, y = (ev.clientY - r.top) / r.height * PH, p = +c.dataset.page;
+  const on = pvMap.regions.filter(g => g.p === p && x >= g.x0 - 2 && x <= g.x1 + 2);
+  const hit = on.filter(g => y >= g.y0 && y <= g.y1);
+  if(hit.length) return hit.find(g => !g.id.startsWith("__")) || hit[0];
+  // in the gap between two questions: take the nearest one within 8 mm
+  let best = null, bd = 8;
+  on.forEach(g => { if(g.id.startsWith("__")) return; const d = y < g.y0 ? g.y0 - y : y - g.y1; if(d < bd){ bd = d; best = g; } });
+  return best;
+}
+function jumpToItem(id){
+  if(!id) return;
+  if(id === "__cover"){ const pnl = document.querySelector('[data-k="title"]').closest(".panel"); pnl.scrollIntoView({ behavior: "smooth", block: "start" }); flash(pnl); setTimeout(() => document.querySelector('[data-k="title"]').focus({ preventScroll: true }), 350); return; }
+  if(id === "__rubric"){ const pnl = document.querySelector(".rubric-panel"); pnl.scrollIntoView({ behavior: "smooth", block: "start" }); flash(pnl); return; }
+  const card = document.querySelector(`.card[data-id="${id}"]`); if(!card) return;
+  card.scrollIntoView({ behavior: "smooth", block: "center" }); flash(card);
+  const f = card.querySelector("textarea[data-f=text],input[data-f=text]");
+  if(f) setTimeout(() => f.focus({ preventScroll: true }), 350);
+}
+function flash(el){ el.classList.remove("jumped"); void el.offsetWidth; el.classList.add("jumped"); setTimeout(() => el.classList.remove("jumped"), 1600); }
+document.getElementById("pv").addEventListener("click", ev => {
+  const c = ev.target.closest("canvas[data-page]"); if(!c) return;
+  const g = pvLocate(c, ev); if(g) jumpToItem(g.id);
+});
+document.getElementById("pv").addEventListener("mousemove", ev => {
+  const c = ev.target.closest("canvas[data-page]"); if(!c) return;
+  const g = pvLocate(c, ev); c.style.cursor = g ? "pointer" : "";
+  c.title = g ? (g.id === "__cover" ? "Click to edit the exam details" : g.id === "__rubric" ? "Click to edit the rubric" : "Click to edit this in the editor") : "";
+});
 async function showPreview(bytes, jumpPage){
   const run = ++pvRun;
   if(!window.pdfjsLib){ return; }
@@ -2976,7 +3014,7 @@ async function preview(){
   try{
     await prepareMath();
     const doc = buildPDF({ key: !!(document.getElementById("pvKey") || {}).checked });
-    lastBytes = doc.output("arraybuffer");
+    lastBytes = doc.output("arraybuffer"); pvMap = { regions: doc.__regions || [], size: doc.__size };
     const pg = (lastEdited && doc.__pageOf && doc.__pageOf[lastEdited]) || (lastEdited === null ? 1 : 0);
     await showPreview(lastBytes, pg);
     $("#status").textContent = doc.getNumberOfPages() + " page" + (doc.getNumberOfPages() > 1 ? "s" : "") + " · updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
