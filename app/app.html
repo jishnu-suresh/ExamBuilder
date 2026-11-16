@@ -100,6 +100,7 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .hidden{display:none!important}
 @keyframes jumped{0%{box-shadow:0 0 0 0 rgba(212,160,23,.0)}15%{box-shadow:0 0 0 4px rgba(212,160,23,.55)}100%{box-shadow:0 0 0 0 rgba(212,160,23,0)}}
 .jumped{animation:jumped 1.5s ease-out}
+.card.pagebreak{border-style:dashed;background:repeating-linear-gradient(135deg,#fff,#fff 8px,#faf7f0 8px,#faf7f0 16px)}.card.pagebreak .body{padding:2px 0}
 .card.subpart{border-left:3px solid var(--acc)}.card.subpart .badge{font-weight:800}
 .card.subpart input[data-f=text]{font-weight:700;font-size:15px;color:var(--acc-d,#333)}
 .fmtbar button.sz{font:600 13px Georgia,serif;padding:0 6px}.fmtbar button.sz small{font-size:10px;margin-left:1px}
@@ -451,6 +452,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
         <button class="btn sm" id="addS">＋ Part / section</button>
         <button class="btn sm" id="addN">＋ Text / passage</button>
         <button class="btn sm" id="addSub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-part</button>
+        <button class="btn sm" id="addBreak" title="Everything after this starts on a new page">＋ Page break</button>
         <button class="btn sm" id="addMCQ">＋ MCQ</button>
         <button class="btn sm" id="arrangeBtn" title="See all questions as small tiles and drag them into a new order">⇅ Arrange</button>
         <button class="btn sm" id="eqGlobal" title="Visual equation editor (maths, physics, chemistry)">∑ Equation</button>
@@ -470,6 +472,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
         <button class="btn sm" data-add="s">＋ Part</button>
         <button class="btn sm" data-add="n">＋ Text / passage</button>
         <button class="btn sm" data-add="sub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-part</button>
+        <button class="btn sm" data-add="brk" title="Everything after this starts on a new page">＋ Page break</button>
         <button class="btn sm" data-add="eq">∑ Equation</button>
         <button class="btn sm" data-add="graph">📈 Graph</button>
         <button class="btn sm" data-add="img">🖼 Photo / image</button>
@@ -1041,6 +1044,7 @@ function takeSpace(str){
   const k = m[1].toLowerCase().replace(/\s+/g, ""), kind = k === "numberline" ? "numberline" : (k === "axes" || k === "coordinategrid") ? "axes" : k, rng = kind === "numberline" || kind === "axes";
   return { s: str.replace(RE_SPACE, " ").replace(/[ \t]+\n/g, "\n").replace(/\s+$/, ""), space: kind, range: rng ? m[2].trim() : "", lines: rng ? "" : (m[2].match(/\d+/) || [""])[0] };
 }
+const RE_BREAK = /^\s*\{\s*(?:new\s*page|page\s*break|pagebreak|newpage)\s*\}\s*$/i;
 const RE_SUBPART = /^\s*(?:\*\*)?\s*(?:sub-?part|sous-partie)\s*:\s*(.+?)\s*$/i;
 function takeMarks(str){
   let m = str.match(RE_MARKS_SQ) || str.match(RE_MARKS_PAR);
@@ -1250,6 +1254,7 @@ function parseText(txt){
     let para = [];
     const flushPara = () => { if(para.length){ out.push(finishBlock({ type: "q", lines: para })); para = []; } };
     for(const l of raw){
+      if(RE_BREAK.test(l)){ flushPara(); out.push({ id: nid(), type: "note", pagebreak: true, text: "" }); continue; }
       const spm = l.match(RE_SUBPART);
       if(spm){ flushPara(); out.push({ id: nid(), type: "note", heading: true, text: spm[1].replace(/\*\*/g, "").trim(), marks: "" }); continue; }
       if(RE_SEC.test(l) && !para.length){ out.push(finishBlock({ type: "section", lines: [l.match(RE_SEC)[1] || l.match(RE_SEC)[2]] })); continue; }
@@ -1260,6 +1265,7 @@ function parseText(txt){
     return out.filter(Boolean);
   }
   for(const l of raw){
+    if(RE_BREAK.test(l)){ flush(); out.push({ id: nid(), type: "note", pagebreak: true, text: "" }); continue; }
     const spm = l.match(RE_SUBPART);
     if(spm){ flush(); out.push({ id: nid(), type: "note", heading: true, text: spm[1].replace(/\*\*/g, "").trim(), marks: "" }); continue; }
     const sm = l.match(RE_SEC);
@@ -1416,14 +1422,19 @@ function render(){
       return `<div class="card section" data-id="${it.id}"><div class="badge">§</div><div class="body">
         <div class="row"><span class="kind">Part / section</span>${tools}</div>
         <input type="text" data-f="text" value="${esc(it.text)}" placeholder="Part heading, e.g. Part I: FCQ">
-        <div class="row"><label>Marks for this part <input type="number" min="0" step="0.5" data-f="marks" value="${esc(it.marks)}" placeholder="${fmt(meta[it.id] || 0)}"></label><span class="hint">blank = sum of its questions</span><span class="grow"></span><button class="btn sm" data-act="sec2col" title="Print the short questions of this part two per row">⫴ ${secAllHalf(it.id) ? "Back to 1 column" : "2 columns for this part"}</button></div>
+        <div class="row"><label>Marks for this part <input type="number" min="0" step="0.5" data-f="marks" value="${esc(it.marks)}" placeholder="${fmt(meta[it.id] || 0)}"></label><span class="hint">blank = sum of its questions</span><span class="grow"></span><button class="btn sm ${it.newPage ? "on-t" : ""}" data-act="newpage" title="Start this part on a new page">⤓ New page</button><button class="btn sm" data-act="sec2col" title="Print the short questions of this part two per row">⫴ ${secAllHalf(it.id) ? "Back to 1 column" : "2 columns for this part"}</button></div>
+      </div></div>`;
+    }
+    if(it.type === "note" && it.pagebreak){
+      return `<div class="card note pagebreak" data-id="${it.id}"><div class="badge">⤓</div><div class="body">
+        <div class="row"><span class="kind">Page break — what follows starts on a new page</span>${tools}</div>
       </div></div>`;
     }
     if(it.type === "note" && it.heading){
       return `<div class="card note subpart" data-id="${it.id}"><div class="badge">A</div><div class="body">
         <div class="row"><span class="kind">Sub-part heading</span>${tools}</div>
         <input type="text" data-f="text" value="${esc(it.text)}" placeholder="e.g. A. Definitions (18 points)">
-        <div class="row"><label>Points shown on the right <input type="number" min="0" step="0.5" data-f="marks" value="${esc(it.marks || "")}" placeholder="—"></label><span class="hint">optional · for show only, the total comes from the questions</span></div>
+        <div class="row"><label>Points shown on the right <input type="number" min="0" step="0.5" data-f="marks" value="${esc(it.marks || "")}" placeholder="—"></label><span class="hint">optional · for show only, the total comes from the questions</span><span class="grow"></span><button class="btn sm ${it.newPage ? "on-t" : ""}" data-act="newpage" title="Start this sub-part on a new page">⤓ New page</button></div>
       </div></div>`;
     }
     if(it.type === "note"){
@@ -2410,7 +2421,7 @@ function buildPDF(opt){
   }
 
   /* ================= QUESTION PAGES ================= */
-  const items = (opt.coverOnly || opt.rubricOnly) ? [] : S.items.filter(it => it.type === "section" || (it.text && it.text.trim()) || it.img || it.type === "q");
+  const items = (opt.coverOnly || opt.rubricOnly) ? [] : S.items.filter(it => it.type === "section" || it.pagebreak || (it.text && it.text.trim()) || it.img || it.type === "q");
   const TOP = 30, BOTTOM = PH - 19;
   let firstQPage = null;
   const pageOf = {};
@@ -2836,7 +2847,7 @@ function buildPDF(opt){
     for(let idx = 0; idx < items.length; idx++){
       const it = items[idx];
       if(it.type === "section"){
-        if(D.sectionNewPage && y > TOP + 1) newPage();
+        if((D.sectionNewPage || it.newPage) && y > TOP + 1) newPage();
         const h = 11;
         // keep the heading together with (the start of) its first question — never alone at the bottom of a page
         let need = 22;
@@ -2860,6 +2871,7 @@ function buildPDF(opt){
         y += h + (COMPACT ? 4.5 : 6);
         continue;
       }
+      if(it.pagebreak){ if(y > TOP + 1) newPage(); continue; }
       if(it.newPage && y > TOP + 1) newPage();
       // sub-part heading (A. Definitions …): accent-coloured, a rule underneath, never left alone at the bottom of a page
       if(it.type === "note" && it.heading){
@@ -3539,6 +3551,7 @@ FORMAT RULES
 2. If the material has a rubric, scoring table or marking criteria (or I ask for one), put it right after the details: a line  Rubric: <title of the rubric page>  then a Markdown table with the columns  | Criterion | Points |  (add a Description column in the middle if there are descriptions). One row per criterion; for a part with sub-criteria, give the part row first and then its sub-rows starting with A., B. or Question 1, Question 2. End with  | TOTAL | n |  and, if the original has it,  | TOTAL EXAM GRADE | % |.
 3. Part headings on their own line, e.g.:  Part I: Algebra   — add the part's total marks if known:  Part I: Algebra [20]
    Sub-parts inside a part (A., B., …) on their own line starting with  Sub-part:  e.g.  Sub-part: A. Definitions (18 points)
+   Where the original starts a new page, put  {newpage}  on its own line.
    A question that has no number in the original (e.g. "Use the word … in a sentence:"): still number it like the others, and put  {nonum}  after its marks — the number is then left off the paper. Add  {nomarks}  if the original doesn't show its marks.
 4. Instructions or reading passages that are not questions: plain paragraphs.
 5. Every question starts on a new line with its number:  1. Question text
@@ -3862,7 +3875,7 @@ function frFields(){
   // every editable text in the exam: [item, label, getter, setter]
   const out = [], { meta } = computeMeta();
   S.items.forEach(it => {
-    const tag = it.type === "section" ? "Part" : it.heading ? "Sub-part" : it.type === "note" ? "Text" : it.nonum ? "Q –" : "Q" + meta[it.id];
+    const tag = it.type === "section" ? "Part" : it.pagebreak ? "Page break" : it.heading ? "Sub-part" : it.type === "note" ? "Text" : it.nonum ? "Q –" : "Q" + meta[it.id];
     out.push([it, tag, () => it.text || "", v => { it.text = v; }]);
     (it.options || []).forEach((o, i) => out.push([it, tag + " · option " + LETTERS[i].toUpperCase(), () => it.options[i] || "", v => { it.options[i] = v; }]));
     if(it.answer) out.push([it, tag + " · model answer", () => it.answer || "", v => { it.answer = v; }]);
@@ -3919,7 +3932,7 @@ $("#addMCQ").onclick = () => {
 };
 $("#bottomBar").addEventListener("click", e => {
   const b = e.target.closest("[data-add]"); if(!b) return;
-  ({ q: () => $("#addQ").click(), mcq: () => $("#addMCQ").click(), s: () => $("#addS").click(), n: () => $("#addN").click(), sub: () => $("#addSub").click(),
+  ({ q: () => $("#addQ").click(), mcq: () => $("#addMCQ").click(), s: () => $("#addS").click(), n: () => $("#addN").click(), sub: () => $("#addSub").click(), brk: () => $("#addBreak").click(),
      eq: () => openEq(null), graph: () => openGraph(null), arrange: () => openArrange(),
      img: () => { pendingImgTarget = null; $("#fileIn").accept = "image/*"; $("#fileIn").click(); } })[b.dataset.add]();
 });
@@ -4178,6 +4191,7 @@ $("#addSub").onclick = () => {
   let k = 0; for(let i = S.items.length - 1; i >= 0 && S.items[i].type !== "section"; i--) if(S.items[i].heading) k++;
   S.items.push({ id: nid(), type: "note", heading: true, text: "ABCDEFGH"[k] + ". ", marks: "" }); render(); changed(); focusLast();
 };
+$("#addBreak").onclick = () => { S.items.push({ id: nid(), type: "note", pagebreak: true, text: "" }); render(); changed(); focusLast(); };
 $("#addN").onclick = () => { S.items.push({ id: nid(), type: "note", text: "", img: null }); render(); changed(); focusLast(); };
 function focusLast(){ const L = S.items[S.items.length - 1]; if(L) lastEdited = L.id; return focusLast0(); }
 function focusLast0(){ const c = $("#list").lastElementChild; if(c){ c.scrollIntoView({ behavior: "smooth", block: "center" }); const f = c.querySelector("textarea,input[type=text]"); if(f) setTimeout(() => f.focus(), 250); } }
