@@ -98,6 +98,7 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+.fmtbar button.sz{font:600 13px Georgia,serif;padding:0 6px}.fmtbar button.sz small{font-size:10px;margin-left:1px}
 .fmtbar button.al{display:inline-flex;align-items:center;justify-content:center;padding:0 5px}
 .picstrip{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
 .picchip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:#fff;font-size:12.5px}
@@ -544,7 +545,7 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
 | Distance (m) | 0 | 4 | 16 |</pre>
     <ul style="margin:6px 0 0 18px;padding:0">
       <li><b>{numberline: -10..10}</b> and <b>{axes: -6..6}</b> after the marks give a number line or a coordinate grid to answer on; <b>{mol: CCO}</b> on its own line draws a molecule.</li>
-      <li><b>{center}</b> or <b>{right}</b> at the start of a line aligns it; <b>🖼 Picture here</b> puts a picture exactly where the cursor is.</li>
+      <li><b>{center}</b> or <b>{right}</b> at the start of a line aligns it, <b>{big}</b> / <b>{bigger}</b> / <b>{huge}</b> / <b>{small}</b> changes its size; <b>🖼 Picture here</b> puts a picture exactly where the cursor is.</li>
       <li><b>**bold**</b>, <i>*italic*</i>, <u>++underline++</u>, <s>~~strikethrough~~</s>, and lines starting with <b>- </b> become bullet points.</li>
       <li>Don't know LaTeX? Use <b>∑ Equation</b> — click buttons to build the formula; it writes the LaTeX for you.</li>
       <li>A price like “$5 and $10” stays as normal text. Write <b>\$</b> if a dollar sign is ever mistaken for maths.</li>
@@ -5673,19 +5674,24 @@ function selStyle(text, a, e){
   return { b: sel.every(x => x.st.b), i: sel.every(x => x.st.i), u: sel.every(x => x.st.u), x: sel.every(x => x.st.x), c: sel.every(x => x.st.c === c0) ? c0 : "" };
 }
 const RE_ALIGN = /^\s*\{(center|centre|right|left)\}\s*/i;
+const SIZES = ["small", "", "big", "bigger", "huge"], SIZE_K = { small: .85, big: 1.2, bigger: 1.45, huge: 1.75 };
+const RE_PRE = /^\s*\{(center|centre|right|left|small|big|bigger|huge)\}\s*/i;
+function linePre(l){ let align = "", size = "", rest = String(l); for(let m; (m = rest.match(RE_PRE));){ const t = m[1].toLowerCase().replace("centre", "center"); if(SIZE_K[t]) size = t; else align = t; rest = rest.slice(m[0].length); } return { align, size, rest }; }
+const buildLine = (align, size, rest) => (align ? "{" + align + "}" : "") + (size ? "{" + size + "}" : "") + rest;
 // a picture placed inside the text:  {img: ID | 60% | center}
-const RE_IMG = /^\s*(?:\{(?:center|centre|right|left)\}\s*)?\{\s*img\s*:\s*([\w-]+)\s*(?:\|\s*(\d{1,3})\s*%?\s*)?(?:\|\s*(left|center|centre|right)\s*)?\}\s*$/i;
+const RE_IMG = /^\s*(?:\{(?:center|centre|right|left|small|big|bigger|huge)\}\s*)*\{\s*img\s*:\s*([\w-]+)\s*(?:\|\s*(\d{1,3})\s*%?\s*)?(?:\|\s*(left|center|centre|right)\s*)?\}\s*$/i;
 function picData(id){ for(const it of S.items){ if(it.pics && it.pics[id]) return it.pics[id]; } return null; }
 function parseRich(text, base){
   const lines = String(text || "").replace(/\t/g, "    ").split("\n");
   const blocks = [];
   const para = l => {
     let s = l.replace(/\s+$/, ""), ind = 0, bullet = false, align = (base && base.align) || "";
-    const am = s.match(RE_ALIGN); if(am){ align = am[1].toLowerCase().replace("centre", "center"); s = s.replace(RE_ALIGN, ""); }
+    const pre = linePre(s), am = !!pre.align; if(am) align = pre.align; s = pre.rest;
+    const size = pre.size || (base && base.size) || "";
     if(/^\s*[-•]\s+|^\s*\*\s+/.test(s)){ bullet = true; ind = 5; s = s.replace(/^\s*[-•*]\s+/, ""); }
     const opt = !bullet && OPT_LINE.test(s.replace(/^\s*(\{color:[^}]*\}|\*\*|\*|\+\+)+/, ""));   // formatting before "A." still counts as an option
     if(opt) ind = 5;
-    return { type: "para", runs: parseInline(s.trim(), base), ind, bullet, opt, align: opt || bullet ? (am ? align : "") : align };
+    return { type: "para", runs: parseInline(s.trim(), base), ind, bullet, opt, align: opt || bullet ? (am ? align : "") : align, scale: SIZE_K[size] || 1 };
   };
   for(let i = 0; i < lines.length; i++){
     const l = lines[i], t = l.trim();
@@ -5827,9 +5833,9 @@ $("#molGo").onclick = async () => {
   tfSet(it, tf, before + (before && !before.endsWith("\n") ? "\n" : "") + line + (after && !after.startsWith("\n") ? "\n" : "") + after);
   $("#molModal").classList.remove("open"); render(); changed(); focusItem(it.id);
 };
-const hasRich = t => /\$|\\\(|\\\[|\*\*|\*[^\s*]|^\s*\||\\ce\{|\+\+\S|~~\S|\{color:|^\s*\{\s*(?:mol|molecule|smiles|structure|img)\s*:|^\s*\{(?:center|centre|right|left)\}/m.test(t || "");
+const hasRich = t => /\$|\\\(|\\\[|\*\*|\*[^\s*]|^\s*\||\\ce\{|\+\+\S|~~\S|\{color:|^\s*\{\s*(?:mol|molecule|smiles|structure|img)\s*:|^\s*\{(?:center|centre|right|left|small|big|bigger|huge)\}/m.test(t || "");
 // whole-question formatting chosen on the card (bold / italic / underline / colour)
-const fmtOf = it => (it && it.fmt && (it.fmt.b || it.fmt.i || it.fmt.u || it.fmt.x || it.fmt.c || it.fmt.align)) ? it.fmt : null;
+const fmtOf = it => (it && it.fmt && (it.fmt.b || it.fmt.i || it.fmt.u || it.fmt.x || it.fmt.c || it.fmt.align || it.fmt.size)) ? it.fmt : null;
 
 /* math rendering cache (MathJax → SVG → PNG) */
 const MATH = new Map();
@@ -5921,7 +5927,7 @@ function richHTML(text, q){
     if(b.type === "display"){ const m = texSVG(b.tex, true); return `<div class="disp">${m.err ? `<span class="err" title="${esc(m.errMsg)}">⚠ ${esc(b.tex)} — ${esc(m.errMsg)}</span>` : m.svg}</div>`; }
     if(b.type === "table") return "<table>" + b.rows.map((r, i) => "<tr>" + r.map(c => (b.header && i === 0 ? "<th>" : "<td>") + runsH(c) + (b.header && i === 0 ? "</th>" : "</td>")).join("") + "</tr>").join("") + "</table>";
     const mk = "";
-    return `<div style="padding-left:${b.ind ? 1.2 : 0}em${b.align ? ";text-align:" + b.align : ""}">${b.bullet ? "• " : ""}${mk}${runsH(b.runs) || "&nbsp;"}</div>`;
+    return `<div style="padding-left:${b.ind ? 1.2 : 0}em${b.align ? ";text-align:" + b.align : ""}${b.scale && b.scale !== 1 ? ";font-size:" + b.scale + "em;line-height:1.35" : ""}">${b.bullet ? "• " : ""}${mk}${runsH(b.runs) || "&nbsp;"}</div>`;
   }).join("") + (q && q.mcq === "multi" && !/all that apply/i.test(q.text || "") ? '<div><i style="color:var(--muted)">(Select all that apply.)</i></div>' : "");
 }
 function mathErrors(text){
@@ -5961,7 +5967,7 @@ function updateRich(card, it){
   const box = card.querySelector("[data-rich]"); if(!box) return;
   const T = qText(it);
   const blocks = (hasRich(T) || it.mcq || fmtOf(it)) && mathOK ? parseRich(T, fmtOf(it)) : [];
-  const rich = ((it.mcq || fmtOf(it)) && blocks.length) || blocks.some(b => b.type === "display" || b.type === "table" || b.type === "mol" || b.type === "img" || b.align || b.bullet || (b.runs || []).some(r => r.t === "math" || r.b || r.i || r.u || r.x || r.c));
+  const rich = ((it.mcq || fmtOf(it)) && blocks.length) || blocks.some(b => b.type === "display" || b.type === "table" || b.type === "mol" || b.type === "img" || b.align || (b.scale && b.scale !== 1) || b.bullet || (b.runs || []).some(r => r.t === "math" || r.b || r.i || r.u || r.x || r.c));
   const subs = it.subs || [];
   const subRich = subs.some(sb => hasRich(sb.text));
   if(!rich && !subRich){ box.classList.add("hidden"); box.innerHTML = ""; return; }
@@ -6363,15 +6369,15 @@ function buildPDF(opt){
   }
   function newPage(){ doc.addPage(); frame(); header(); y = TOP; if(firstQPage === null) firstQPage = doc.getNumberOfPages(); }
 
-  const fs = LARGE ? Math.max(16, num(D.fontSize) || 11) : (num(D.fontSize) || 11);
+  let fs = LARGE ? Math.max(16, num(D.fontSize) || 11) : (num(D.fontSize) || 11);
   const SPC = LARGE ? 2 : (num(D.lineSpacing) || 1);
   const SHEET = D.answerMode === "sheet";
   const COMPACT = SHEET && !LARGE && SPC < 1.5;      // separate answer sheet → tighter paper (not for accommodations)
-  const LH = fs * mmPt * (SPC >= 2 ? 2.34 : SPC >= 1.5 ? 1.78 : COMPACT ? 1.3 : 1.42);
+  let LH = fs * mmPt * (SPC >= 2 ? 2.34 : SPC >= 1.5 ? 1.78 : COMPACT ? 1.3 : 1.42);
   const QGAP = COMPACT ? 4.5 : 7, NGAP = COMPACT ? 3.5 : 5;
-  const TASC = fs * mmPt * .8 + (LH - fs * mmPt * 1.05) / 2;   // baseline position inside a line
+  let TASC = fs * mmPt * .8 + (LH - fs * mmPt * 1.05) / 2;   // baseline position inside a line
   const NUMW = Math.max(9, fs * .78), MARKW = D.showMarks ? Math.max(21, fs * 1.75) : 0;
-  const EM = fs * mmPt;               // mm per em for maths
+  let EM = fs * mmPt;               // mm per em for maths
   const styleName = st => (SANS === "DejaVu" && st === "bolditalic") ? "bold" : st;
   const setSt = st => doc.setFont(SANS, styleName(st));
   const mAlias = m => "mx" + strHash(m.key);
@@ -6402,6 +6408,12 @@ function buildPDF(opt){
   }
   // wrap = { narrow:{w,h,dx}, acc }: rows that start above narrow.h use the narrow width (text beside a picture)
   function layoutPara(b, width, wrap){
+    const k = b.scale || 1; if(k === 1) return layoutPara0(b, width, wrap);
+    const sv = [fs, LH, TASC, EM], sc = [fs * k, LH * k, TASC * k, EM * k], set = v => { [fs, LH, TASC, EM] = v; };
+    set(sc); let rows; try{ rows = layoutPara0(b, width, wrap); } finally{ set(sv); }
+    return rows.map(r => Object.assign({}, r, { draw(...a){ set(sc); try{ r.draw(...a); } finally{ set(sv); } } }));
+  }
+  function layoutPara0(b, width, wrap){
     doc.setFontSize(fs);
     const words = wordsOf(b.runs);
     setSt("normal"); const SP = tw(" ");
@@ -7400,7 +7412,7 @@ FORMAT RULES
 12. Units:  $9.8\\,\\mathrm{m/s^2}$
 13. Tables: Markdown tables (| a | b |, with a |---|---| line under the header row).
 14. Biology: scientific names in italics (*Homo sapiens*), Punnett squares and data as Markdown tables, temperatures as $37^\\circ\\mathrm{C}$, sizes as $10\\,\\mu\\mathrm{m}$.
-15. To centre or right-align a line (a poem, a title, a quotation), start the line with {center} or {right}.
+15. To centre or right-align a line (a poem, a title, a quotation), start the line with {center} or {right}. To make a line bigger (a title) start it with {big} or {bigger}; smaller: {small}. They can be combined: {center}{big}The Water Cycle
     Text styles: **bold**, *italic*, ++underline++ and ~~strikethrough~~ — keep every one that appears in the original. Do not use any other Markdown (no # headings, no horizontal rules, no numbered-list auto-formatting).
 16. EVERY picture, photo, diagram, graph, map or chart that cannot be typed: write  [diagram: short description]  on its own line exactly where it belongs (include any caption or credit in the description). Never skip a picture.
 17. Copy the wording exactly and keep the original numbering. Do NOT add answers or solutions unless I ask for them.
@@ -7450,6 +7462,9 @@ function fmtBar(it){
     <button type="button" data-fmt="u" class="${f.u ? "on" : ""}" title="Underline"><u>U</u></button>
     <button type="button" data-fmt="x" class="${f.x ? "on" : ""}" title="Strikethrough"><s>S</s></button>
     <span class="fsep"></span>
+    <button type="button" data-fmt="sz" data-d="-1" class="sz" title="Smaller text — select lines, or nothing = whole question">A<small>−</small></button>
+    <button type="button" data-fmt="sz" data-d="1" class="sz" title="Bigger text (e.g. a title) — select lines, or nothing = whole question"><b>A</b><small>+</small></button>
+    <span class="fsep"></span>
     <button type="button" data-fmt="al" data-a="left" class="al ${(f.align || "left") === "left" ? "on" : ""}" title="Align left (default) — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M2 6.5h8M2 10h12M2 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
     <button type="button" data-fmt="al" data-a="center" class="al ${(f.align || "left") === "center" ? "on" : ""}" title="Align center — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M4 6.5h8M2 10h12M4 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
     <button type="button" data-fmt="al" data-a="right" class="al ${(f.align || "left") === "right" ? "on" : ""}" title="Align right — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M6 6.5h8M2 10h12M6 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
@@ -7478,7 +7493,7 @@ function applyToggle(card, it, key, val){
   lastTA = { id: it.id, s: r.a, e: r.e };
   return true;
 }
-function stripFmt(t){ return t.replace(/^\s*\{(?:center|centre|right|left)\}\s*/gm, "").replace(/\{\/?color[^}]*\}/g, "").replace(/\*\*|\+\+|~~/g, "").replace(/(^|[^\w*])\*([^\s*][^*]*?)\*(?!\*)/g, "$1$2"); }
+function stripFmt(t){ return t.replace(/^(?:\s*\{(?:center|centre|right|left|small|big|bigger|huge)\}\s*)+/gm, "").replace(/\{\/?color[^}]*\}/g, "").replace(/\*\*|\+\+|~~/g, "").replace(/(^|[^\w*])\*([^\s*][^*]*?)\*(?!\*)/g, "$1$2"); }
 function onFmt(btn, card, it, colorVal){
   const k = btn.dataset.fmt;
   it.fmt = it.fmt || {};
@@ -7487,13 +7502,23 @@ function onFmt(btn, card, it, colorVal){
   }else if(k === "color" || k === "colorpick"){
     const c = colorVal || btn.dataset.c;
     if(!applyToggle(card, it, "c", c)) it.fmt.c = (it.fmt.c === c && k === "color") ? "" : c;
+  }else if(k === "sz"){
+    const d = +btn.dataset.d, r = curSel(card), step = cur => SIZES[Math.max(0, Math.min(SIZES.length - 1, SIZES.indexOf(cur || "") + d))];
+    if(r && r.e > r.a){
+      const v = r.ta.value, a0 = v.lastIndexOf("\n", r.a - 1) + 1, e1 = v.indexOf("\n", r.e - (v[r.e - 1] === "\n" ? 1 : 0)), e0 = e1 < 0 ? v.length : e1;
+      const whole = it.fmt.size || "";
+      const seg = v.slice(a0, e0).split("\n").map(l => { const P = linePre(l); if(!P.rest.trim()) return l; const ns = step(P.size || whole); return buildLine(P.align, ns === whole ? "" : ns, P.rest); }).join("\n");
+      it.text = v.slice(0, a0) + seg + v.slice(e0); r.ta.value = it.text;
+      r.ta.focus(); r.ta.setSelectionRange(a0, a0 + seg.length);
+      toast("Text size: " + ({ small: "small", "": "normal", big: "big", bigger: "bigger", huge: "huge" })[linePre(seg.split("\n").find(l => l.trim()) || "").size || whole]);
+    }else{ it.fmt.size = step(it.fmt.size); toast("Whole question: " + (it.fmt.size || "normal") + " text"); }
   }else if(k === "al"){
     const want = btn.dataset.a, r = curSel(card);
     if(r && r.e > r.a){
       // align only the lines touched by the selection
       const v = r.ta.value, a0 = v.lastIndexOf("\n", r.a - 1) + 1, e1 = v.indexOf("\n", r.e - (v[r.e - 1] === "\n" ? 1 : 0)), e0 = e1 < 0 ? v.length : e1;
       const whole = (it.fmt.align || "left");
-      const seg = v.slice(a0, e0).split("\n").map(l => { const t = l.replace(RE_ALIGN, ""); return !t.trim() || want === whole ? t : "{" + want + "}" + t; }).join("\n");
+      const seg = v.slice(a0, e0).split("\n").map(l => { const P = linePre(l); return !P.rest.trim() ? l : buildLine(want === whole ? "" : want, P.size, P.rest); }).join("\n");
       it.text = v.slice(0, a0) + seg + v.slice(e0); r.ta.value = it.text;
       r.ta.focus(); r.ta.setSelectionRange(a0, a0 + seg.length);
     }else it.fmt.align = want === "left" ? "" : want;
@@ -7514,7 +7539,7 @@ function refreshFmtBar(card, it){
   { let al = it.fmt && it.fmt.align || "left";
     if(ta && document.activeElement === ta && ta.selectionEnd > ta.selectionStart){
       const v = ta.value, a0 = v.lastIndexOf("\n", ta.selectionStart - 1) + 1, e1 = v.indexOf("\n", ta.selectionEnd), L = v.slice(a0, e1 < 0 ? v.length : e1).split("\n").filter(l => l.trim());
-      const set = new Set(L.map(l => { const m = l.match(RE_ALIGN); return m ? m[1].toLowerCase().replace("centre", "center") : (it.fmt && it.fmt.align || "left"); }));
+      const set = new Set(L.map(l => linePre(l).align || (it.fmt && it.fmt.align || "left")));
       al = set.size === 1 ? [...set][0] : "";
     }
     bar.querySelectorAll("button[data-fmt=al]").forEach(x => x.classList.toggle("on", x.dataset.a === al)); }
