@@ -77,7 +77,7 @@ async def main():
         # equation into the sub-question box
         await pg.focus(f'{c7} textarea[data-sub="{sid}"][data-sf=text]'); await pg.keyboard.press('End')
         await pg.evaluate(f"document.querySelector('{c7} textarea[data-sub=\"{sid}\"][data-sf=text]').blur()")
-        await pg.click(f'{c7} [data-act=eq]'); await pg.wait_for_timeout(400)
+        await pg.click(f'{c7} [data-ins]'); await pg.click(f'{c7} .ins-it[data-act=eq]'); await pg.wait_for_timeout(400)
         await pg.click('#eqTabs button[data-m=latex]'); await pg.fill('#eqTex','\\sqrt{9}'); await pg.click('#eqInsert'); await pg.wait_for_timeout(300)
         st = await pg.evaluate(f"__exam.S().items.find(x=>x.id=='{q7}').subs[0].text")
         ok("2e equation editor inserts into the sub-question it was used in", st.endswith('$\\sqrt{9}$'), st)

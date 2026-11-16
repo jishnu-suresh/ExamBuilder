@@ -98,6 +98,11 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+.ins-wrap{position:relative;display:inline-block}
+.ins-menu{position:absolute;left:0;top:calc(100% + 4px);z-index:30;min-width:270px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 28px rgba(0,0,0,.14);padding:5px}
+.ins-menu.up{top:auto;bottom:calc(100% + 4px)}
+.ins-it{display:flex;gap:10px;align-items:center;width:100%;text-align:left;border:0;background:none;padding:7px 9px;border-radius:7px;cursor:pointer;font:13.5px system-ui,sans-serif;color:var(--ink)}
+.ins-it:hover{background:#F6F1E6}.ins-it .ic{width:22px;text-align:center;font-size:16px}.ins-it small{display:block;color:var(--muted);font-size:11.5px;font-weight:400}
 @keyframes jumped{0%{box-shadow:0 0 0 0 rgba(212,160,23,.0)}15%{box-shadow:0 0 0 4px rgba(212,160,23,.55)}100%{box-shadow:0 0 0 0 rgba(212,160,23,0)}}
 .jumped{animation:jumped 1.5s ease-out}
 .card.pagebreak{border-style:dashed;background:repeating-linear-gradient(135deg,#fff,#fff 8px,#faf7f0 8px,#faf7f0 16px)}.card.pagebreak .body{padding:2px 0}
@@ -455,8 +460,8 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
         <button class="btn sm" id="addBreak" title="Everything after this starts on a new page">＋ Page break</button>
         <button class="btn sm" id="addMCQ">＋ MCQ</button>
         <button class="btn sm" id="arrangeBtn" title="See all questions as small tiles and drag them into a new order">⇅ Arrange</button>
-        <button class="btn sm" id="eqGlobal" title="Visual equation editor (maths, physics, chemistry)">∑ Equation</button>
-        <button class="btn sm" id="graphGlobal" title="Plot functions or add blank axes / grid paper">📈 Graph</button>
+        <button class="btn sm hidden" id="eqGlobal">∑ Equation</button>
+        <button class="btn sm hidden" id="graphGlobal">📈 Graph</button>
         <button class="btn sm" id="pasteText">📋 Paste questions</button>
         <button class="btn sm open-prompt">🤖 Prompt for your AI</button>
         <button class="btn sm" id="frBtn" title="Find &amp; replace in all questions (Ctrl/⌘ + H)">🔎 Find &amp; replace</button>
@@ -473,9 +478,6 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
         <button class="btn sm" data-add="n">＋ Text / passage</button>
         <button class="btn sm" data-add="sub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-part</button>
         <button class="btn sm" data-add="brk" title="Everything after this starts on a new page">＋ Page break</button>
-        <button class="btn sm" data-add="eq">∑ Equation</button>
-        <button class="btn sm" data-add="graph">📈 Graph</button>
-        <button class="btn sm" data-add="img">🖼 Photo / image</button>
         <span style="flex:1"></span>
         <button class="btn sm" data-add="arrange">⇅ Arrange</button>
       </div>
@@ -1444,7 +1446,7 @@ function render(){
       <textarea data-f="text" placeholder="Instructions, a reading passage, a diagram caption…">${esc(it.text)}</textarea>
         <div class="miss hidden" data-miss></div><div class="picstrip hidden" data-pics></div>
         <div class="rich hidden" data-rich></div>
-        ${imgBlock}<div class="row"><button class="btn sm" data-act="eq">∑ Equation</button><button class="btn sm" data-act="graph" title="${it.graph ? "Edit the graph" : "Insert a graph where the cursor is"}">📈 ${it.graph ? "Edit graph" : "Graph here"}</button><button class="btn sm" data-act="mol" title="Insert a molecule where the cursor is">⌬ Molecule here</button><button class="btn sm" data-act="table" title="Insert a table where the cursor is">▦ Table here</button><button class="btn sm" data-act="inspic" title="Put a picture exactly where the cursor is in the text">🖼 Picture here</button>${it.img ? "" : `<button class="btn sm" data-act="addimg" title="One picture at the top or bottom, with text wrap">＋ Add image</button>`}
+        ${imgBlock}<div class="row">${insertMenu(it)}
         <span class="grow"></span><button class="btn sm ${it.lineNums ? "on-t" : ""}" data-act="linenums" title="Number every 5th line (for reading passages)">№ Line numbers</button><button class="btn sm ${it.newPage ? "on-t" : ""}" data-act="newpage" title="Start on a new page">⤓ New page</button></div>
       </div></div>`;
     }
@@ -1473,12 +1475,7 @@ function render(){
         <button class="btn sm ${it.lineNums ? "on-t" : ""}" data-act="linenums" title="Number every 5th line of the question text">№ Line numbers</button>
         ${it.mcq ? "" : `<button class="btn sm" data-act="subadd" title="Add (a), (b), (c)… parts with their own marks">＋ Sub-question</button>`}
         ${it.mcq || (it.answer || "").trim() || it._ans ? "" : `<button class="btn sm" data-act="showans" title="Model answer for the answer key (teacher copy)">✎ Model answer</button>`}
-        <button class="btn sm" data-act="table" title="Insert a table where the cursor is (data table, Punnett square…)">▦ Table here</button>
-        <button class="btn sm" data-act="eq" title="Insert an equation">∑ Equation</button>
-        <button class="btn sm" data-act="graph" title="${it.graph ? "Edit the graph" : "Insert a graph where the cursor is in the text"}">📈 ${it.graph ? "Edit graph" : "Graph here"}</button>
-        <button class="btn sm" data-act="mol" title="Insert a molecule where the cursor is in the text">⌬ Molecule here</button>
-        <button class="btn sm" data-act="inspic" title="Put a picture exactly where the cursor is in the text">🖼 Picture here</button>
-        ${it.img ? "" : `<button class="btn sm" data-act="addimg" title="One picture beside or above the question, with text wrap">＋ Image</button>`}
+        ${insertMenu(it)}
       </div>
     </div></div>`;
   }).join("");
@@ -3619,6 +3616,22 @@ $("#promptToPaste").onclick = () => { $("#promptModal").classList.remove("open")
 /* ---------------- text formatting (per question) ---------------- */
 const SWATCHES = [["#111111", "Black"], ["#C0392B", "Red"], ["#1F5FBF", "Blue"], ["#2E7D32", "Green"], ["#D35400", "Orange"], ["#7B3FA0", "Purple"]];
 const alDef = () => S.d.justify !== false ? "justify" : "left";   // what a line with no alignment of its own looks like
+function insertMenu(it){
+  const I = (act, ic, label, sub, title) => `<button type="button" class="ins-it" data-act="${act}" title="${title || ""}"><span class="ic">${ic}</span><span><b>${label}</b><small>${sub}</small></span></button>`;
+  return `<span class="ins-wrap"><button type="button" class="btn sm" data-ins title="Put a table, equation, graph, molecule or picture where the cursor is">＋ Insert ▾</button><div class="ins-menu hidden">
+    ${I("table", "▦", "Table", "data table, Punnett square… at the cursor")}
+    ${I("eq", "∑", "Equation", "maths, physics, chemistry at the cursor")}
+    ${I("graph", "📈", it.graph ? "Edit graph" : "Graph", it.graph ? "the graph of this question" : "functions or blank axes at the cursor")}
+    ${I("mol", "⌬", "Molecule", "a chemical structure at the cursor")}
+    ${I("inspic", "🖼", "Picture", "a photo or diagram at the cursor")}
+    ${it.img ? "" : I("addimg", "⇲", "Picture beside the text", "one picture with the text wrapping round it")}
+  </div></span>`;
+}
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-ins]");
+  document.querySelectorAll(".ins-menu").forEach(m => { if(!t || m !== t.nextElementSibling) m.classList.add("hidden"); });
+  if(t){ const m = t.nextElementSibling; m.classList.toggle("hidden"); if(!m.classList.contains("hidden")){ const r = m.getBoundingClientRect(); m.classList.toggle("up", r.bottom > innerHeight - 8 && r.top > r.height + 60); } }
+});
 function fmtBar(it){
   const f = it.fmt || {};
   return `<div class="fmtbar" title="Select words to format just them — or select nothing to format the whole question">
