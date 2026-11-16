@@ -105,6 +105,11 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+.fmtbar button.al{display:inline-flex;align-items:center;justify-content:center;padding:0 5px}
+.picstrip{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0}
+.picchip{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:#fff;font-size:12.5px}
+.picchip img{width:44px;height:34px;object-fit:cover;border-radius:4px}
+.picchip select{font-size:12.5px;padding:2px 4px}
 .mol-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
 @media (max-width:800px){.mol-grid{grid-template-columns:1fr}}
 .mol-presets{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;max-height:260px;overflow:auto}
@@ -546,6 +551,7 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
 | Distance (m) | 0 | 4 | 16 |</pre>
     <ul style="margin:6px 0 0 18px;padding:0">
       <li><b>{numberline: -10..10}</b> and <b>{axes: -6..6}</b> after the marks give a number line or a coordinate grid to answer on; <b>{mol: CCO}</b> on its own line draws a molecule.</li>
+      <li><b>{center}</b> or <b>{right}</b> at the start of a line aligns it; <b>🖼 Picture here</b> puts a picture exactly where the cursor is.</li>
       <li><b>**bold**</b>, <i>*italic*</i>, <u>++underline++</u>, <s>~~strikethrough~~</s>, and lines starting with <b>- </b> become bullet points.</li>
       <li>Don't know LaTeX? Use <b>∑ Equation</b> — click buttons to build the formula; it writes the LaTeX for you.</li>
       <li>A price like “$5 and $10” stays as normal text. Write <b>\$</b> if a dollar sign is ever mistaken for maths.</li>
@@ -866,7 +872,11 @@ const IDB = {
   async set(k, v){ const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); },
   async del(k){ const db = await this.open(); return new Promise(res => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").delete(k); t.oncomplete = () => res(); t.onerror = () => res(); }); }
 };
-function snapshot(){ return { app: "exam-builder", version: 2, savedAt: S.savedAt || Date.now(), d: S.d, logo: S.logo.isDefault ? { isDefault: true } : S.logo, items: S.items }; }
+function snapshot(){
+  const used = new Set(); S.items.forEach(it => [it.text, it.answer].concat((it.subs || []).flatMap(sb => [sb.text, sb.answer])).forEach(t => String(t || "").split("\n").forEach(l => { const m = l.match(RE_IMG); if(m) used.add(m[1]); })));
+  const items = S.items.map(it => it.pics && Object.keys(it.pics).some(k => !used.has(k)) ? Object.assign({}, it, { pics: Object.fromEntries(Object.entries(it.pics).filter(([k]) => used.has(k))) }) : it);
+  return { app: "exam-builder", version: 2, savedAt: S.savedAt || Date.now(), d: S.d, logo: S.logo.isDefault ? { isDefault: true } : S.logo, items };
+}
 async function loadLocal(){
   let o = null;
   try{ o = await IDB.get("state"); }catch(e){}
@@ -1404,9 +1414,9 @@ function render(){
         <div class="row"><span class="kind">Text / passage (not numbered)</span>${tools}</div>
         ${fmtBar(it)}
       <textarea data-f="text" placeholder="Instructions, a reading passage, a diagram caption…">${esc(it.text)}</textarea>
-        <div class="miss hidden" data-miss></div>
+        <div class="miss hidden" data-miss></div><div class="picstrip hidden" data-pics></div>
         <div class="rich hidden" data-rich></div>
-        ${imgBlock}<div class="row"><button class="btn sm" data-act="eq">∑ Equation</button><button class="btn sm" data-act="graph">📈 ${it.graph ? "Edit graph" : "Graph"}</button><button class="btn sm" data-act="mol">⌬ Molecule</button>${it.img ? "" : `<button class="btn sm" data-act="addimg">＋ Add image</button>`}
+        ${imgBlock}<div class="row"><button class="btn sm" data-act="eq">∑ Equation</button><button class="btn sm" data-act="graph">📈 ${it.graph ? "Edit graph" : "Graph"}</button><button class="btn sm" data-act="mol">⌬ Molecule</button><button class="btn sm" data-act="inspic" title="Put a picture exactly where the cursor is in the text">🖼 Picture here</button>${it.img ? "" : `<button class="btn sm" data-act="addimg" title="One picture at the top or bottom, with text wrap">＋ Add image</button>`}
         <span class="grow"></span><button class="btn sm ${it.lineNums ? "on-t" : ""}" data-act="linenums" title="Number every 5th line (for reading passages)">№ Line numbers</button><button class="btn sm ${it.newPage ? "on-t" : ""}" data-act="newpage" title="Start on a new page">⤓ New page</button></div>
       </div></div>`;
     }
@@ -1414,7 +1424,7 @@ function render(){
       <div class="row"><span class="kind">Question ${meta[it.id]}</span>${tools}</div>
       ${fmtBar(it)}
       <textarea data-f="text" placeholder="${it.img ? "Optional text above the image…" : "Type the question… maths: $x^2+1$ · or use ∑ Equation"}">${esc(it.text)}</textarea>
-      <div class="miss hidden" data-miss></div>
+      <div class="miss hidden" data-miss></div><div class="picstrip hidden" data-pics></div>
       ${it.mcq ? `<div class="opts">${(it.options || []).map((o, oi) => `<div class="opt-row" data-oi="${oi}"><b>${LETTERS[oi].toUpperCase()}.</b><input type="text" data-opt="${oi}" value="${esc(o)}" placeholder="Option ${LETTERS[oi].toUpperCase()} — maths: $x^2$"><button class="btn icon cor ${(it.correct || []).includes(oi) ? "on" : ""}" data-act="correct" data-oi="${oi}" title="Mark as the correct answer (for the answer key)">✓</button><button class="btn icon danger" data-act="optdel" data-oi="${oi}" title="Remove option">✕</button></div>`).join("")}
         <div class="opt-add"><button class="btn sm" data-act="optadd">＋ Add option</button><span class="hint">Press Enter in an option to add the next one</span></div></div>` : ""}
       <div class="rich hidden" data-rich></div>
@@ -1437,7 +1447,8 @@ function render(){
         <button class="btn sm" data-act="eq" title="Insert an equation">∑ Equation</button>
         <button class="btn sm" data-act="graph" title="Plot a graph or add axes">📈 ${it.graph ? "Edit graph" : "Graph"}</button>
         <button class="btn sm" data-act="mol" title="Draw a chemical structure (organic chemistry, biology)">⌬ Molecule</button>
-        ${it.img ? "" : `<button class="btn sm" data-act="addimg">＋ Image</button>`}
+        <button class="btn sm" data-act="inspic" title="Put a picture exactly where the cursor is in the text">🖼 Picture here</button>
+        ${it.img ? "" : `<button class="btn sm" data-act="addimg" title="One picture beside or above the question, with text wrap">＋ Image</button>`}
       </div>
     </div></div>`;
   }).join("");
@@ -1481,7 +1492,7 @@ function subsBlock(it){
 }
 function autoGrow(t){ t.style.height = "auto"; t.style.height = Math.min(420, t.scrollHeight + 2) + "px"; }
 
-let pendingImgTarget = null;
+let pendingImgTarget = null, pendingInline = null;
 function focusOpt(id, oi){ setTimeout(() => { const el = document.querySelector(`.card[data-id="${id}"] input[data-opt="${oi}"]`); if(el){ el.focus(); el.select(); } }, 30); }
 function onListInput(e){
   const card = e.target.closest(".card"); if(!card) return;
@@ -1561,6 +1572,11 @@ async function onListClick(e){
     case "mol": openMol(it.id); return;
     case "rot": b.disabled = true; it.img = await rotateImg(it.img); delete it.graph; delete it.labels; break;
     case "addimg": pendingImgTarget = it.id; $("#fileIn").accept = "image/*"; $("#fileIn").click(); return;
+    case "inspic": {
+      const tf = lastTA && lastTA.id === it.id && lastTA.f && lastTA.f !== "answer" && lastTA.f !== "range" ? { f: lastTA.f, sid: lastTA.sid } : null;
+      pendingInline = { id: it.id, tf, pos: lastTA && lastTA.id === it.id ? lastTA.e : null };
+      $("#fileIn").accept = "image/*"; $("#fileIn").click(); return; }
+    case "fillpic": pendingInline = { id: it.id, fill: true }; $("#fileIn").accept = "image/*"; $("#fileIn").click(); return;
     case "rmpic": if(picsOf(it.text).length) it.text = dropFirstPic(it.text); else { const sb = (it.subs || []).find(x => picsOf(x.text).length); if(sb) sb.text = dropFirstPic(sb.text); } break;
   }
   render(); changed();
@@ -1712,20 +1728,26 @@ function selStyle(text, a, e){
   const c0 = sel[0].st.c;
   return { b: sel.every(x => x.st.b), i: sel.every(x => x.st.i), u: sel.every(x => x.st.u), x: sel.every(x => x.st.x), c: sel.every(x => x.st.c === c0) ? c0 : "" };
 }
+const RE_ALIGN = /^\s*\{(center|centre|right|left)\}\s*/i;
+// a picture placed inside the text:  {img: ID | 60% | center}
+const RE_IMG = /^\s*(?:\{(?:center|centre|right|left)\}\s*)?\{\s*img\s*:\s*([\w-]+)\s*(?:\|\s*(\d{1,3})\s*%?\s*)?(?:\|\s*(left|center|centre|right)\s*)?\}\s*$/i;
+function picData(id){ for(const it of S.items){ if(it.pics && it.pics[id]) return it.pics[id]; } return null; }
 function parseRich(text, base){
   const lines = String(text || "").replace(/\t/g, "    ").split("\n");
   const blocks = [];
   const para = l => {
-    let s = l.replace(/\s+$/, ""), ind = 0, bullet = false;
+    let s = l.replace(/\s+$/, ""), ind = 0, bullet = false, align = (base && base.align) || "";
+    const am = s.match(RE_ALIGN); if(am){ align = am[1].toLowerCase().replace("centre", "center"); s = s.replace(RE_ALIGN, ""); }
     if(/^\s*[-•]\s+|^\s*\*\s+/.test(s)){ bullet = true; ind = 5; s = s.replace(/^\s*[-•*]\s+/, ""); }
     const opt = !bullet && OPT_LINE.test(s.replace(/^\s*(\{color:[^}]*\}|\*\*|\*|\+\+)+/, ""));   // formatting before "A." still counts as an option
     if(opt) ind = 5;
-    return { type: "para", runs: parseInline(s.trim(), base), ind, bullet, opt };
+    return { type: "para", runs: parseInline(s.trim(), base), ind, bullet, opt, align: opt || bullet ? (am ? align : "") : align };
   };
   for(let i = 0; i < lines.length; i++){
     const l = lines[i], t = l.trim();
     if(!t){ blocks.push({ type: "gap" }); continue; }
     const pm = l.match(RE_PIC); if(pm){ blocks.push({ type: "pic", desc: pm[1].trim() }); continue; }
+    const im = l.match(RE_IMG); if(im){ blocks.push({ type: "img", id: im[1], size: Math.max(10, Math.min(100, +im[2] || 60)), align: (im[3] || "center").toLowerCase().replace("centre", "center") }); continue; }
     const mo = l.match(RE_MOL); if(mo){ blocks.push({ type: "mol", smi: mo[1].trim(), cap: (mo[2] || "").trim() }); continue; }
     const open = t.startsWith("$$") ? "$$" : t.startsWith("\\[") ? "\\[" : null;
     if(open){
@@ -1861,9 +1883,9 @@ $("#molGo").onclick = async () => {
   tfSet(it, tf, before + (before && !before.endsWith("\n") ? "\n" : "") + line + (after && !after.startsWith("\n") ? "\n" : "") + after);
   $("#molModal").classList.remove("open"); render(); changed(); focusItem(it.id);
 };
-const hasRich = t => /\$|\\\(|\\\[|\*\*|\*[^\s*]|^\s*\||\\ce\{|\+\+\S|~~\S|\{color:|^\s*\{\s*(?:mol|molecule|smiles|structure)\s*:/m.test(t || "");
+const hasRich = t => /\$|\\\(|\\\[|\*\*|\*[^\s*]|^\s*\||\\ce\{|\+\+\S|~~\S|\{color:|^\s*\{\s*(?:mol|molecule|smiles|structure|img)\s*:|^\s*\{(?:center|centre|right|left)\}/m.test(t || "");
 // whole-question formatting chosen on the card (bold / italic / underline / colour)
-const fmtOf = it => (it && it.fmt && (it.fmt.b || it.fmt.i || it.fmt.u || it.fmt.x || it.fmt.c)) ? it.fmt : null;
+const fmtOf = it => (it && it.fmt && (it.fmt.b || it.fmt.i || it.fmt.u || it.fmt.x || it.fmt.c || it.fmt.align)) ? it.fmt : null;
 
 /* math rendering cache (MathJax → SVG → PNG) */
 const MATH = new Map();
@@ -1948,13 +1970,14 @@ function richHTML(text, q){
   }).join("");
   return parseRich(text, fmtOf(q)).map(b => {
     if(b.type === "gap") return "<div style='height:.5em'></div>";
+    if(b.type === "img"){ const P = picData(b.id); return P ? `<div style="text-align:${b.align}"><img src="${P.src}" style="width:${b.size}%;max-width:100%;border-radius:4px"></div>` : `<span class="err">⚠ picture ${esc(b.id)} not found</span>`; }
     if(b.type === "pic") return `<div class="picmiss">🖼 Picture missing: <i>${esc(b.desc)}</i></div>`;
     if(b.type === "mol"){ const m = MOLS[b.smi]; if(!m){ getMol(b.smi).then(() => { const c = q && $("#list").querySelector(`.card[data-id="${q.id}"]`); if(c) updateRich(c, q); }); return `<div class="molbox hint">⌬ drawing ${esc(b.smi)}…</div>`; }
       return m.err ? `<span class="err">⚠ ${esc(b.smi)} — ${esc(m.err)}</span>` : `<div class="molbox"><img src="${m.png}" alt="${esc(b.smi)}">${b.cap ? `<div class="cap">${esc(b.cap)}</div>` : ""}</div>`; }
     if(b.type === "display"){ const m = texSVG(b.tex, true); return `<div class="disp">${m.err ? `<span class="err" title="${esc(m.errMsg)}">⚠ ${esc(b.tex)} — ${esc(m.errMsg)}</span>` : m.svg}</div>`; }
     if(b.type === "table") return "<table>" + b.rows.map((r, i) => "<tr>" + r.map(c => (b.header && i === 0 ? "<th>" : "<td>") + runsH(c) + (b.header && i === 0 ? "</th>" : "</td>")).join("") + "</tr>").join("") + "</table>";
     const mk = "";
-    return `<div style="padding-left:${b.ind ? 1.2 : 0}em">${b.bullet ? "• " : ""}${mk}${runsH(b.runs) || "&nbsp;"}</div>`;
+    return `<div style="padding-left:${b.ind ? 1.2 : 0}em${b.align ? ";text-align:" + b.align : ""}">${b.bullet ? "• " : ""}${mk}${runsH(b.runs) || "&nbsp;"}</div>`;
   }).join("") + (q && q.mcq === "multi" && !/all that apply/i.test(q.text || "") ? '<div><i style="color:var(--muted)">(Select all that apply.)</i></div>' : "");
 }
 function mathErrors(text){
@@ -1969,14 +1992,32 @@ function updateMiss(card, it){
   if(!P.length){ el.innerHTML = ""; return; }
   el.innerHTML = `<div><b>🖼 ${P.length === 1 ? "A picture is missing" : P.length + " pictures are missing"}</b> — the AI could only describe ${P.length === 1 ? "it" : "them"}:
     ${P.map(d => `<div class="d">“${esc(d || "picture")}”</div>`).join("")}</div>
-    <div class="row">${it.img ? "" : `<button class="btn sm" data-act="addimg">＋ Add the picture</button>`}<button class="btn sm" data-act="rmpic" title="Delete the [diagram: …] line">Remove the placeholder</button></div>`;
+    <div class="row"><button class="btn sm" data-act="fillpic">＋ Add the picture here</button><button class="btn sm" data-act="rmpic" title="Delete the [diagram: …] line">Remove the placeholder</button></div>`;
+}
+function picTags(it){
+  const out = [], scan = (txt, where) => String(txt || "").split("\n").forEach((l, li) => { const m = l.match(RE_IMG); if(m) out.push({ id: m[1], size: +m[2] || 60, align: (m[3] || "center").toLowerCase().replace("centre", "center"), where, li }); });
+  scan(it.text, null); (it.subs || []).forEach(sb => scan(sb.text, sb.id));
+  return out;
+}
+function setPicTag(it, id, fn){   // rewrite (or with fn → null, delete) the {img: id …} line
+  const edit = txt => String(txt || "").split("\n").flatMap(l => { const m = l.match(RE_IMG); if(!m || m[1] !== id) return [l]; const t = fn({ size: +m[2] || 60, align: (m[3] || "center").toLowerCase().replace("centre", "center") }); return t ? ["{img: " + id + " | " + t.size + "% | " + t.align + "}"] : []; }).join("\n");
+  it.text = edit(it.text); (it.subs || []).forEach(sb => sb.text = edit(sb.text));
+}
+function updatePics(card, it){
+  const el = card.querySelector("[data-pics]"); if(!el) return;
+  const T = picTags(it); el.classList.toggle("hidden", !T.length);
+  if(!T.length){ el.innerHTML = ""; return; }
+  el.innerHTML = T.map(t => { const P = picData(t.id); return `<div class="picchip" data-pic="${t.id}">${P ? `<img src="${P.src}" alt="">` : "⚠"}
+    <select data-picsize title="Picture width">${[25, 33, 40, 50, 60, 75, 100].map(v => `<option value="${v}" ${v === t.size ? "selected" : ""}>${v}%</option>`).join("")}${[25, 33, 40, 50, 60, 75, 100].includes(t.size) ? "" : `<option selected value="${t.size}">${t.size}%</option>`}</select>
+    <select data-picalign title="Position">${["left", "center", "right"].map(v => `<option value="${v}" ${v === t.align ? "selected" : ""}>${{ left: "⇤ Left", center: "↔ Centre", right: "⇥ Right" }[v]}</option>`).join("")}</select>
+    <button class="btn sm" data-picdel title="Remove this picture">✕</button></div>`; }).join("");
 }
 function updateRich(card, it){
-  updateMiss(card, it);
+  updateMiss(card, it); updatePics(card, it);
   const box = card.querySelector("[data-rich]"); if(!box) return;
   const T = qText(it);
   const blocks = (hasRich(T) || it.mcq || fmtOf(it)) && mathOK ? parseRich(T, fmtOf(it)) : [];
-  const rich = ((it.mcq || fmtOf(it)) && blocks.length) || blocks.some(b => b.type === "display" || b.type === "table" || b.type === "mol" || b.bullet || (b.runs || []).some(r => r.t === "math" || r.b || r.i || r.u || r.x || r.c));
+  const rich = ((it.mcq || fmtOf(it)) && blocks.length) || blocks.some(b => b.type === "display" || b.type === "table" || b.type === "mol" || b.type === "img" || b.align || b.bullet || (b.runs || []).some(r => r.t === "math" || r.b || r.i || r.u || r.x || r.c));
   const subs = it.subs || [];
   const subRich = subs.some(sb => hasRich(sb.text));
   if(!rich && !subRich){ box.classList.add("hidden"); box.innerHTML = ""; return; }
@@ -2442,10 +2483,13 @@ function buildPDF(opt){
     if(!rows.length) pushRow([]);
     return rows.map((r, ri) => {
       let asc = TASC, desc = LH - TASC;
+      const rowW = r.reduce((a, w) => a + w.reduce((x, p) => x + p.w, 0), 0) + SP * Math.max(0, r.length - 1);
+      const rowAvail = ((wrap && wrap.narrow && rowN[ri]) ? wrap.narrow.w : width) - (b.ind || 0);
+      const shift = b.align === "center" ? Math.max(0, (rowAvail - rowW) / 2) : b.align === "right" ? Math.max(0, rowAvail - rowW) : 0;
       r.forEach(w => w.forEach(p => { if(p.t === "math"){ asc = Math.max(asc, p.asc + .7); desc = Math.max(desc, p.desc + .7); } }));
       return { h: asc + desc, asc, txt: true, dx: (wrap && wrap.narrow && rowN[ri]) ? wrap.narrow.dx : 0, width: r.reduce((a, w) => a + w.reduce((x, p) => x + p.w, 0), 0) + SP * Math.max(0, r.length - 1), draw(x, y, color){
         doc.setFontSize(fs); doc.setTextColor(...(color || INK));
-        let cx = x + (b.ind || 0);
+        let cx = x + (b.ind || 0) + shift;
         if(b.bullet && ri === 0){ setSt("bold"); doc.text("•", x + 1, y + asc); }
         if(b.mark && ri === 0){
           const r = EM * .37, cy = y + asc - EM * .34, cx0 = x + 1.2 + r;
@@ -2541,6 +2585,14 @@ function buildPDF(opt){
         continue;
       }
       if(b.type === "table"){ add([layoutTable(b, bw)]); continue; }
+      if(b.type === "img"){
+        const P = picData(b.id); if(!P) continue;
+        let w = bw * b.size / 100, h = w * P.h / P.w;
+        const maxH = Math.max(30, BOTTOM - TOP - 16); if(h > maxH){ w *= maxH / h; h = maxH; }
+        const off = b.align === "left" ? 0 : b.align === "right" ? bw - w : (bw - w) / 2;
+        add([{ h: h + 4, asc: TASC, draw(x, y){ doc.addImage(P.src, P.src.startsWith("data:image/png") ? "PNG" : "JPEG", x + off, y + 2, w, h, "pic_" + b.id, "FAST"); } }]);
+        continue;
+      }
       if(b.type === "mol"){
         const m = MOLS[b.smi];
         if(!m || !m.png){ add(layoutPara({ runs: [{ t: "text", s: "[molecule: " + b.smi + (m && m.err ? " — " + m.err : "") + "]", i: true }] }, bw)); continue; }
@@ -2887,8 +2939,8 @@ $("#btnOpenTab").onclick = () => { if(!lastBytes) return; const u = URL.createOb
 let pvResizeT; new ResizeObserver(() => { clearTimeout(pvResizeT); pvResizeT = setTimeout(() => { if(lastBytes) showPreview(lastBytes, 0); }, 250); }).observe(document.getElementById("pv"));
 /* undo / redo — app-wide history of the whole exam */
 const H = { stack: [], idx: -1, t: null, restoring: false };
-function cloneItem(it){ const c = Object.assign({}, it); if(Array.isArray(it.options)) c.options = it.options.slice(); if(Array.isArray(it.correct)) c.correct = it.correct.slice(); if(it.fmt) c.fmt = Object.assign({}, it.fmt); if(Array.isArray(it.subs)) c.subs = it.subs.map(x => Object.assign({}, x)); return c; }
-function snapSig(d, items){ return JSON.stringify({ d, items: items.map(i => Object.assign({}, i, { img: i.img ? i.img.src.length + ":" + i.img.w + ":" + i.img.h : null, labels: i.labels ? JSON.stringify(i.labels.pts) : 0, graph: i.graph ? JSON.stringify(i.graph) : 0 })) }); }
+function cloneItem(it){ const c = Object.assign({}, it); if(Array.isArray(it.options)) c.options = it.options.slice(); if(Array.isArray(it.correct)) c.correct = it.correct.slice(); if(it.fmt) c.fmt = Object.assign({}, it.fmt); if(it.pics) c.pics = Object.assign({}, it.pics); if(Array.isArray(it.subs)) c.subs = it.subs.map(x => Object.assign({}, x)); return c; }
+function snapSig(d, items){ return JSON.stringify({ d, items: items.map(i => Object.assign({}, i, { img: i.img ? i.img.src.length + ":" + i.img.w + ":" + i.img.h : null, labels: i.labels ? JSON.stringify(i.labels.pts) : 0, graph: i.graph ? JSON.stringify(i.graph) : 0, pics: i.pics ? Object.keys(i.pics).join(",") : 0 })) }); }
 function snapOf(){ const d = JSON.parse(JSON.stringify(S.d)), items = S.items.map(cloneItem); return { d, logo: S.logo, items, sig: snapSig(d, items) }; }
 function updUndoBtns(){ const u = document.getElementById("btnUndo"), r = document.getElementById("btnRedo"); if(u) u.disabled = !(H.idx > 0 || H.t); if(r) r.disabled = !(H.idx < H.stack.length - 1); }
 function histReset(){ clearTimeout(H.t); H.t = null; H.stack = [snapOf()]; H.idx = 0; updUndoBtns(); }
@@ -3404,7 +3456,8 @@ FORMAT RULES
 12. Units:  $9.8\\,\\mathrm{m/s^2}$
 13. Tables: Markdown tables (| a | b |, with a |---|---| line under the header row).
 14. Biology: scientific names in italics (*Homo sapiens*), Punnett squares and data as Markdown tables, temperatures as $37^\\circ\\mathrm{C}$, sizes as $10\\,\\mu\\mathrm{m}$.
-15. Text styles: **bold**, *italic*, ++underline++ and ~~strikethrough~~ — keep every one that appears in the original. Do not use any other Markdown (no # headings, no horizontal rules, no numbered-list auto-formatting).
+15. To centre or right-align a line (a poem, a title, a quotation), start the line with {center} or {right}.
+    Text styles: **bold**, *italic*, ++underline++ and ~~strikethrough~~ — keep every one that appears in the original. Do not use any other Markdown (no # headings, no horizontal rules, no numbered-list auto-formatting).
 16. EVERY picture, photo, diagram, graph, map or chart that cannot be typed: write  [diagram: short description]  on its own line exactly where it belongs (include any caption or credit in the description). Never skip a picture.
 17. Copy the wording exactly and keep the original numbering. Do NOT add answers or solutions unless I ask for them.
 18. ONLY if I ask for an answer key: put {correct} after each correct MCQ option, and after a question or sub-question add a line starting with "Model answer:" followed by the answer or marking points.
@@ -3453,6 +3506,10 @@ function fmtBar(it){
     <button type="button" data-fmt="u" class="${f.u ? "on" : ""}" title="Underline"><u>U</u></button>
     <button type="button" data-fmt="x" class="${f.x ? "on" : ""}" title="Strikethrough"><s>S</s></button>
     <span class="fsep"></span>
+    <button type="button" data-fmt="al" data-a="left" class="al ${(f.align || "left") === "left" ? "on" : ""}" title="Align left (default) — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M2 6.5h8M2 10h12M2 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button type="button" data-fmt="al" data-a="center" class="al ${(f.align || "left") === "center" ? "on" : ""}" title="Align center — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M4 6.5h8M2 10h12M4 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <button type="button" data-fmt="al" data-a="right" class="al ${(f.align || "left") === "right" ? "on" : ""}" title="Align right — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M6 6.5h8M2 10h12M6 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+    <span class="fsep"></span>
     ${SWATCHES.map(([c, n]) => `<button type="button" data-fmt="color" data-c="${c}" class="sw ${f.c === c ? "on" : ""}" title="${n} text" style="--c:${c}"></button>`).join("")}
     <label class="sw custom ${f.c && !SWATCHES.some(x => x[0] === f.c) ? "on" : ""}" title="Other colour…" style="--c:${f.c && !SWATCHES.some(x => x[0] === f.c) ? f.c : "#fff"}"><input type="color" data-fmt="colorpick" value="${f.c || "#1F5FBF"}"></label>
     <span class="fsep"></span>
@@ -3477,7 +3534,7 @@ function applyToggle(card, it, key, val){
   lastTA = { id: it.id, s: r.a, e: r.e };
   return true;
 }
-function stripFmt(t){ return t.replace(/\{\/?color[^}]*\}/g, "").replace(/\*\*|\+\+|~~/g, "").replace(/(^|[^\w*])\*([^\s*][^*]*?)\*(?!\*)/g, "$1$2"); }
+function stripFmt(t){ return t.replace(/^\s*\{(?:center|centre|right|left)\}\s*/gm, "").replace(/\{\/?color[^}]*\}/g, "").replace(/\*\*|\+\+|~~/g, "").replace(/(^|[^\w*])\*([^\s*][^*]*?)\*(?!\*)/g, "$1$2"); }
 function onFmt(btn, card, it, colorVal){
   const k = btn.dataset.fmt;
   it.fmt = it.fmt || {};
@@ -3486,6 +3543,16 @@ function onFmt(btn, card, it, colorVal){
   }else if(k === "color" || k === "colorpick"){
     const c = colorVal || btn.dataset.c;
     if(!applyToggle(card, it, "c", c)) it.fmt.c = (it.fmt.c === c && k === "color") ? "" : c;
+  }else if(k === "al"){
+    const want = btn.dataset.a, r = curSel(card);
+    if(r && r.e > r.a){
+      // align only the lines touched by the selection
+      const v = r.ta.value, a0 = v.lastIndexOf("\n", r.a - 1) + 1, e1 = v.indexOf("\n", r.e - (v[r.e - 1] === "\n" ? 1 : 0)), e0 = e1 < 0 ? v.length : e1;
+      const whole = (it.fmt.align || "left");
+      const seg = v.slice(a0, e0).split("\n").map(l => { const t = l.replace(RE_ALIGN, ""); return !t.trim() || want === whole ? t : "{" + want + "}" + t; }).join("\n");
+      it.text = v.slice(0, a0) + seg + v.slice(e0); r.ta.value = it.text;
+      r.ta.focus(); r.ta.setSelectionRange(a0, a0 + seg.length);
+    }else it.fmt.align = want === "left" ? "" : want;
   }else if(k === "clear"){
     if(!applyToggle(card, it, "clear")) it.fmt = {};
   }
@@ -3500,6 +3567,13 @@ function refreshFmtBar(card, it){
   let f = it.fmt || {};
   if(ta && document.activeElement === ta && ta.selectionEnd > ta.selectionStart){ const ss = selStyle(ta.value, ta.selectionStart, ta.selectionEnd); if(ss) f = ss; }
   bar.querySelectorAll("button[data-fmt=b],button[data-fmt=i],button[data-fmt=u],button[data-fmt=x]").forEach(x => x.classList.toggle("on", !!f[x.dataset.fmt]));
+  { let al = it.fmt && it.fmt.align || "left";
+    if(ta && document.activeElement === ta && ta.selectionEnd > ta.selectionStart){
+      const v = ta.value, a0 = v.lastIndexOf("\n", ta.selectionStart - 1) + 1, e1 = v.indexOf("\n", ta.selectionEnd), L = v.slice(a0, e1 < 0 ? v.length : e1).split("\n").filter(l => l.trim());
+      const set = new Set(L.map(l => { const m = l.match(RE_ALIGN); return m ? m[1].toLowerCase().replace("centre", "center") : (it.fmt && it.fmt.align || "left"); }));
+      al = set.size === 1 ? [...set][0] : "";
+    }
+    bar.querySelectorAll("button[data-fmt=al]").forEach(x => x.classList.toggle("on", x.dataset.a === al)); }
   bar.querySelectorAll("button[data-fmt=color]").forEach(x => x.classList.toggle("on", !!f.c && f.c.toLowerCase() === x.dataset.c.toLowerCase()));
   const cu = bar.querySelector(".custom"); if(cu){ const custom = f.c && !SWATCHES.some(x => x[0].toLowerCase() === f.c.toLowerCase()); cu.classList.toggle("on", !!custom); cu.style.setProperty("--c", custom ? cssHex(f.c) : "#fff"); }
 }
@@ -3903,6 +3977,31 @@ document.addEventListener("paste", async e => {
 });
 $("#fileIn").addEventListener("change", async e => {
   const files = [...e.target.files]; e.target.value = "";
+  if(pendingInline && files[0]){
+    const P = pendingInline; pendingInline = null;
+    const it = S.items.find(x => x.id === P.id); if(!it) return;
+    try{
+      const img = await imageFileToData(files[0]), id = "p" + nid().replace(/\W/g, "").slice(-6);
+      it.pics = Object.assign({}, it.pics, { [id]: img });
+      const tag = "{img: " + id + " | 60% | center}";
+      if(P.fill){
+        // replace the first [diagram: …] placeholder, in the question or a sub-question
+        const swap = t => { const L = String(t || "").split("\n"), k = L.findIndex(l => RE_PIC.test(l)); if(k < 0) return null; L[k] = tag; return L.join("\n"); };
+        let done = swap(it.text); if(done != null) it.text = done; else { const sb = (it.subs || []).find(x => swap(x.text) != null); if(sb) sb.text = swap(sb.text); else it.text = (it.text ? it.text + "\n" : "") + tag; }
+        toast("Picture added where the placeholder was — change its size or position under the text");
+      }else{
+        const v = tfGet(it, P.tf), pos = P.pos == null ? v.length : Math.min(P.pos, v.length);
+        const lineStart = v.lastIndexOf("\n", pos - 1) + 1, lineEnd = v.indexOf("\n", pos), atEnd = lineEnd < 0 ? v.length : lineEnd;
+        // a picture always gets its own line: after the line the cursor is on
+        const cut = pos === lineStart ? lineStart : atEnd;
+        const before = v.slice(0, cut), after = v.slice(cut);
+        tfSet(it, P.tf, before + (before && !before.endsWith("\n") ? "\n" : "") + tag + (after && !after.startsWith("\n") ? "\n" : "") + after);
+        toast("Picture added — change its size or position under the text");
+      }
+      render(); changed();
+    }catch(err){ toast(err.message); }
+    return;
+  }
   if(pendingImgTarget && files[0]){
     const it = S.items.find(x => x.id === pendingImgTarget); pendingImgTarget = null;
     try{ it.img = await imageFileToData(files[0]); it.imgSize = 100; if(picsOf(it.text).length){ it.text = dropFirstPic(it.text); toast("Picture added — the red placeholder is gone"); } render(); changed(); }catch(err){ toast(err.message); }
@@ -3911,6 +4010,20 @@ $("#fileIn").addEventListener("change", async e => {
   handleFiles(files);
 });
 $("#list").addEventListener("input", onListInput);
+$("#list").addEventListener("change", e => {
+  const ch = e.target.closest("[data-pic]"); if(!ch || !(e.target.matches("[data-picsize],[data-picalign]"))) return;
+  const card = ch.closest(".card"), it = S.items.find(x => x.id === card.dataset.id); if(!it) return;
+  setPicTag(it, ch.dataset.pic, t => ({ size: +ch.querySelector("[data-picsize]").value, align: ch.querySelector("[data-picalign]").value }));
+  const ta = card.querySelector("textarea[data-f=text]"); if(ta) ta.value = it.text;
+  card.querySelectorAll("textarea[data-sf=text]").forEach(x => { const sb = (it.subs || []).find(s => s.id === x.dataset.sub); if(sb) x.value = sb.text; });
+  updateRich(card, it); lastEdited = it.id; changed();
+});
+$("#list").addEventListener("click", e => {
+  const b = e.target.closest("[data-picdel]"); if(!b) return;
+  const ch = b.closest("[data-pic]"), card = b.closest(".card"), it = S.items.find(x => x.id === card.dataset.id); if(!it) return;
+  setPicTag(it, ch.dataset.pic, () => null); if(it.pics) delete it.pics[ch.dataset.pic];
+  render(); changed();
+});
 $("#list").addEventListener("keydown", e => {
   const inp = e.target.closest("input[data-opt]"); if(!inp) return;
   const card = inp.closest(".card"); const it = S.items.find(x => x.id === card.dataset.id); if(!it) return;
