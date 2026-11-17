@@ -98,6 +98,8 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+#pdfModal{z-index:65}
+.pdf-steps{margin:0;padding-left:22px;line-height:1.55}.pdf-steps li{margin:0 0 10px}.pdf-steps .btn{margin-top:5px}
 #saveModal{z-index:60}   /* above the start screen (＋ New) */
 .sv-name{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;background:#fff;overflow:hidden}
 label.f .sv-name input,.sv-name input{flex:1;border:0!important;outline:0;box-shadow:none!important;border-radius:0!important;margin:0!important;padding:9px 10px;font-size:15px;min-width:0;background:transparent!important;width:auto}
@@ -605,6 +607,20 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
 </div>
 
 <!-- EQUATION EDITOR -->
+<div class="modal" id="pdfModal">
+  <div class="box" style="max-width:560px">
+    <h3 style="margin:0 0 6px" id="pdfTitle">📄 BEE can't open PDF files</h3>
+    <p style="margin:0 0 12px;line-height:1.5" id="pdfWhy">A PDF is made for printing, so BEE can't take the questions out of it. Your AI tool can do that in a few seconds, using BEE's ready-made prompt:</p>
+    <ol class="pdf-steps">
+      <li><b>Copy BEE's prompt.</b><br><button class="btn sm primary" id="pdfCopy">📋 Copy the AI prompt</button></li>
+      <li><b>Open your AI</b> (ChatGPT, Claude, Gemini, Copilot…), <b>attach your <span class="pdf-kind">PDF</span></b>, paste the prompt and send.</li>
+      <li><b>Copy the AI's answer</b> and paste it into BEE.<br><button class="btn sm" id="pdfPaste">📋 Paste the AI answer</button></li>
+    </ol>
+    <p class="hint" style="margin:10px 0 0">Pictures from the PDF come back as red “picture missing” boxes. Add them with <b>＋ Add the picture here</b>, for example from a screenshot.</p>
+    <p class="hint" style="margin:6px 0 0" id="pdfFiles"></p>
+    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn" data-close>OK</button></div>
+  </div>
+</div>
 <div class="modal" id="saveModal">
   <div class="box" style="max-width:520px">
     <h3 style="margin:0 0 4px" id="svTitle">💾 Save exam as</h3>
@@ -4998,7 +5014,10 @@ async function openProject(){
 }
 async function openFromHandle(h){
   try{
-    const o = JSON.parse(await (await h.getFile()).text());
+    const file = await h.getFile();
+    if(fileKind(file)){ showBlocked(fileKind(file), [file.name]); return false; }
+    if(/\.(txt|md|markdown|text)$/i.test(file.name)){ await handleFiles([file]); return true; }
+    const o = JSON.parse(await file.text());
     if(!o || !Array.isArray(o.items)) throw new Error("not an exam project");
     applyState(o);
     try{ proj.perm = h.requestPermission ? await h.requestPermission({ mode: "readwrite" }) : "granted"; }catch(_){ proj.perm = "prompt"; }
@@ -5341,7 +5360,35 @@ async function rotateImg(img){
 }
 
 /* ---------------- adding content ---------------- */
+// files BEE can't read: they would be read as text and freeze the page
+function fileKind(f){
+  const n = (f && f.name || "").toLowerCase(), t = (f && f.type || "").toLowerCase();
+  if(t === "application/pdf" || /\.pdf$/.test(n)) return "PDF";
+  if(/\.(docx?|odt|rtf|pages)$/.test(n) || /wordprocessing|msword|opendocument\.text|rtf/.test(t)) return "Word document";
+  if(/\.(pptx?|odp|key)$/.test(n) || /presentation|powerpoint/.test(t)) return "presentation";
+  if(/\.(xlsx?|ods|numbers|csv)$/.test(n) && !/\.csv$/.test(n) || /spreadsheet|excel/.test(t)) return "spreadsheet";
+  if(/\.(zip|rar|7z|epub|exe|dmg|mp4|mov|mp3|wav)$/.test(n)) return "file";
+  return null;
+}
+function showBlocked(kind, names){
+  const pdf = kind === "PDF";
+  $("#pdfTitle").textContent = pdf ? "📄 BEE can't open PDF files" : "📄 BEE can't open this " + kind;
+  $("#pdfWhy").textContent = pdf
+    ? "A PDF is made for printing, so BEE can't take the questions out of it. Your AI tool can do that in a few seconds, using BEE's ready-made prompt:"
+    : "BEE reads typed text, photos and its own project files. For a " + kind + ", let your AI tool convert it with BEE's ready-made prompt" + (kind === "Word document" ? " (or copy all the text from Word and paste it into BEE)" : "") + ":";
+  document.querySelectorAll(".pdf-kind").forEach(el => el.textContent = kind === "file" ? "file" : kind);
+  $("#pdfFiles").textContent = names && names.length ? "Not opened: " + names.join(", ") : "";
+  openModal("#pdfModal");
+}
+document.getElementById("pdfCopy").onclick = async () => {
+  try{ await navigator.clipboard.writeText(USER_AI_PROMPT); toast("Prompt copied — paste it into your AI chat with the file attached"); $("#pdfCopy").textContent = "✓ Copied"; setTimeout(() => $("#pdfCopy").textContent = "📋 Copy the AI prompt", 2500); }
+  catch(_){ $("#pdfModal").classList.remove("open"); $("#pasteText").click(); toast("Copy the prompt from the box at the top"); }
+};
+document.getElementById("pdfPaste").onclick = () => { $("#pdfModal").classList.remove("open"); $("#pasteText").click(); };
 async function handleFiles(files){
+  // stop PDFs, Word files… before anything tries to read them
+  const blocked = files.filter(f => fileKind(f));
+  if(blocked.length){ showBlocked(fileKind(blocked[0]), blocked.map(f => f.name)); files = files.filter(f => !fileKind(f)); if(!files.length) return; }
   let added = 0; const newPhotos = [];
   for(const f of files){
     try{
@@ -5351,7 +5398,9 @@ async function handleFiles(files){
         S.items.push(it); newPhotos.push(it.id);
         added++;
       }else{
+        if(f.size > 3e6){ showBlocked("file", [f.name + " (too big for a text file)"]); continue; }
         const txt = await f.text();
+        if(/\u0000|\uFFFD{4,}/.test(txt.slice(0, 4000)) || /^%PDF-/.test(txt)){ showBlocked(/^%PDF-/.test(txt) ? "PDF" : "file", [f.name]); continue; }
         const items = parseText(txt);
         const said = applyExtras(extractExtras(txt));
         if(said.length) setTimeout(() => toast(said.join(" · ")), 1600);
@@ -8214,6 +8263,11 @@ document.addEventListener("paste", async e => {
 });
 $("#fileIn").addEventListener("change", async e => {
   const files = [...e.target.files]; e.target.value = "";
+  if((pendingInline || pendingImgTarget) && files[0] && fileKind(files[0])){
+    pendingInline = null; pendingImgTarget = null;
+    toast(fileKind(files[0]) === "PDF" ? "A picture must be an image (PNG or JPG). For a page of a PDF, take a screenshot of it and add that." : "A picture must be an image (PNG or JPG)");
+    return;
+  }
   if(pendingInline && files[0]){
     const P = pendingInline; pendingInline = null;
     const it = S.items.find(x => x.id === P.id); if(!it) return;
@@ -8330,6 +8384,7 @@ $("#pvKey").addEventListener("change", () => preview());
 $("#btnLogo").onclick = () => $("#logoIn").click();
 $("#logoIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if(!f) return;
+  if(fileKind(f)){ toast("The logo must be an image (PNG or JPG)" + (fileKind(f) === "PDF" ? " — take a screenshot of it from the PDF" : "")); return; }
   try{
     const src = await readAsDataURL(f); const i = await loadImg(src);
     const sc = Math.min(1, 1400 / Math.max(i.naturalWidth, i.naturalHeight));
@@ -8360,6 +8415,8 @@ $("#saveChip").onclick = async () => {
 };
 $("#projIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if(!f) return;
+  if(fileKind(f)){ showBlocked(fileKind(f), [f.name]); return; }
+  if(/\.(txt|md|markdown|text)$/i.test(f.name)){ handleFiles([f]); $("#startModal").classList.remove("open"); return; }
   try{ const o = JSON.parse(await f.text()); if(!o || !Array.isArray(o.items)) throw 0; applyState(o); saveLocal(); $("#startModal").classList.remove("open"); toast("Opened " + f.name); }
   catch(err){ toast("That file isn't a valid exam project"); }
 });
