@@ -420,6 +420,8 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
           <label class="f">Paper size<select data-k="paper"><option value="a4">A4</option><option value="letter">US Letter</option></select></label>
           <label class="f">Question font size<select data-k="fontSize"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt</option><option value="13">13 pt</option><option value="14">14 pt</option><option value="16">16 pt</option><option value="18">18 pt</option></select></label>
           <label class="f">Line spacing<select data-k="lineSpacing"><option value="1">Normal</option><option value="1.5">1.5 lines</option><option value="2">Double</option></select></label>
+          <label class="f">Style<select data-k="style"><option value="">Classic (black &amp; white friendly)</option><option value="colour">🎨 Colourful</option></select></label>
+          <label class="f" data-show-colour>Colours<select data-k="palette"><option value="">🌈 Rainbow</option><option value="honey">🍯 Honey</option><option value="ocean">🌊 Ocean</option><option value="garden">🌿 Garden</option><option value="berry">🫐 Berry</option></select></label>
           <label class="f">Accent colour<input data-k="accent" type="color" style="height:36px;padding:3px"></label>
           <div class="f full">
             <span class="kind" style="margin-bottom:6px">Logo</span>
@@ -2173,7 +2175,13 @@ function buildPDF(opt){
   const noEmoji = t => typeof t === "string" ? t.replace(/[\u{1F000}-\u{1FAFF}\u{FE0F}\u{200D}]/gu, "").replace(/\s{2,}(?=\S)/g, m => m.length > 2 ? m : " ") : Array.isArray(t) ? t.map(noEmoji) : t;
   ["text", "getTextWidth", "splitTextToSize", "getStringUnitWidth"].forEach(fn => { const orig = doc[fn].bind(doc); doc[fn] = (t, ...rest) => orig(noEmoji(t), ...rest); });
   const PW = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight();
-  const ACC = hexRgb(D.accent), ACC_D = shade(ACC, .28), ACC_L = tint(ACC, .82), ACC_XL = tint(ACC, .92);
+  // 🎨 colourful mode: every part gets its own colour from the palette
+  const PALETTES = { "": ["#E4572E", "#2E86AB", "#7B4FB5", "#2A9D5C", "#E9A31B", "#D63A7A"], honey: ["#D99A0B", "#C0571B", "#8C6A1E", "#B8860B"],
+    ocean: ["#1F77B4", "#0F9D9A", "#3D5A98", "#1AA0C8"], garden: ["#2A9D5C", "#6A994E", "#3E7C59", "#99A824"], berry: ["#B5367A", "#7B4FB5", "#D63A5A", "#5E3B8C"] };
+  const COLOUR = D.style === "colour";
+  const PAL = (PALETTES[D.palette || ""] || PALETTES[""]).map(hexRgb);
+  const ACC = COLOUR ? PAL[0] : hexRgb(D.accent), ACC_D = shade(ACC, .28), ACC_L = tint(ACC, .82), ACC_XL = tint(ACC, .92);
+  let PC = PAL[0];   // colour of the part being drawn
   const INK = [38, 34, 28], MUTED = [118, 110, 98], RULE = [196, 190, 178];
 
   // fonts
@@ -2616,7 +2624,7 @@ function buildPDF(opt){
         if(b.bullet && ri === 0){ setSt("bold"); doc.text("•", x + 1, y + asc); }
         if(b.mark && ri === 0){
           const r = EM * .37, cy = y + asc - EM * .34, cx0 = x + 1.2 + r;
-          doc.setDrawColor(...INK); doc.setLineWidth(.32);
+          doc.setDrawColor(...(COLOUR ? PC : INK)); doc.setLineWidth(.32);
           if(b.mark === "multi") doc.rect(cx0 - r, cy - r, 2 * r, 2 * r, "S"); else doc.circle(cx0, cy, r, "S");
         }
         r.forEach((w, wi) => {
@@ -2628,7 +2636,7 @@ function buildPDF(opt){
             if(p.t === "math") doc.addImage(p.m.png, "PNG", cx, y + asc - p.asc, p.w, p.asc + p.desc, mAlias(p.m), "FAST");
             else {
               if(p.djv) doc.setFont("DejaVu", p.st === "normal" ? "normal" : "bold"); else setSt(p.st);
-              const tc = p.err ? [180, 60, 40] : p.c ? hexRgb(cssHex(p.c)) : (color || INK);
+              const tc = p.err ? [180, 60, 40] : p.c ? hexRgb(cssHex(p.c)) : (COLOUR && b.opt && ri === 0 && wi === 0 ? PC : (color || INK));
               doc.setTextColor(...tc);
               doc.text(p.s, cx, y + asc);
               if(p.x){ doc.setDrawColor(...tc); doc.setLineWidth(Math.max(.18, fs * .018)); doc.line(cx, y + asc - fs * mmPt * .27, cx + p.w, y + asc - fs * mmPt * .27); }
@@ -2767,7 +2775,7 @@ function buildPDF(opt){
       n = Math.max(0, Math.min(60, Math.round(num(n)))); if(!n) return [];
       if(!kind || kind === "lines"){
         const out = [{ h: 2, draw: () => {} }];
-        for(let k = 0; k < n; k++) out.push({ h: ANS, draw: yy => { doc.setDrawColor(...RULE); doc.setLineWidth(.22); doc.line(x0, yy + ANS, x1, yy + ANS); } });
+        for(let k = 0; k < n; k++) out.push({ h: ANS, draw: yy => { doc.setDrawColor(...(COLOUR ? tint(PC, .55) : RULE)); doc.setLineWidth(.22); doc.line(x0, yy + ANS, x1, yy + ANS); } });
         return out;
       }
       const H = Math.min(n * ANS, pageAvail - 12);
@@ -2909,9 +2917,18 @@ function buildPDF(opt){
         const fd = parts[0].draw;
         parts[0].draw = yy => {
           fd(yy);
-          if(!it.nonum){ font(SANS, "bold", fs, ACC_D); doc.text(M.meta[it.id] + ".", X, yy + base0); }
+          if(!it.nonum){
+            if(COLOUR){ const r = Math.max(2.7, fs * .3), cx0 = X + r, cy0 = yy + base0 - fs * mmPt * .36; doc.setFillColor(...PC); doc.circle(cx0, cy0, r, "F");
+              const t = String(M.meta[it.id]); font(SANS, "bold", Math.min(fs - 1, t.length > 1 ? 8.5 : 10), [255, 255, 255]); doc.text(t, cx0, cy0 + fs * mmPt * .3, { align: "center" }); }
+            else{ font(SANS, "bold", fs, ACC_D); doc.text(M.meta[it.id] + ".", X, yy + base0); }
+          }
           const mk = it.hideMarks ? 0 : qMarks(it);
           // with sub-questions the marks are shown on each part; otherwise next to the question
+          if(COLOUR && D.showMarks && mk > 0 && !subs.some(sb => num(sb.marks) > 0)){
+            const t = fmt(mk) + (half ? "" : (mk === 1 ? PT(" mark]") : PT(" marks]")).replace("]", "")); font(SANS, "bold", fs - 2.5, shade(PC, .25));
+            const tw2 = doc.getTextWidth(t) + 4.5, ph = fs * mmPt * .95; doc.setFillColor(...tint(PC, .85)); doc.roundedRect(X + W - tw2, yy + base0 - ph * .78, tw2, ph, ph / 2, ph / 2, "F");
+            doc.text(t, X + W - tw2 / 2, yy + base0 - ph * .78 + ph * .7, { align: "center" });
+          }else
           if(D.showMarks && mk > 0 && !subs.some(sb => num(sb.marks) > 0)){ font(SANS, "normal", fs - 1.5, MUTED); doc.text("[" + fmt(mk) + (half ? "]" : (mk === 1 ? PT(" mark]") : PT(" marks]"))), X + W, yy + base0, { align: "right" }); }
         };
       }
@@ -2933,14 +2950,16 @@ function buildPDF(opt){
         if(y > TOP + 1 && y + h + 9 + need > BOTTOM) newPage();
         if(y > TOP + 1) y += 3;
         pageOf[it.id] = doc.getNumberOfPages();
-        mark(it.id, y, y + h); doc.setFillColor(...ACC_XL); doc.rect(ML, y, CW, h, "F");
-        doc.setFillColor(...ACC); doc.rect(ML, y, 1.6, h, "F");
+        if(COLOUR){ PC = PAL[items.slice(0, idx).filter(x => x.type === "section").length % PAL.length]; }
+        mark(it.id, y, y + h);
+        if(COLOUR){ doc.setFillColor(...PC); doc.roundedRect(ML, y, CW, h, 2.2, 2.2, "F"); }
+        else{ doc.setFillColor(...ACC_XL); doc.rect(ML, y, CW, h, "F"); doc.setFillColor(...ACC); doc.rect(ML, y, 1.6, h, "F"); }
         const mk = M.meta[it.id];
-        font(SANS, "bold", 8.5, ACC_D);
+        font(SANS, "bold", 8.5, COLOUR ? [255, 255, 255] : ACC_D);
         const mtxt = mk > 0 ? fmt(mk) + (mk === 1 ? PT(" MARK") : PT(" MARKS")) : "";
         const mw = mtxt ? doc.getTextWidth(mtxt) + mtxt.length * .5 + 4 : 0;
         if(mtxt) doc.text(mtxt, PW - MR - 3 - doc.getTextWidth(mtxt) - mtxt.length * .5, y + 7.1, { charSpace: .5 });
-        font(SANS, "bold", 12.5, INK);
+        font(SANS, "bold", 12.5, COLOUR ? [255, 255, 255] : INK);
         doc.text(fitText(stripFmt(it.text || PT("Part")).replace(/\$+([^$]*)\$+/g, "$1"), CW - 12 - mw), ML + 6, y + 7.4);
         y += h + (COMPACT ? 4.5 : 6);
         continue;
@@ -2962,11 +2981,12 @@ function buildPDF(opt){
         pageOf[it.id] = doc.getNumberOfPages();
         const base = y + fs * mmPt * 1.05; mark(it.id, y - 1, y + hh);
         const mk = num(it.marks), mtxt = mk > 0 ? fmt(mk) + (mk === 1 ? PT(" point") : PT(" points")) : "";
-        font(SANS, "normal", fs - 1, ACC_D); const mw = mtxt ? doc.getTextWidth(mtxt) + 4 : 0;
+        const SC = COLOUR ? shade(PC, .12) : ACC_D;
+        font(SANS, "normal", fs - 1, SC); const mw = mtxt ? doc.getTextWidth(mtxt) + 4 : 0;
         if(mtxt) doc.text(mtxt, ML + CW, base, { align: "right" });
-        font(SANS, "bold", fs + 1, ACC_D);
+        font(SANS, "bold", fs + 1, SC);
         doc.text(fitText(stripFmt(it.text || "").replace(/\$+([^$]*)\$+/g, "$1"), CW - mw), ML, base);
-        doc.setDrawColor(...ACC); doc.setLineWidth(.45); doc.line(ML, base + 2, ML + CW, base + 2);
+        doc.setDrawColor(...(COLOUR ? PC : ACC)); doc.setLineWidth(COLOUR ? .8 : .45); doc.line(ML, base + 2, ML + CW, base + 2);
         y += hh + (COMPACT ? 2 : 3);
         continue;
       }
@@ -2986,7 +3006,11 @@ function buildPDF(opt){
       const blk = qBlock(it, ML, CW);
       if(blk.h <= pageAvail ? y + blk.h > BOTTOM : y + blk.first > BOTTOM) newPage();
       pageOf[it.id] = doc.getNumberOfPages();
-      blk.parts.forEach(p => { if(y + p.h > BOTTOM && y > TOP + 1) newPage(); mark(it.id, y, y + p.h); p.draw(y); y += p.h; });
+      const panel = COLOUR && it.type === "note" && !it.heading && blk.h > 14;
+      blk.parts.forEach((p, k) => { if(y + p.h > BOTTOM && y > TOP + 1) newPage(); mark(it.id, y, y + p.h);
+        if(panel){ const top = k === 0 ? y - 2 : y, bot = y + p.h + (k === blk.parts.length - 1 ? 1.5 : 0); doc.setFillColor(...tint(PC, .93)); doc.rect(ML - 3, top, CW + 6, bot - top, "F"); doc.setFillColor(...PC); doc.rect(ML - 3, top, 1.2, bot - top, "F"); }
+        p.draw(y); y += p.h; });
+      if(panel) y += 2;
       y += it.type === "q" ? QGAP : NGAP;
     }
 
