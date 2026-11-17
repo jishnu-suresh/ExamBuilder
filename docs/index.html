@@ -1453,8 +1453,16 @@ function bindDetails(){
     });
   });
 }
+function syncStyleUI(){
+  const c = S.d.style === "colour";
+  document.querySelectorAll("[data-show-colour]").forEach(el => el.classList.toggle("hidden", !c));
+  const acc = document.querySelector('[data-k="accent"]'); if(acc) acc.closest("label").classList.toggle("hidden", c);
+}
+document.addEventListener("change", e => { if(e.target.matches && e.target.matches('[data-k="style"]')) setTimeout(syncStyleUI, 0); });
+setTimeout(syncStyleUI, 0); addEventListener("load", () => setTimeout(syncStyleUI, 50));
 function refreshDetails(){
   try{ renderRubric(); }catch(e){}
+  setTimeout(syncStyleUI, 0);
   document.querySelectorAll("[data-k]").forEach(el => {
     const k = el.dataset.k;
     if(el.type === "checkbox") el.checked = !!S.d[k]; else el.value = S.d[k] ?? "";
@@ -2339,9 +2347,24 @@ function buildPDF(opt){
     if(instr.length){
       y += 8 * g;
       font(SANS, "normal", ifs);
-      wrapped = instr.map(t => doc.splitTextToSize(t, iw));
       ilh = ifs * mmPt * P.instrLH;
-      ih = 13 + wrapped.reduce((a, w) => a + w.length, 0) * ilh + (instr.length - 1) * 1.2 + 3;
+      const styled = t => !/\$/.test(t) && /\*|\+\+|~~|\{color:/.test(t);
+      // styled instruction → lines of words, each word keeps its own style
+      const coverRich = t => {
+        const words = [];
+        parseInline(t, {}).forEach(r => { if(r.t !== "text") return;
+          const st = r.b && r.i ? "bolditalic" : r.b ? "bold" : r.i ? "italic" : "normal";
+          String(r.s).split(/(\s+)/).forEach(w => { if(!w) return; if(/^\s+$/.test(w)){ words.push({ sp: true }); return; }
+            font(SANS, st, ifs); words.push({ s: w, st, u: !!r.u, x: !!r.x, c: r.c || "", w: doc.getTextWidth(w) }); }); });
+        font(SANS, "normal", ifs); const SPW = doc.getTextWidth(" ");
+        const lines = [[]]; let lw = 0;
+        words.forEach(w => { if(w.sp){ if(lines[lines.length - 1].length) lines[lines.length - 1].push({ sp: true, w: SPW }); lw += SPW; return; }
+          if(lw + w.w > iw && lines[lines.length - 1].some(x => !x.sp)){ const L = lines[lines.length - 1]; while(L.length && L[L.length - 1].sp) L.pop(); lines.push([]); lw = 0; }
+          lines[lines.length - 1].push(w); lw += w.w; });
+        return { lines };
+      };
+      wrapped = instr.map(t => styled(t) ? coverRich(t) : doc.splitTextToSize(t, iw));
+      ih = 13 + wrapped.reduce((a, w) => a + (w.lines ? w.lines.length : w.length) * ilh, 0) + (instr.length - 1) * 1.2 + 3;
       instrTop = y; y += ih;
     }
     // points per part: 1 column, or 2 columns when there are many parts
@@ -2362,7 +2385,15 @@ function buildPDF(opt){
         wrapped.forEach(w => {
           doc.setFillColor(...ACC); hexagon(ML + 9.2, iy - ifs * mmPt * .35, .95, "F");
           font(SANS, "normal", ifs, INK);
-          w.forEach(l => { doc.text(l, ML + 8 + bulletW, iy); iy += ilh; });
+          if(w.lines) w.lines.forEach(L => {
+            let cx = ML + 8 + bulletW;
+            L.forEach(p => { if(p.sp){ cx += p.w; return; }
+              const tc = p.c ? hexRgb(cssHex(p.c)) : INK; font(SANS, p.st, ifs, tc); doc.text(p.s, cx, iy);
+              if(p.x){ doc.setDrawColor(...tc); doc.setLineWidth(.2); doc.line(cx, iy - ifs * mmPt * .27, cx + p.w, iy - ifs * mmPt * .27); }
+              if(p.u){ doc.setDrawColor(...tc); doc.setLineWidth(.2); doc.line(cx, iy + ifs * mmPt * .14, cx + p.w, iy + ifs * mmPt * .14); }
+              cx += p.w; });
+            iy += ilh; });
+          else w.forEach(l => { doc.text(l, ML + 8 + bulletW, iy); iy += ilh; });
           iy += 1.2;
         });
       }
