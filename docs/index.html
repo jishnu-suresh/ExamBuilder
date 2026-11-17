@@ -1505,7 +1505,7 @@ function render(){
         <button class="btn icon" data-act="dup" title="Duplicate">⧉</button>
         <button class="btn icon danger" data-act="del" title="Delete">✕</button></div>`;
     const imgBlock = it.img ? `<div class="img"><img src="${it.img.src}" alt=""></div>
-        <div class="row"><label>Image width <input type="range" min="25" max="100" step="5" data-f="imgSize" value="${it.imgSize || 100}"> <span>${it.imgSize || 100}%</span></label>
+        <div class="row"><label>Image width <input type="range" min="5" max="100" step="5" data-f="imgSize" value="${it.imgSize || 100}"> <span>${it.imgSize || 100}%</span></label>
         <span class="seg algn" title="Image position">${[["left","⇤ Left"],["center","↔ Centre"],["right","Right ⇥"]].map(([v,l]) => `<button type="button" data-act="align" data-v="${v}" class="${(it.imgAlign || "left") === v ? "on" : ""}">${l}</button>`).join("")}</span>
         ${(it.imgAlign || "left") !== "center" ? `<label class="wrapchk" title="Put the question text ${(it.imgAlign || "left") === "left" ? "to the right" : "to the left"} of the picture"><input type="checkbox" data-f="imgWrap" ${it.imgWrap ? "checked" : ""}> Wrap text ${(it.imgAlign || "left") === "left" ? "on the right" : "on the left"}</label>` : ""}</div>
         <div class="row">
@@ -1871,7 +1871,7 @@ function parseRich(text, base){
     const l = lines[i], t = l.trim();
     if(!t){ blocks.push({ type: "gap" }); continue; }
     const pm = l.match(RE_PIC); if(pm){ blocks.push({ type: "pic", desc: pm[1].trim() }); continue; }
-    const im = l.match(RE_IMG); if(im){ blocks.push({ type: "img", id: im[1], size: Math.max(10, Math.min(100, +im[2] || 60)), align: (im[3] || "center").toLowerCase().replace("centre", "center") }); continue; }
+    const im = l.match(RE_IMG); if(im){ blocks.push({ type: "img", id: im[1], size: Math.max(5, Math.min(100, +im[2] || 60)), align: (im[3] || "center").toLowerCase().replace("centre", "center") }); continue; }
     const mo = l.match(RE_MOL); if(mo){ blocks.push({ type: "mol", smi: mo[1].trim(), cap: (mo[2] || "").trim() }); continue; }
     const open = t.startsWith("$$") ? "$$" : t.startsWith("\\[") ? "\\[" : null;
     if(open){
@@ -2129,7 +2129,7 @@ function updatePics(card, it){
   const T = picTags(it); el.classList.toggle("hidden", !T.length);
   if(!T.length){ el.innerHTML = ""; return; }
   el.innerHTML = T.map(t => { const P = picData(t.id); return `<div class="picchip" data-pic="${t.id}">${P ? `<img src="${P.src}" alt="">` : "⚠"}
-    <select data-picsize title="Picture width">${[25, 33, 40, 50, 60, 75, 100].map(v => `<option value="${v}" ${v === t.size ? "selected" : ""}>${v}%</option>`).join("")}${[25, 33, 40, 50, 60, 75, 100].includes(t.size) ? "" : `<option selected value="${t.size}">${t.size}%</option>`}</select>
+    <select data-picsize title="Picture width">${[5, 10, 15, 20, 25, 33, 40, 50, 60, 75, 100].map(v => `<option value="${v}" ${v === t.size ? "selected" : ""}>${v}%</option>`).join("")}${[5, 10, 15, 20, 25, 33, 40, 50, 60, 75, 100].includes(t.size) ? "" : `<option selected value="${t.size}">${t.size}%</option>`}</select>
     <select data-picalign title="Position">${["left", "center", "right"].map(v => `<option value="${v}" ${v === t.align ? "selected" : ""}>${{ left: "⇤ Left", center: "↔ Centre", right: "⇥ Right" }[v]}</option>`).join("")}</select>
     ${P && P.graph ? `<button class="btn sm" data-picgraph title="Change this graph">📈 Edit</button>` : ""}<button class="btn sm" data-picdel title="Remove this picture">✕</button></div>`; }).join("");
 }
