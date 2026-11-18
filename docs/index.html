@@ -2218,7 +2218,7 @@ const TR_FR = { "Part": "Partie", "Other questions": "Autres questions", "DURATI
   "FOR EXAMINER USE": "RÉSERVÉ AU CORRECTEUR", "Total points": "Note totale", "Criteria": "Critères", "Points": "Points", "TOTAL EXAM GRADE": "NOTE FINALE",
   "TEACHER COMMENTS": "COMMENTAIRES DE L'ENSEIGNANT", "ANSWER KEY · TEACHER COPY": "CORRIGÉ · EXEMPLAIRE ENSEIGNANT", "NAME": "NOM",
   "(Select all that apply.)": "(Plusieurs réponses possibles.)", " mark]": " point]", " marks]": " points]", " MARK": " POINT", " MARKS": " POINTS",
-  "END OF EXAM": "FIN DE L'ÉPREUVE", " of ": " sur ", "MODEL ANSWER": "RÉPONSE ATTENDUE", "Diagram": "Schéma", " points": " points" };
+  "END OF EXAM": "FIN DE L'ÉPREUVE", "(continued)": "(suite)", " of ": " sur ", "MODEL ANSWER": "RÉPONSE ATTENDUE", "Diagram": "Schéma", " points": " points" };
 function buildPDF(opt){
   const PT = w => (S.d.lang === "fr" && TR_FR[w] != null) ? TR_FR[w] : w;   // words printed on the paper
   const FINAL = !!(opt && opt.final);   // downloads: placeholders print as a plain grey frame, not red
@@ -2972,7 +2972,9 @@ function buildPDF(opt){
       }
       // sub-questions (a), (b), (c)…
       const subs = isQ && Array.isArray(it.subs) ? it.subs : [];
+      const subStart = [];
       subs.forEach((sb, k) => {
+        subStart.push(parts.length);
         const lab = "(" + LETTERS[k] + ")", SI = Math.max(8, fs * .72);
         const sx = tx + SI, sw = (num(sb.marks) > 0 && D.showMarks ? twM : tw) - SI;
         const sl = layoutRich(sb.text || "", sw, null);
@@ -3013,7 +3015,10 @@ function buildPDF(opt){
         };
       }
       const h = parts.reduce((a, p) => a + p.h, 0);
-      return { parts, h, first: parts.slice(0, 3).reduce((a, p) => a + p.h, 0), drawAll(yy){ parts.forEach(p => { p.draw(yy); yy += p.h; }); } };
+      // pieces a question may be split between: the question itself, then each sub-question
+      parts.forEach((p, i) => { p.g = subStart.filter(st => st <= i).length; });
+      const groupH = [0].concat(subStart.map((_, k) => k + 1)).map(g => parts.filter(p => p.g === g).reduce((a, p) => a + p.h, 0));
+      return { parts, h, groupH, first: parts.slice(0, 3).reduce((a, p) => a + p.h, 0), drawAll(yy){ parts.forEach(p => { p.draw(yy); yy += p.h; }); } };
     }
     for(let idx = 0; idx < items.length; idx++){
       const it = items[idx];
@@ -3084,10 +3089,23 @@ function buildPDF(opt){
         continue;
       }
       const blk = qBlock(it, ML, CW);
-      if(blk.h <= pageAvail ? y + blk.h > BOTTOM : y + blk.first > BOTTOM) newPage();
+      // a question with sub-questions may break between them: it starts here if the question + (a) fit,
+      // and a later sub-question moves to the next page only when it doesn't fit whole
+      const splitSubs = it.type === "q" && blk.groupH && blk.groupH.length > 2 && y + blk.h > BOTTOM && y > TOP + 1;
+      if(splitSubs){ if(y + blk.groupH[0] + blk.groupH[1] > BOTTOM) newPage(); }
+      else if(blk.h <= pageAvail ? y + blk.h > BOTTOM : y + blk.first > BOTTOM) newPage();
       pageOf[it.id] = doc.getNumberOfPages();
       const panel = COLOUR && it.type === "note" && !it.heading && blk.h > 14;
-      blk.parts.forEach((p, k) => { if(y + p.h > BOTTOM && y > TOP + 1) newPage(); mark(it.id, y, y + p.h);
+      blk.parts.forEach((p, k) => {
+        if(splitSubs && k && p.g !== blk.parts[k - 1].g && y > TOP + 1){
+          const gh = blk.groupH[p.g];
+          if(gh <= pageAvail - 6 && y + gh > BOTTOM){
+            newPage();
+            // a small reminder at the top of the new page
+            if(!it.nonum){ font(SANS, "italic", fs - 2, MUTED); doc.text(M.meta[it.id] + ". " + PT("(continued)"), ML, y + fs * mmPt * .8); y += fs * mmPt * 1.25 + 1; }
+          }
+        }
+        if(y + p.h > BOTTOM && y > TOP + 1) newPage(); mark(it.id, y, y + p.h);
         if(panel){ const top = k === 0 ? y - 2 : y, bot = y + p.h + (k === blk.parts.length - 1 ? 1.5 : 0); doc.setFillColor(...tint(PC, .93)); doc.rect(ML - 3, top, CW + 6, bot - top, "F"); doc.setFillColor(...PC); doc.rect(ML - 3, top, 1.2, bot - top, "F"); }
         p.draw(y); y += p.h; });
       if(panel) y += 2;
