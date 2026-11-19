@@ -98,6 +98,9 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+.ai-prompts{margin-top:8px}.ai-pbtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.ai-pbtns .btn{font-weight:500}.ai-pbtns .btn .hint{font-size:12px}
+.pk-seg{display:inline-flex;margin:4px 0 8px}
 #pdfModal{z-index:65}
 .pdf-steps{margin:0;padding-left:22px;line-height:1.55}.pdf-steps li{margin:0 0 10px}.pdf-steps .btn{margin-top:5px}
 #saveModal{z-index:60}   /* above the start screen (＋ New) */
@@ -463,7 +466,13 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
           <button data-m="image">Insert as picture</button>
           <button data-m="offline">Read the text (offline)</button>
         </span>
-        <span class="hint" style="display:block;margin-top:6px">Handwriting or lots of maths? Give the photo to your favourite AI with our <a href="#" class="open-prompt" style="color:var(--gold-d);font-weight:600">ready-made prompt</a>, then paste its answer with 📋 Paste.</span>
+        <div class="ai-prompts">
+          <span class="hint">Handwriting, lots of maths or a PDF? Give it to your favourite AI with one of our ready-made prompts, then paste its answer with 📋 Paste:</span>
+          <div class="ai-pbtns">
+            <button type="button" class="btn sm open-prompt" data-p="gen"><b>1.</b>&nbsp;🤖 Generic AI prompt <span class="hint">· for everything</span></button>
+            <button type="button" class="btn sm open-prompt" data-p="ixl"><b>2.</b>&nbsp;🧮 IXL printed worksheet</button>
+          </div>
+        </div>
       </div>
       <div class="actions">
         <button class="btn sm" id="addQ">＋ Question</button>
@@ -520,7 +529,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
   <div class="box">
     <h3>Paste questions from your AI (or any text)</h3>
     <div class="paste-help">
-      <span><b>1.</b> <a href="#" id="pasteCopyPrompt">Copy our prompt</a> and give it to your AI with your photo, PDF or idea.</span>
+      <span><b>1.</b> <a href="#" id="pasteCopyPrompt">Copy our prompt</a> (or the <a href="#" id="pasteCopyIxl">IXL prompt</a> for an IXL worksheet) and give it to your AI with your photo, PDF or idea.</span>
       <span><b>2.</b> Copy the AI's whole answer and paste it below.</span>
     </div>
     <p class="hint" style="margin:0 0 8px">Numbered questions become separate questions. Lines like <b>Part I: Grammar</b> or <b># Reading</b> start a new part. Marks in square brackets at the end of a question, e.g. <b>[5]</b>, are picked up automatically.</p>
@@ -612,7 +621,7 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
     <h3 style="margin:0 0 6px" id="pdfTitle">📄 BEE can't open PDF files</h3>
     <p style="margin:0 0 12px;line-height:1.5" id="pdfWhy">A PDF is made for printing, so BEE can't take the questions out of it. Your AI tool can do that in a few seconds, using BEE's ready-made prompt:</p>
     <ol class="pdf-steps">
-      <li><b>Copy BEE's prompt.</b><br><button class="btn sm primary" id="pdfCopy">📋 Copy the AI prompt</button></li>
+      <li><b>Copy BEE's prompt.</b><br><button class="btn sm primary" id="pdfCopy">📋 Copy the AI prompt</button> <button class="btn sm" id="pdfCopyIxl" title="For a quiz or worksheet printed from IXL">🧮 IXL worksheet? Copy the IXL prompt</button></li>
       <li><b>Open your AI</b> (ChatGPT, Claude, Gemini, Copilot…), <b>attach your <span class="pdf-kind">PDF</span></b>, paste the prompt and send.</li>
       <li><b>Copy the AI's answer</b> and paste it into BEE.<br><button class="btn sm" id="pdfPaste">📋 Paste the AI answer</button></li>
     </ol>
@@ -730,9 +739,10 @@ x = 3
 <div class="modal" id="promptModal">
   <div class="box">
     <h3>Use your favourite AI (ChatGPT, Claude, Gemini, Copilot…)</h3>
+    <div class="seg pk-seg" id="promptKind"><button type="button" data-k="gen">🤖 Generic — for everything</button><button type="button" data-k="ixl">🧮 IXL printed worksheet</button></div>
     <ol style="margin:6px 0 10px 18px;padding:0">
       <li>Copy this prompt and paste it into your AI chat.</li>
-      <li>Attach your photo/PDF of the exam, or paste the questions, or describe the exam you want.</li>
+      <li id="promptFor">Attach your photo/PDF of the exam, or paste the questions, or describe the exam you want.</li>
       <li>Copy the AI's answer and paste it here with <b>📋 Paste questions</b>.</li>
     </ol>
     <textarea id="promptText" readonly style="width:100%;min-height:300px;border:1px solid var(--line);border-radius:8px;padding:10px;font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace"></textarea>
@@ -5380,6 +5390,7 @@ function showBlocked(kind, names){
   $("#pdfFiles").textContent = names && names.length ? "Not opened: " + names.join(", ") : "";
   openModal("#pdfModal");
 }
+document.getElementById("pdfCopyIxl").onclick = e => copyPrompt("ixl", e.currentTarget);
 document.getElementById("pdfCopy").onclick = async () => {
   try{ await navigator.clipboard.writeText(USER_AI_PROMPT); toast("Prompt copied — paste it into your AI chat with the file attached"); $("#pdfCopy").textContent = "✓ Copied"; setTimeout(() => $("#pdfCopy").textContent = "📋 Copy the AI prompt", 2500); }
   catch(_){ $("#pdfModal").classList.remove("open"); $("#pasteText").click(); toast("Copy the prompt from the box at the top"); }
@@ -7751,10 +7762,61 @@ $$\\int_0^2 (3x^2 + 1)\\,dx$$
 
 Here is the exam material:
 `;
-$("#promptText").value = USER_AI_PROMPT;
-document.addEventListener("click", e => { const a = e.target.closest(".open-prompt"); if(a){ e.preventDefault(); document.querySelectorAll(".modal.open").forEach(m => m.classList.remove("open")); openModal("#promptModal"); } });
+const IXL_RULES = `IXL MATERIAL — extra rules (they win over the rules above)
+19. Leave out IXL's page furniture: "© IXL Learning", "Name: ____", "Page 1 of 2 - www.ixl.com", the grey separator lines, skill codes (e.g. "A.3"), "Submit", progress bars and SmartScore.
+20. The large heading at the top is the title:  Title: <that heading>  (even if it is generic, e.g. "TestQuiz" — the teacher will rename it).
+21. IXL prints fractions stacked (numerator above the line, denominator below). Read the picture, not the text order, and write them in LaTeX: $\\frac{13}{500}$. Keep thousands separators inside braces: $\\frac{9{,}639}{10{,}000}$. Mixed numbers: $3\\frac{1}{4}$. The same for exponents, square roots and long division shown as pictures.
+22. IXL gives no marks: put [1] after every question unless I tell you otherwise.
+23. Answer spaces — turn IXL's boxes into BEE answer spaces:
+    • one small empty box under or after a question (a number, a word) → {lines: 1}
+    • a large box or "show your work" area → {lines: 4} (or more for longer answers)
+    • several boxes inside a sentence or an equation → write ______ for each box, keep the sentence, add {lines: 1}
+    • a blank coordinate plane → {axes: …} with the plane's range; a blank number line → {numberline: …}; squared paper → {grid: 8}
+24. Choices — IXL's clickable answers:
+    • buttons or bubbles with one answer → a) b) c) … with {mcq}; "Select all that apply" / several correct → {mcq: multi}; short options (numbers, words) → add {cols: 4} or {cols: 2}
+    • "Is it true or false?" / "yes or no" → a) True b) False with {mcq} and {cols: 2}
+    • drag-and-drop, sorting into groups, ordering or matching → rewrite for paper: list the items in the question, say what to do in writing (e.g. "Write each number in the correct group: Prime / Composite."), and give {lines: 3}
+25. Pictures that can't be typed (fraction bars, models, clocks, shapes, graphs, maps, coins, tables shown as images): [diagram: short description, including every number and label you can see] on its own line where it belongs. A table you can read: copy it as a Markdown table instead.
+26. IXL quizzes have no parts. Only add "Part" headings if the material really has sections; keep IXL's question numbers.
+
+EXAMPLE OUTPUT FOR AN IXL QUIZ
+Title: Fractions and decimals
+Instructions:
+- Answer all questions.
+- Write your answers in the boxes.
+1. Write $\\frac{27}{1{,}000}$ as a decimal number. [1] {lines: 1}
+2. Which fraction is equal to $0.4$? [1] {mcq} {cols: 4}
+a) $\\frac{4}{100}$
+b) $\\frac{2}{5}$
+c) $\\frac{1}{4}$
+d) $\\frac{40}{1{,}000}$
+3. Fill in the missing number: $0.75 = $ ______ $\\div 4$ [1] {lines: 1}
+4. What fraction of the shape is shaded? [1] {lines: 1}
+[diagram: a rectangle split into 8 equal parts, 3 of them shaded]
+
+Here is the IXL material:
+`;
+const IXL_AI_PROMPT = USER_AI_PROMPT
+  .replace("Convert the exam material I give you (a photo, a PDF, pasted text, or my description of the exam I want)", "Convert the IXL quiz or worksheet I give you (a PDF or screenshots printed from IXL)")
+  .split("EXAMPLE OUTPUT")[0] + IXL_RULES;
+const PROMPTS = { gen: USER_AI_PROMPT, ixl: IXL_AI_PROMPT };
+let promptKind = "gen";
+function setPromptKind(k){
+  promptKind = PROMPTS[k] ? k : "gen";
+  $("#promptText").value = PROMPTS[promptKind];
+  document.querySelectorAll("#promptKind button").forEach(b => b.classList.toggle("on", b.dataset.k === promptKind));
+  $("#promptFor").textContent = promptKind === "ixl" ? "Attach the PDF printed from IXL (or screenshots of the quiz)." : "Attach your photo/PDF of the exam, or paste the questions, or describe the exam you want.";
+}
+async function copyPrompt(k, btn){
+  const t = PROMPTS[k] || USER_AI_PROMPT;
+  try{ await navigator.clipboard.writeText(t); toast((k === "ixl" ? "IXL prompt" : "Prompt") + " copied — paste it into your AI chat"); if(btn){ const o = btn.innerHTML; btn.textContent = "✓ Copied"; setTimeout(() => btn.innerHTML = o, 2200); } return true; }
+  catch(e){ document.querySelectorAll(".modal.open").forEach(m => m.classList.remove("open")); openModal("#promptModal"); setPromptKind(k); const ta = $("#promptText"); ta.focus(); ta.select(); toast("Select all and copy the prompt"); return false; }
+}
+setPromptKind("gen");
+document.addEventListener("click", e => { const a = e.target.closest(".open-prompt"); if(a){ e.preventDefault(); document.querySelectorAll(".modal.open").forEach(m => m.classList.remove("open")); setPromptKind(a.dataset.p || "gen"); openModal("#promptModal"); } });
+$("#promptKind").addEventListener("click", e => { const b = e.target.closest("[data-k]"); if(b) setPromptKind(b.dataset.k); });
 $("#promptCopy").onclick = async () => {
-  try{ await navigator.clipboard.writeText(USER_AI_PROMPT); toast("Prompt copied — paste it into your AI chat"); }
+  try{ await navigator.clipboard.writeText(PROMPTS[promptKind]); toast((promptKind === "ixl" ? "IXL prompt" : "Prompt") + " copied — paste it into your AI chat"); }
   catch(e){ const t = $("#promptText"); t.focus(); t.select(); document.execCommand("copy"); toast("Prompt copied"); }
 };
 $("#promptToPaste").onclick = () => { $("#promptModal").classList.remove("open"); $("#pasteText").click(); };
@@ -8262,6 +8324,7 @@ const drop = $("#drop");
 $("#tilePaste").onclick = () => $("#pasteText").click();
 $("#tilePhoto").onclick = () => { pendingImgTarget = null; $("#fileIn").accept = "image/*"; $("#fileIn").click(); };
 $("#tileFile").onclick = () => { pendingImgTarget = null; $("#fileIn").accept = ".txt,.text,.md,.markdown,.tex,text/plain,text/markdown"; $("#fileIn").click(); };
+$("#pasteCopyIxl").onclick = e => { e.preventDefault(); copyPrompt("ixl"); };
 $("#pasteCopyPrompt").onclick = async e => { e.preventDefault(); try{ await navigator.clipboard.writeText(USER_AI_PROMPT); toast("Prompt copied — paste it into your AI chat"); }catch(_){ $("#pasteModal").classList.remove("open"); openModal("#promptModal"); } };
 $("#pasteClip").onclick = async () => { try{ const t = await navigator.clipboard.readText(); if(t){ $("#pasteArea").value = t; pasteCount(); } else toast("The clipboard is empty"); }catch(_){ toast("Click in the box and press Ctrl+V (⌘+V on Mac)"); $("#pasteArea").focus(); } };
 function pasteCount(){
