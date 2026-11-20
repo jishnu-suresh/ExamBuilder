@@ -38,7 +38,7 @@ async def main():
         ok("A1b name dialog shown first", await pg.is_visible('#saveModal'))
         await pg.fill('#svName', 'Dry run exam'); await pg.click('#svGo'); await pg.clock.run_for(500)
         ok("A2 new project file created & written", await pg.evaluate("__writes")>=1, await pg.evaluate("Object.keys(__files)"))
-        ok("A3 chip shows saved", 'Saved to' in await pg.text_content('#saveChip'), await pg.text_content('#saveChip'))
+        ok("A3 chip shows saved", 'Saved in' in await pg.text_content('#saveChip'), await pg.text_content('#saveChip'))
         await pg.fill('[data-k=subject]','Science Dry Run'); await pg.clock.run_for(1000)
         ok("A4 chip shows pending after edit", 'within a minute' in await pg.text_content('#saveChip'))
         w0 = await pg.evaluate("__writes"); await pg.clock.run_for(61000)

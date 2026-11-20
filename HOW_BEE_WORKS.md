@@ -153,6 +153,12 @@ Every change calls `changed()`, which updates totals and undo history and schedu
 * Safari and Firefox download the file instead (`downloadProject()`).
 * The last state is also kept in browser storage (`saveLocal()` / `loadLocal()`).
 * **🕘 Version history:** `keepVersion(reason)` stores a copy in IndexedDB (`versions` list plus `v:<id>`), at most 30 copies or 60 MB, skipping exact duplicates. It runs every 5 minutes while the exam changes, and before anything that replaces it (opening a file, new exam, paste, clear all, replace all, restore, demo).
+* **💾 The save light (`saveState()` / `updateChip()`):**
+  * 🟢 the latest changes are in the project file, or in a downloaded copy in Safari/Firefox
+  * 🟠 they are only in this browser
+  * 🔴 saving stopped (permission lost, or a save failed), or the work has been only in the browser for more than 10 minutes. The red state also shows a banner (`#saveBanner`).
+  * While not 🟢, the tab title starts with "•", and closing the tab asks "Leave site?" (`unsavedWork()`; skipped in automated browsers).
+  * BEE also asks the browser to keep its storage (`navigator.storage.persist()`).
 * **Never swap `S` across a wait.** If you must draw another exam (versions, student answers), swap `S` only around the synchronous `buildPDF()` call. Prepare with `prepareMath(otherExam)` beforehand. A save that runs while `S` is swapped would store the wrong exam in the teacher's file.
 * **Pictures are kept small:** `fitCanvas()` limits the size (photos 1600 px, PDF cuts 2000 px) and `encodeBest()` keeps PNG unless JPEG is far smaller.
 

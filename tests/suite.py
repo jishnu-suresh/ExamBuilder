@@ -298,9 +298,44 @@ async def beta_switch(b):
     ok("student version hidden until the secret link, remembered, and ?beta=off hides it again", hidden == [False, False] and shown == [True, True] and kept == [True, True] and off == [False, False], [hidden, shown, kept, off])
     await c.close()
 
+async def save_light(b):
+    # 1a–1e: the save light, the • in the tab title, the banner, the close warning, the start screen
+    c, pg, errs = await fresh(b)
+    st = lambda: pg.evaluate("({ chip: $('#saveChip').textContent, cls: $('#saveChip').className, title: document.title, banner: !$('#saveBanner').classList.contains('hidden'), unsaved: unsavedWork() })")
+    await pg.evaluate("__exam.set({ d: { title: 'Light test' }, items: [{ id: 'q1', type: 'q', text: 'What is 2+2?', marks: '1' }] }); proj.unsavedSince = 0; updateChip()")
+    a = await st()
+    ok("save light: 🟠 only in this browser, • in the tab title, close warning on", "Only in this browser" in a["chip"] and "warn" in a["cls"] and a["title"].startswith("• ") and a["unsaved"] and not a["banner"], a)
+    await pg.evaluate("proj.unsavedSince = Date.now() - 11 * 60000; updateChip()"); b2 = await st()
+    ok("save light: 🔴 after 10 minutes, with a banner nobody can miss", "bad" in b2["cls"] and b2["banner"] and "only in this browser" in await pg.text_content("#saveBannerText"), b2)
+    # a real project file (the browser's private file system stands in for the computer)
+    await pg.goto("http://127.0.0.1:8765/"); await pg.wait_for_timeout(1500); await pg.evaluate("$('#startModal').classList.remove('open')")
+    await pg.evaluate("""async () => { const root = await navigator.storage.getDirectory(); const h = await root.getFileHandle('light.exam.json', { create: true });
+      FileSystemFileHandle.prototype.queryPermission = async () => 'granted';
+      __exam.set({ d: { title: 'Light test' }, items: [{ id: 'q1', type: 'q', text: 'Q', marks: '1' }] }); await setHandle(h); proj.perm = 'granted'; await writeProject(true); }""")
+    await pg.wait_for_timeout(300); c3 = await st()
+    ok("save light: 🟢 saved in the project file, no •, no warning", "Saved in light.exam.json" in c3["chip"] and "ok" in c3["cls"] and not c3["title"].startswith("•") and not c3["unsaved"] and not c3["banner"], c3)
+    await pg.evaluate("proj.perm = 'prompt'; updateChip()"); d = await st()
+    ok("save light: 🔴 when saving has stopped (permission lost)", "Not saving" in d["chip"] and d["banner"] and await pg.text_content("#saveBannerGo") == "Allow saving", d)
+    await c.close()
+    # Safari / Firefox: no saving to files; a downloaded copy counts as safe
+    c, pg, errs = await fresh(b)
+    await pg.evaluate("1")
+    c2 = await b.new_context(accept_downloads=True); p2 = await c2.new_page()
+    await p2.add_init_script("delete window.showSaveFilePicker; delete window.showOpenFilePicker;")
+    await p2.goto("http://127.0.0.1:8765/"); await p2.wait_for_timeout(1500); await p2.evaluate("$('#startModal').classList.remove('open')")
+    await p2.evaluate("__exam.set({ d: { title: 'Safari test' }, items: [{ id: 'q1', type: 'q', text: 'Q', marks: '1' }] }); proj.unsavedSince = 0; localStorage.removeItem('examBuilder.lastDownload'); updateChip()")
+    e1 = await p2.text_content("#saveChip")
+    async with p2.expect_download(): await p2.evaluate("downloadProject('x')")
+    await p2.wait_for_timeout(300); e2 = await p2.text_content("#saveChip")
+    ok("Safari/Firefox: 🟠 until a copy is downloaded, then 🟢", "Download a copy" in e1 and "Copy downloaded" in e2, [e1, e2])
+    # start screen: says where "continue" comes from
+    await p2.evaluate("storedLocal = { d: { title: 'Safari test' }, items: [{ type: 'q' }], savedAt: Date.now() }; storedHandle = null; openStart()")
+    ok("start screen: “Continue” says it is only in this browser", "Only in this browser" in await p2.text_content("#stLocalInfo"))
+    await c2.close(); await c.close()
+
 CHECKS = [phones, sticky_preview, paste_details_rubric, formatting, pdf_guard, cut_from_pdf, drawings, mcq_ends_after_options,
           sub_question_split, mcq_split, page_breaks, click_to_jump, insert_menu, save_dialog, prompts, looks,
-          lead_in, settings_tabs, more_menu, tour_and_demo, switch_files, maths_keyboard_close, beta_switch]
+          lead_in, settings_tabs, more_menu, tour_and_demo, switch_files, maths_keyboard_close, beta_switch, save_light]
 
 async def main():
     os.chdir(OUT)

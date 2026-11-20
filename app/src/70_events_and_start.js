@@ -180,6 +180,7 @@ $("#btnNew").onclick = async () => {
   if(proj.dirty && proj.handle) await writeProject();
   openStart(true);
 };
+$("#saveBannerGo").onclick = () => $("#saveChip").click();
 $("#saveChip").onclick = async () => {
   if(proj.handle && proj.perm !== "granted"){
     try{ proj.perm = await proj.handle.requestPermission({ mode: "readwrite" }); }catch(_){}
@@ -187,7 +188,7 @@ $("#saveChip").onclick = async () => {
     updateChip(); return;
   }
   if(proj.handle){ if(await writeProject(true)) toast("Saved to " + proj.name); return; }
-  saveAs();
+  await saveAs(); updateChip();
 };
 $("#projIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if(!f) return;
@@ -206,7 +207,7 @@ function openStart(isNew){
   if(storedHandle) $("#stFileName").textContent = "Continue “" + storedHandle.name + "”";
   const hasLocal = !isNew && storedLocal && Array.isArray(storedLocal.items) && (storedLocal.items.length || storedLocal.d && storedLocal.d.subject);
   locBtn.classList.toggle("hidden", !hasLocal || !!storedHandle);
-  if(hasLocal) $("#stLocalInfo").textContent = (storedLocal.d.subject || storedLocal.d.title || "Exam") + " · " + storedLocal.items.filter(x => x.type === "q").length + " questions" + (storedLocal.savedAt ? " · last edited " + new Date(storedLocal.savedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "");
+  if(hasLocal) $("#stLocalInfo").textContent = "🟠 Only in this browser, not in a file · " + (storedLocal.d.subject || storedLocal.d.title || "Exam") + " · " + storedLocal.items.filter(x => x.type === "q").length + " questions" + (storedLocal.savedAt ? " · last edited " + new Date(storedLocal.savedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "");
   $("#stNote").textContent = FS_OK ? "" : "This browser (e.g. Safari or Firefox) doesn't let web pages save to a file on your computer automatically — Chrome and Edge do. Your work is still kept safely in this browser, and 💾 Save as… downloads a project copy whenever you like.";
   $("#stSkip").parentElement.classList.toggle("hidden", !!isNew);
   $("#startModal").classList.add("open");

@@ -101,6 +101,7 @@ window.backupTick = async box => {
   try{
     const f = await saveDir.getFileHandle(safeName(EXAM.title + " - " + ST.name) + " (backup).bee-backup", { create: true });
     const w = await f.createWritable(); await w.write(JSON.stringify({ bee: "backup", v: 1, examId: EXAM.examId, name: ST.name, savedAt: now(), box })); await w.close();
+    window.lastFolderSave = now();
   }catch(e){ console.warn("backup", e); }
 };
 $("#stBackup").onclick = () => {

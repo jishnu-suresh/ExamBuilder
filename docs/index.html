@@ -339,6 +339,9 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .savechip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 11px;font-size:12.5px;color:var(--muted);cursor:pointer;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .savechip.ok{color:#3C6E3C;border-color:#BFD8BF;background:#F4FAF4}
 .savechip.warn{color:#9A5B12;border-color:#E9C98F;background:#FFF8EA}
+.savechip.bad{color:#fff;border-color:#B4452F;background:#B4452F;font-weight:600}
+.save-banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;margin:10px auto 0;max-width:1400px;padding:10px 16px;border-radius:12px;background:#FDECEA;border:1.5px solid #E9B4AD;color:#7A2A1E;font-size:14px}
+.save-banner.hidden{display:none}
 .add-tiles{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:10px;padding:10px;cursor:default}
 @media (max-width:700px){.add-tiles{grid-template-columns:1fr}}
 .tile-add{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:10px;padding:12px 14px;cursor:pointer;transition:border-color .15s,background .15s}
@@ -450,6 +453,8 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
     </div>
   </span>
 </header>
+
+<div class="save-banner hidden" id="saveBanner" role="alert"><span id="saveBannerText"></span><button class="btn sm primary" id="saveBannerGo">💾 Save to a file</button></div>
 
 <main class="grid">
   <div>
@@ -909,8 +914,8 @@ x = 3
     <div class="start-tag">Build&nbsp;•&nbsp;Edit&nbsp;•&nbsp;Evaluate</div>
     <p class="hint" style="text-align:center;margin:4px 0 14px">Each exam is a project file. It's saved automatically every minute, so your work is never lost.</p>
     <div class="start-opts">
-      <button class="start-btn primary hidden" id="stContinueFile"><b id="stFileName">Continue</b><span>Reopen your last project file and keep saving to it</span></button>
-      <button class="start-btn hidden" id="stContinueLocal"><b>Continue where you left off</b><span id="stLocalInfo">kept in this browser</span></button>
+      <button class="start-btn primary hidden" id="stContinueFile"><b id="stFileName">Continue</b><span>🟢 From your project file: BEE keeps saving to it</span></button>
+      <button class="start-btn hidden" id="stContinueLocal"><b>Continue where you left off</b><span id="stLocalInfo">only in this browser</span></button>
       <button class="start-btn" id="stNew"><b>＋ New exam</b><span>First choose where to save the project file</span></button>
       <button class="start-btn" id="stOpen"><b>📂 Open a saved exam</b><span>An .exam.json project file</span></button>
       <button class="start-btn" id="stDemo"><b>🐝 Try the demo exam</b><span>A finished sample paper to look around and play with</span></button>
@@ -1210,21 +1215,60 @@ const FS_OK = typeof window.showSaveFilePicker === "function";
 const proj = { handle: null, name: "", dirty: false, lastWrite: 0, perm: "none", writing: false };
 const PTYPES = [{ description: "Exam project", accept: { "application/json": [".json"] } }];
 function hhmm(t){ return new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
+/* ---- 💾 where is the work, really? (1a–1f) ----
+   in a file   → 🟢 green: the latest changes are in the project file (or, without file access, in a downloaded copy)
+   browser     → 🟠 orange: the latest changes are only in this browser's memory
+   danger      → 🔴 red: not saving (permission lost, or a save failed), or only in the browser for more than 10 minutes */
+const RISK_MS = 10 * 60000;
+const hasWork = () => S.items.length > 0;
+function saveState(){
+  const last = +(localStorage.getItem("examBuilder.lastDownload") || 0);
+  if(proj.handle){
+    if(proj.perm !== "granted") return { k: "danger", why: "perm" };
+    if(proj.failed) return { k: "danger", why: "failed" };
+    if(!proj.dirty) return { k: "file" };
+  }else if(!FS_OK && last && last >= (S.savedAt || 0)) return { k: "file", download: last };
+  if(!hasWork()) return { k: "file", empty: true };
+  if(!proj.unsavedSince) proj.unsavedSince = Date.now();
+  if(proj.handle) return { k: "file", pending: true };            // a project file: it saves within a minute
+  return { k: Date.now() - proj.unsavedSince > RISK_MS ? "danger" : "browser", why: "nofile" };
+}
+const agoText = t => { const m = Math.round((Date.now() - t) / 60000); return m < 1 ? "just now" : m === 1 ? "1 min ago" : m < 60 ? m + " min ago" : hhmm(t); };
+const BASE_TITLE = document.title;
 function updateChip(){
   const c = document.getElementById("saveChip"); if(!c) return;
-  c.classList.remove("ok", "warn");
-  if(proj.handle){
-    if(proj.perm !== "granted"){ c.textContent = "⚠ Click to allow saving to " + proj.name; c.classList.add("warn"); return; }
-    if(proj.writing){ c.textContent = "Saving to " + proj.name + "…"; return; }
-    c.textContent = proj.dirty ? "● " + proj.name + " — saves within a minute" : "✓ Saved to " + proj.name + (proj.lastWrite ? " · " + hhmm(proj.lastWrite) : "");
-    if(!proj.dirty) c.classList.add("ok");
-  }else{
-    if(FS_OK){ c.textContent = "⚠ Not saved to a file yet — click to choose one"; c.classList.add("warn"); return; }
-    const last = +(localStorage.getItem("examBuilder.lastDownload") || 0);
-    if(last && last >= (S.savedAt || 0)){ c.textContent = "✓ Copy downloaded " + hhmm(last) + " · also kept in this browser"; c.classList.add("ok"); }
-    else { c.textContent = "⚠ Kept in this browser only — click to download a project copy"; c.classList.add("warn"); }
+  const st = saveState();
+  if(st.k === "file" && !st.pending) proj.unsavedSince = 0;
+  c.classList.remove("ok", "warn", "bad");
+  let txt, cls;
+  if(st.k === "danger" && st.why === "perm"){ txt = "🔴 Not saving! Click to allow saving to " + proj.name; cls = "bad"; }
+  else if(st.k === "danger" && st.why === "failed"){ txt = "🔴 Couldn't save to " + proj.name + " — click to try again"; cls = "bad"; }
+  else if(proj.handle){ txt = proj.writing ? "Saving to " + proj.name + "…" : proj.dirty ? "🟢 " + proj.name + " · saving within a minute" : "🟢 Saved in " + proj.name + (proj.lastWrite ? " · " + agoText(proj.lastWrite) : ""); cls = proj.dirty ? "" : "ok"; }
+  else if(st.k === "file"){ txt = st.empty ? "Nothing to save yet" : "🟢 Copy downloaded " + agoText(st.download) + " · also in this browser"; cls = st.empty ? "" : "ok"; }
+  else { txt = (st.k === "danger" ? "🔴 " : "🟠 ") + "Only in this browser · " + (FS_OK ? "Save" : "Download a copy"); cls = st.k === "danger" ? "bad" : "warn"; }
+  c.textContent = txt; if(cls) c.classList.add(cls);
+  c.title = st.k === "browser" || st.k === "danger" && st.why === "nofile" ? "Your latest changes are kept only in this browser's memory. Clearing the browser, another computer or a full disk could lose them. Save to a file to be safe." : "Your project is saved automatically every minute";
+  // the browser tab shows • while the latest changes are not in a file (like Word)
+  const risky = st.k !== "file";
+  document.title = (risky ? "• " : "") + BASE_TITLE;
+  // the banner nobody can miss: work only in the browser for more than 10 minutes, or saving has stopped
+  const ban = document.getElementById("saveBanner");
+  if(ban){
+    const show = st.k === "danger";
+    ban.classList.toggle("hidden", !show);
+    if(show){
+      $("#saveBannerText").innerHTML = st.why === "perm" ? `<b>BEE is not saving to ${esc(proj.name)}.</b> The browser needs your permission again.`
+        : st.why === "failed" ? `<b>The last save to ${esc(proj.name)} failed.</b> Your changes are only in this browser.`
+        : `<b>Your changes since ${hhmm(proj.unsavedSince)} are only in this browser</b>, not in a file. Clearing the browser or changing computer would lose them.`;
+      $("#saveBannerGo").textContent = st.why === "perm" ? "Allow saving" : st.why === "failed" ? "Try again" : FS_OK ? "💾 Save to a file" : "💾 Download a copy";
+    }
   }
 }
+// leaving with changes that are only in this browser: the browser asks "Leave site?" (not in automated tests)
+function unsavedWork(){ return saveState().k !== "file"; }
+setInterval(updateChip, 30000);
+// ask the browser to keep BEE's storage (it can otherwise clear it when the disk is full)
+try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persisted().then(p => p || navigator.storage.persist()); }catch(_){}
 async function writeProject(force){
   if(!proj.handle || proj.writing) return false;
   if(!force && !proj.dirty) return true;
@@ -1237,9 +1281,9 @@ async function writeProject(force){
     const w = await h.createWritable();
     await w.write(data);
     await w.close();
-    if(proj.handle === h){ if(S.savedAt === was) proj.dirty = false; proj.lastWrite = Date.now(); proj.perm = "granted"; }
+    if(proj.handle === h){ if(S.savedAt === was) proj.dirty = false; proj.lastWrite = Date.now(); proj.perm = "granted"; proj.failed = false; }
     return true;
-  }catch(e){ console.error(e); toast("Couldn't save to " + name + ": " + (e.message || e)); return false; }
+  }catch(e){ console.error(e); if(proj.handle === h) proj.failed = true; toast("Couldn't save to " + name + ": " + (e.message || e)); return false; }
   finally{ proj.writing = false; updateChip(); }
 }
 // before BEE shows a different exam: save the current one into its own file, then let go of that file,
@@ -1256,6 +1300,7 @@ async function setHandle(h){
 }
 function downloadProject(name){
   try{ localStorage.setItem("examBuilder.lastDownload", String(Date.now() + 1)); }catch(e){}
+  setTimeout(updateChip, 50);
   setTimeout(updateChip, 50);
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([JSON.stringify(snapshot())], { type: "application/json" }));
@@ -1364,14 +1409,11 @@ async function newProject(){
   return true;
 }
 setInterval(() => { if(proj.dirty && proj.handle) writeProject(); }, 60000);
-// browsers without file access (Safari, Firefox): remind every 10 minutes if there are changes not downloaded
-setInterval(() => {
-  if(FS_OK) return;
-  const last = +(localStorage.getItem("examBuilder.lastDownload") || 0);
-  if((S.savedAt || 0) > last && S.items.length) toast("Reminder: click 💾 Save as… to download a project copy — this browser can't save files automatically.");
-}, 600000);
 document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden" && proj.dirty && proj.handle) writeProject(); });
-window.addEventListener("beforeunload", e => { if(proj.dirty && proj.handle){ writeProject(); } });
+window.addEventListener("beforeunload", e => {
+  if(proj.dirty && proj.handle) writeProject();
+  if(!navigator.webdriver && unsavedWork()){ e.preventDefault(); e.returnValue = ""; }
+});
 document.addEventListener("keydown", e => { if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s"){ e.preventDefault(); if(proj.handle) writeProject(true).then(ok => ok && toast("Saved")); else saveAs(); } });
 
 /* ---------------- helpers ---------------- */
@@ -5946,6 +5988,7 @@ $("#btnNew").onclick = async () => {
   if(proj.dirty && proj.handle) await writeProject();
   openStart(true);
 };
+$("#saveBannerGo").onclick = () => $("#saveChip").click();
 $("#saveChip").onclick = async () => {
   if(proj.handle && proj.perm !== "granted"){
     try{ proj.perm = await proj.handle.requestPermission({ mode: "readwrite" }); }catch(_){}
@@ -5953,7 +5996,7 @@ $("#saveChip").onclick = async () => {
     updateChip(); return;
   }
   if(proj.handle){ if(await writeProject(true)) toast("Saved to " + proj.name); return; }
-  saveAs();
+  await saveAs(); updateChip();
 };
 $("#projIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if(!f) return;
@@ -5972,7 +6015,7 @@ function openStart(isNew){
   if(storedHandle) $("#stFileName").textContent = "Continue “" + storedHandle.name + "”";
   const hasLocal = !isNew && storedLocal && Array.isArray(storedLocal.items) && (storedLocal.items.length || storedLocal.d && storedLocal.d.subject);
   locBtn.classList.toggle("hidden", !hasLocal || !!storedHandle);
-  if(hasLocal) $("#stLocalInfo").textContent = (storedLocal.d.subject || storedLocal.d.title || "Exam") + " · " + storedLocal.items.filter(x => x.type === "q").length + " questions" + (storedLocal.savedAt ? " · last edited " + new Date(storedLocal.savedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "");
+  if(hasLocal) $("#stLocalInfo").textContent = "🟠 Only in this browser, not in a file · " + (storedLocal.d.subject || storedLocal.d.title || "Exam") + " · " + storedLocal.items.filter(x => x.type === "q").length + " questions" + (storedLocal.savedAt ? " · last edited " + new Date(storedLocal.savedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "");
   $("#stNote").textContent = FS_OK ? "" : "This browser (e.g. Safari or Firefox) doesn't let web pages save to a file on your computer automatically — Chrome and Edge do. Your work is still kept safely in this browser, and 💾 Save as… downloads a project copy whenever you like.";
   $("#stSkip").parentElement.classList.toggle("hidden", !!isNew);
   $("#startModal").classList.add("open");

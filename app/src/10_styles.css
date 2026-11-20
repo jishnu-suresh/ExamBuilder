@@ -324,6 +324,9 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .savechip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 11px;font-size:12.5px;color:var(--muted);cursor:pointer;max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .savechip.ok{color:#3C6E3C;border-color:#BFD8BF;background:#F4FAF4}
 .savechip.warn{color:#9A5B12;border-color:#E9C98F;background:#FFF8EA}
+.savechip.bad{color:#fff;border-color:#B4452F;background:#B4452F;font-weight:600}
+.save-banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;margin:10px auto 0;max-width:1400px;padding:10px 16px;border-radius:12px;background:#FDECEA;border:1.5px solid #E9B4AD;color:#7A2A1E;font-size:14px}
+.save-banner.hidden{display:none}
 .add-tiles{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:10px;padding:10px;cursor:default}
 @media (max-width:700px){.add-tiles{grid-template-columns:1fr}}
 .tile-add{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;border:1px solid var(--line);background:#fff;border-radius:10px;padding:12px 14px;cursor:pointer;transition:border-color .15s,background .15s}

@@ -44,7 +44,8 @@ async function saveNow(){
     const box = await BC.lock(CK, ST);
     await DB.set(RUN(), { name: ST.name, startedAt: ST.startedAt, ended: !!ST.endedAt, box });
     if(window.backupTick) backupTick(box);
-    $("#bSaved").textContent = "✓ Saved " + hm(ST.savedAt);
+    $("#bSaved").textContent = "✓ Saved " + hm(ST.savedAt) + " on this computer" + (typeof saveDir !== "undefined" && saveDir && window.lastFolderSave ? " · copy in " + saveDir.name + " " + hm(lastFolderSave) : "");
+    $("#bSaved").title = typeof saveDir !== "undefined" && saveDir ? "Saved on this computer every few seconds, and a backup copy goes to " + saveDir.name + " every minute." : "Saved on this computer every few seconds. Your teacher can also keep a copy on a USB stick or folder.";
   }catch(e){ console.error(e); $("#bSaved").textContent = "⚠ Not saved"; }
   finally{ saving = false; }
 }
