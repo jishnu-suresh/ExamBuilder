@@ -110,6 +110,22 @@ button,input,select,textarea{font:inherit;color:inherit}
 .accents .shift.on{background:var(--gold-l);border-color:var(--gold)}
 body.kb-up .accents{bottom:calc(var(--keyboard-height,0px) + 12px)}
 
+/* reading aloud */
+.tts{position:fixed;left:50%;transform:translateX(-50%);bottom:12px;z-index:45;background:var(--paper);border:1.5px solid var(--gold);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:7px 10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;max-width:calc(100vw - 16px);font-size:.85em}
+.tts .tb{width:2.3em;height:2.3em;border-radius:50%;border:1px solid var(--line);background:var(--paper);cursor:pointer;font-size:1em;display:inline-flex;align-items:center;justify-content:center}
+.tts .tb.big{width:2.7em;height:2.7em;background:var(--gold);border-color:var(--gold);color:#fff}
+.tts .tb:hover{border-color:var(--gold)}
+.tts-lab{font-weight:700;max-width:12em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+.tts-rate{display:inline-flex;align-items:center;gap:4px}.tts-rate input{width:90px;accent-color:var(--gold)}.tts-rate b{min-width:2.6em;font-variant-numeric:tabular-nums}
+.tts select{max-width:19em;border:1px solid var(--line);border-radius:8px;padding:.25em .4em;background:var(--paper);font-size:.95em}
+.tts-go{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.reading{outline:3px solid var(--gold);outline-offset:4px;border-radius:6px;background:color-mix(in srgb,var(--gold-l) 45%,transparent)}
+body.tts-up .accents{bottom:78px}
+body.tts-up .wrap{padding-bottom:90px}
+.ro-opts{margin:10px 0 4px;display:grid;gap:6px}
+.ro-opts > div{display:flex;gap:10px;padding:6px 12px;border:1px solid var(--line);border-radius:10px}
+.ro-opts b{min-width:1.4em}
+
 /* screens and dialogs */
 .screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .box{background:var(--paper);border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 40px rgba(0,0,0,.08);padding:28px 30px;max-width:560px;width:100%}

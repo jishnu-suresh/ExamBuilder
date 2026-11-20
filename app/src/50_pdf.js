@@ -770,7 +770,7 @@ function buildPDF(opt){
       let img = it.img ? imgDims(it, markShown ? twM : tw) : null;
       const WGAP = 5;
       const al = it.imgAlign || "left";
-      const T = RESP && it.mcq && Array.isArray(it.options) ? qTextResp(it, ((RESP.answers[it.id] || {}).choice) || []) : qText(it, KEY);
+      const T = RESP && it.mcq && Array.isArray(it.options) ? qTextResp(it, ((RESP.answers[it.id] || {}).choice) || [], KEY) : qText(it, KEY);
       const wrap = !!(img && it.imgWrap && al !== "center" && T.trim());
       if(wrap && twM - img.w - WGAP < twM * .3){ const nw = twM * .7 - WGAP; img = { w: nw, h: img.h * nw / img.w }; }   // keep at least 30% for the text
       // beside a wrapped picture: the narrow column; otherwise only the first line steps aside for "[5 marks]"
@@ -802,8 +802,8 @@ function buildPDF(opt){
       // the question's own answer space (or, in the answer key, its model answer)
       if(isQ){
         const sp = SHEET ? [] : spaceParts(it.space, it.lines, tx, X + W, it.range);
-        if(KEY && (it.answer || "").trim()) parts.push(...answerParts(it.answer, tx, X + W, sp.reduce((a, p) => a + p.h, 0) - 3));
-        else if(RESP) parts.push(...respParts(RESP.answers[it.id], "main", sp, tx, X + W));
+        if(RESP){ parts.push(...respParts(RESP.answers[it.id], "main", sp, tx, X + W)); if(KEY && (it.answer || "").trim()) parts.push(...answerParts(it.answer, tx, X + W, 0)); }
+        else if(KEY && (it.answer || "").trim()) parts.push(...answerParts(it.answer, tx, X + W, sp.reduce((a, p) => a + p.h, 0) - 3));
         else parts.push(...sp);
       }
       // sub-questions (a), (b), (c)…
@@ -826,8 +826,8 @@ function buildPDF(opt){
           }
         } }));
         const sp = SHEET ? [] : spaceParts(sb.space, sb.lines, sx, X + W, sb.range);
-        if(KEY && (sb.answer || "").trim()) parts.push(...answerParts(sb.answer, sx, X + W, sp.reduce((a, p) => a + p.h, 0) - 3));
-        else if(RESP) parts.push(...respParts(RESP.answers[it.id], "s:" + (sb.id || String(k)), sp, sx, X + W));
+        if(RESP){ parts.push(...respParts(RESP.answers[it.id], "s:" + (sb.id || String(k)), sp, sx, X + W)); if(KEY && (sb.answer || "").trim()) parts.push(...answerParts(sb.answer, sx, X + W, 0)); }
+        else if(KEY && (sb.answer || "").trim()) parts.push(...answerParts(sb.answer, sx, X + W, sp.reduce((a, p) => a + p.h, 0) - 3));
         else parts.push(...sp);
       });
       if(!parts.length) parts.push({ h: LH, draw: () => {} });

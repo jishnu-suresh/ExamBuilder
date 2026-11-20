@@ -66,6 +66,14 @@ function stuTotal(){
   $("#stuTotal").innerHTML = no ? "The student has as long as they need." : base ? `Total time: <b>${Math.round(base * (1 + ex / 100))} minutes</b>${ex ? ` (${base} + ${ex}% extra)` : ""}. You can add more during the test (👩‍🏫 teacher menu).` : "Type the time in minutes.";
 }
 ["#stuMin", "#stuExtra", "#stuNoTime"].forEach(s => $(s).addEventListener("input", stuTotal));
+const stuMode = () => (document.querySelector('input[name="stuMode"]:checked') || {}).value || "answer";
+function stuModeUI(){
+  const read = stuMode() === "read";
+  $("#stuReadRow").classList.toggle("hidden", read); $("#stuDrawRow").classList.toggle("hidden", read);
+  $("#stuVoiceRow").classList.toggle("hidden", (S.d.lang || "en") !== "en");
+  $("#stuGo").textContent = read ? "⬇ Download the read-aloud file" : "⬇ Download the student file";
+}
+document.querySelectorAll('input[name="stuMode"]').forEach(r => r.addEventListener("change", stuModeUI));
 $("#stuCodeNew").onclick = () => { $("#stuCode").value = BC.newCode(8); };
 $("#stuTCodeNew").onclick = () => { $("#stuTCode").value = BC.newCode(6, true); };
 async function openStudentDialog(){
@@ -74,27 +82,19 @@ async function openStudentDialog(){
   $("#stuForm").classList.remove("hidden"); $("#stuDone").classList.add("hidden");
   $("#stuMin").value = parseDur(S.d.duration) || 60; $("#stuExtra").value = "0"; $("#stuNoTime").checked = false; $("#stuVer").value = "";
   $("#stuCode").value = BC.newCode(8); $("#stuTCode").value = BC.newCode(6, true);
-  stuTotal(); keyRow(); openModal("#stuModal");
+  stuTotal(); keyRow(); stuModeUI(); openModal("#stuModal");
 }
 
 /* ---- the paper as HTML (same reader as the printed paper) ---- */
-function speakTex(t){
-  return " " + String(t || "")
-    .replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g, " $1 over $2 ").replace(/\\sqrt\{([^{}]*)\}/g, " square root of $1 ")
-    .replace(/\^\{?2\}?/g, " squared ").replace(/\^\{?3\}?/g, " cubed ").replace(/\^\{([^{}]*)\}|\^(\w)/g, " to the power $1$2 ")
-    .replace(/_\{([^{}]*)\}|_(\w)/g, " $1$2 ")
-    .replace(/\\times/g, " times ").replace(/\\div/g, " divided by ").replace(/\\pm/g, " plus or minus ").replace(/\\cdot/g, " times ")
-    .replace(/\\le(q)?\b/g, " less than or equal to ").replace(/\\ge(q)?\b/g, " greater than or equal to ").replace(/\\neq?\b/g, " not equal to ")
-    .replace(/</g, " less than ").replace(/>/g, " greater than ").replace(/=/g, " equals ").replace(/\\approx/g, " approximately ")
-    .replace(/\\pi/g, " pi ").replace(/\\theta/g, " theta ").replace(/\\alpha/g, " alpha ").replace(/\\beta/g, " beta ").replace(/\\infty/g, " infinity ")
-    .replace(/\\degree|\^\\circ|\\circ/g, " degrees ").replace(/\\%/g, " percent ").replace(/\\(sin|cos|tan|log|ln)\b/g, " $1 ")
-    .replace(/\\[a-zA-Z]+/g, " ").replace(/[{}\\]/g, " ").replace(/-/g, " minus ").replace(/\s+/g, " ") + " ";
-}
+// spoken form of maths and text (66_speech.js): language and British/American set when the file is made
+let SAY = { lang: "en", us: false };
+const speakTex = t => " " + SPEECH.tex(t, SAY.lang, SAY) + " ";
+const speakText = t => SPEECH.text(t, SAY.lang);
 function studentRich(text, q, pics){
   const plain = [];
   const runsH = rs => rs.map(r => {
     if(r.t === "math"){ const m = texSVG(r.tex, !!r.display); plain.push(speakTex(r.tex)); return m.err || !m.svg ? esc(r.tex) : `<span class="math" role="img" aria-label="${esc(speakTex(r.tex).trim())}">${m.svg}</span>`; }
-    plain.push(r.s);
+    plain.push(speakText(r.s));
     let h = esc(r.s); if(r.b) h = "<b>" + h + "</b>"; if(r.i) h = "<i>" + h + "</i>"; if(r.u) h = "<u>" + h + "</u>"; if(r.x) h = "<s>" + h + "</s>"; if(r.c) h = `<span style="color:${esc(cssHex(r.c))}">` + h + "</span>"; return h;
   }).join("");
   const pic = (id, P, size, align) => { pics[id] = { src: P.src, w: P.w, h: P.h }; plain.push(" (picture) "); return `<div class="picwrap" style="text-align:${align || "center"}"><img class="pic" data-pic="${esc(id)}" src="${P.src}" alt="Picture" style="width:${size || 100}%"></div>`; };
@@ -143,8 +143,8 @@ function buildPaper(items){
     q.subs = subs.map((sb, k) => { const x = studentRich(sb.text || "", null, pics); return { key: sb.id || String(k), L: "(" + LETTERS[k] + ")", marks: S.d.showMarks !== false && num(sb.marks) > 0 ? fmt(num(sb.marks)) : "", html: x.html, plain: x.plain, ans: areaSpec(sb.space, sb.lines, sb.range, 3) }; });
     out.push(q);
   }
-  const ins = S.d.instructions ? studentRich(String(S.d.instructions), null, pics).html : "";
-  return { paper: { lang: S.d.lang || "en", cover: { title: S.d.title || "Exam", subtitle: S.d.subtitle || "", subject: S.d.subject || "", teacher: S.d.teacher || "", date: S.d.date || "", durationText: S.d.duration || "", total: M.total ? fmt(M.total) : "", instructionsHTML: ins }, items: out, pics },
+  const insR = S.d.instructions ? studentRich(String(S.d.instructions), null, pics) : { html: "", plain: "" }, ins = insR.html;
+  return { paper: { lang: S.d.lang || "en", cover: { title: S.d.title || "Exam", subtitle: S.d.subtitle || "", subject: S.d.subject || "", teacher: S.d.teacher || "", date: S.d.date || "", durationText: S.d.duration || "", total: M.total ? fmt(M.total) : "", instructionsHTML: ins, instructionsPlain: insR.plain }, items: out, pics },
            nq: out.filter(x => x.k === "q").length, total: M.total };
 }
 
@@ -163,7 +163,8 @@ $("#stuGo").onclick = async () => {
   if(BC.norm(code) === BC.norm(tcode)){ toast("Use two different codes."); return; }
   btn.disabled = true; const lbl = btn.textContent; btn.textContent = "Making the file…";
   try{
-    const ver = $("#stuVer").value;
+    const ver = $("#stuVer").value, mode = stuMode(), accent = (S.d.lang || "en") === "en" ? $("#stuVoice").value : (S.d.lang === "fr" ? "fr-FR" : S.d.lang);
+    SAY = { lang: S.d.lang === "fr" ? "fr" : "en", us: accent === "en-US" };
     const items = ver ? versionItems(S.items, ver, true, true) : S.items.map(cloneItem);
     await prepareMath({ items, logo: S.logo });
     const { paper, nq, total } = buildPaper(items);
@@ -174,16 +175,16 @@ $("#stuGo").onclick = async () => {
     const EXAM = {
       bee: "student-exam", v: 1, examId: BC.b64e(BC.rnd(12)).replace(/[+/=]/g, "x"), title: S.d.title || "Exam", subject: S.d.subject || "", version: ver,
       nq, total: total ? fmt(total) : "", timeMin: noTime ? 0 : Math.round(base * (1 + extraPct / 100)), baseMin: base, extraPct,
-      readAloud: $("#stuRead").checked, drawing: $("#stuDraw").checked, lang: S.d.lang || "en",
+      mode, accent, readAloud: mode === "read" || $("#stuRead").checked, drawing: mode !== "read" && $("#stuDraw").checked, lang: S.d.lang || "en",
       kid: key.kid, pub: key.pub, salt, iter, paper: await BC.lock(await BC.codeKey(code, salt, iter), paper),
       unlock: { salt: salt2, iter: iter2, hash: await BC.codeHash(tcode, salt2, iter2) },
       teacher: await BC.seal({ snap, startCode: code, teacherCode: tcode }, key.pub)
     };
     const tpl = await playerTemplate();
     const html = tpl.replace("/*__EXAM" + "__*/null", () => JSON.stringify(EXAM).replace(/<\//g, "<\\/").replace(/<!--/g, "<\\!--"));
-    const name = cleanFile((S.d.title || "Exam") + (ver ? " - Version " + ver : "") + " - computer version") + ".html";
+    const name = cleanFile((S.d.title || "Exam") + (ver ? " - Version " + ver : "") + (mode === "read" ? " - read-aloud version" : " - computer version")) + ".html";
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([html], { type: "text/html" })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    lastExport = { name, code, tcode, title: S.d.title || "Exam", subject: S.d.subject || "", ver, base, extraPct, timeMin: EXAM.timeMin, nq, kid: key.kid, readAloud: EXAM.readAloud };
+    lastExport = { mode, name, code, tcode, title: S.d.title || "Exam", subject: S.d.subject || "", ver, base, extraPct, timeMin: EXAM.timeMin, nq, kid: key.kid, readAloud: EXAM.readAloud };
     $("#stuFile").textContent = name; $("#stuShowCode").textContent = code; $("#stuShowTCode").textContent = tcode;
     $("#stuForm").classList.add("hidden"); $("#stuDone").classList.remove("hidden");
     if((await IDB.get("teacherKeyBackup")) !== key.kid) setTimeout(() => openKeyModal(), 600);
@@ -199,7 +200,7 @@ $("#stuSheet").onclick = () => {
   const PW = doc.internal.pageSize.getWidth(); let y = 20;
   const T = (s, size, style, col, x, opt) => { doc.setFont("helvetica", style || "normal"); doc.setFontSize(size); doc.setTextColor(...(col || [38, 34, 28])); doc.text(s, x || 20, y, opt); };
   const para = (s, size) => { doc.setFont("helvetica", "normal"); doc.setFontSize(size || 10.5); doc.setTextColor(38, 34, 28); doc.splitTextToSize(s, PW - 46).forEach(l => { doc.text(l, 26, y); y += 5; }); };
-  T("INVIGILATOR SHEET - COMPUTER VERSION", 9, "bold", [140, 102, 32]); y += 7;
+  T(X.mode === "read" ? "INVIGILATOR SHEET - READ-ALOUD VERSION" : "INVIGILATOR SHEET - COMPUTER VERSION", 9, "bold", [140, 102, 32]); y += 7;
   T(X.title, 17, "bold"); y += 6;
   T([X.subject, X.ver ? "Version " + X.ver : "", X.nq + " questions"].filter(Boolean).join("   |   "), 10.5, "normal", [118, 110, 98]); y += 6;
   T(X.timeMin ? `Time: ${X.timeMin} minutes` + (X.extraPct ? `  (${X.base} min + ${X.extraPct}% extra time)` : "") : "Time: no limit", 10.5, "bold"); y += 9;
@@ -212,10 +213,17 @@ $("#stuSheet").onclick = () => {
   box(20, "START CODE", X.code, "to start, or carry on after a problem"); box(PW - 100, "TEACHER CODE", X.tcode, "unlocks a locked test - teacher menu");
   y += 40;
   const step = (n, title, body) => { T(n + "  " + title, 11.5, "bold"); y += 6; body.forEach(b => para("•  " + b)); y += 3; };
-  step("1", "Before the test", ["Copy “" + X.name + "” to each student's laptop (USB stick or shared folder). The questions stay locked inside it until you type the start code.", "Open it with Chrome or Edge (Firefox and Safari also work). No internet is needed.", "Plug in the chargers. Close other programs and switch off notifications if you can.", "Optional, Chrome/Edge: tick “Also keep a backup copy” and choose a USB stick, so the answers are safe even if the laptop dies."]);
-  step("2", "Starting", ["The student types their name. You type the START CODE and press Start. The test goes full screen and the clock starts."]);
-  step("3", "During the test", ["If the student leaves the test screen (another window, Alt+Tab, Esc), the laptop beeps and the test LOCKS. Type the TEACHER CODE to unlock it. Every time is recorded on the answer PDF.", "Teacher menu (the teacher button at the top, then the TEACHER CODE): add time, or end the test for this student.", "If the laptop crashes or the file closes: open the same file again and type the START CODE. The student carries on where they were; the clock kept running (add time if needed).", "On another laptop: copy the same file there, press “Carry on from a backup”, choose the backup from the USB stick, type the START CODE."]);
-  step("4", "At the end", ["The student presses End the test (or time runs out). A sealed answers file appears in Downloads (and on the backup USB): “<title> - <name>.bee-answers”. Collect these files.", "In BEE: the small arrow next to Download PDF, then Open student answers. BEE makes a PDF of each paper with the answers in blue, ready to mark, plus the record of times and exits.", "Only the BEE with your teacher key (" + X.kid.slice(0, 6) + ") can open these files. Keep a backup of your key."]);
+  if(X.mode === "read"){
+    step("1", "Before the test", ["Copy \u201C" + X.name + "\u201D to the student's laptop. The questions stay locked inside it until you type the start code.", "Give the student the printed paper as usual: they write their answers on paper. The laptop only shows and reads the questions.", "Open the file with Chrome or Edge (Firefox and Safari also work). No internet is needed. Plug in the charger and give the student headphones.", "Voices: the most natural ones (marked with a star) are Edge\u2019s \u201CNatural\u201D voices and Chrome\u2019s Google voices, but they need the internet. With no internet, Windows uses its standard voices (clear, a little robotic). On a Mac, download an Enhanced or Premium voice beforehand (System Settings > Accessibility > Spoken Content > System voice > Manage voices) for a natural voice offline."]);
+    step("2", "Starting", ["Type the START CODE and press Open the paper. It goes full screen."]);
+    step("3", "During the test", ["The student clicks the speaker next to a question. The reading bar can pause, stop, go back or forward, slow down, change the voice and keep reading by itself.", "If the student leaves the screen, the laptop beeps and the paper LOCKS. Type the TEACHER CODE to unlock it.", "If the file closes by mistake, open it again and type the START CODE."]);
+    step("4", "At the end", ["The student presses Finish (or time runs out). Collect the printed paper as usual: there is nothing to collect from the laptop."]);
+  }else{
+    step("1", "Before the test", ["Copy “" + X.name + "” to each student's laptop (USB stick or shared folder). The questions stay locked inside it until you type the start code.", "Open it with Chrome or Edge (Firefox and Safari also work). No internet is needed.", "Plug in the chargers. Close other programs and switch off notifications if you can.", "Optional, Chrome/Edge: tick “Also keep a backup copy” and choose a USB stick, so the answers are safe even if the laptop dies."]);
+    step("2", "Starting", ["The student types their name. You type the START CODE and press Start. The test goes full screen and the clock starts."]);
+    step("3", "During the test", ["If the student leaves the test screen (another window, Alt+Tab, Esc), the laptop beeps and the test LOCKS. Type the TEACHER CODE to unlock it. Every time is recorded on the answer PDF.", "Teacher menu (the teacher button at the top, then the TEACHER CODE): add time, or end the test for this student.", "If the laptop crashes or the file closes: open the same file again and type the START CODE. The student carries on where they were; the clock kept running (add time if needed).", "On another laptop: copy the same file there, press “Carry on from a backup”, choose the backup from the USB stick, type the START CODE."]);
+    step("4", "At the end", ["The student presses End the test (or time runs out). A sealed answers file appears in Downloads (and on the backup USB): “<title> - <name>.bee-answers”. Collect these files.", "In BEE: the small arrow next to Download PDF, then Open student answers. BEE makes a PDF of each paper with the answers in blue, ready to mark, plus the record of times and exits.", "Only the BEE with your teacher key (" + X.kid.slice(0, 6) + ") can open these files. Keep a backup of your key."]);
+  }
   doc.setFont("helvetica", "italic"); doc.setFontSize(8.5); doc.setTextColor(118, 110, 98);
   doc.text("Keep this sheet away from students. Made with BEE - " + new Date().toLocaleDateString(), PW / 2, doc.internal.pageSize.getHeight() - 12, { align: "center" });
   doc.save(cleanFile(X.title + (X.ver ? " - Version " + X.ver : "") + " - invigilator sheet") + ".pdf");
@@ -292,8 +300,9 @@ async function answerPDF(r){
   // the student's exam is in place only while the PDF is drawn — no waiting, so nothing can save it over yours
   const saved = S; let doc;
   S = { d: snap.d, logo: snap.logo, items: snap.items };
-  try{ doc = buildPDF({ final: true, resp, version: snap.version || undefined }); }finally{ S = saved; }
-  return { doc, name: cleanFile((snap.d.title || "Exam") + " - " + P.name + " (answers)") + ".pdf" };
+  const key = $("#ansKey").checked;
+  try{ doc = buildPDF({ final: true, resp, key, version: snap.version || undefined }); }finally{ S = saved; }
+  return { doc, name: cleanFile((snap.d.title || "Exam") + " - " + P.name + (key ? " (answers + key)" : " (answers)")) + ".pdf" };
 }
 $("#ansZip").onclick = async () => {
   const btn = $("#ansZip"), lbl = btn.textContent; btn.disabled = true;
@@ -338,10 +347,14 @@ function zipStore(files){
 }
 
 /* ---- inside buildPDF: the chosen MCQ options in blue, and the answer record page ---- */
-function qTextResp(it, chosen){
-  const ch = new Set(chosen || []), L = optionList(it);
+// chosen options in blue ◀; with the answer key, the right ones also get a red ✓
+function qTextResp(it, chosen, key){
+  const ch = new Set(chosen || []), co = new Set(key ? it.correct || [] : []), L = optionList(it);
   if(!L.length) return it.text || "";
-  return (it.text || "").replace(/\s+$/, "") + "\n" + L.map(({ o, i, L }) => ch.has(i) ? "{color:" + BLUE_HEX + "}**" + L + ". " + o + "  ◀**{/color}" : L + ". " + o).join("\n");
+  const tick = "  {color:#C0392B}**✓**{/color}";
+  return (it.text || "").replace(/\s+$/, "") + "\n" + L.map(({ o, i, L }) =>
+    ch.has(i) ? "{color:" + BLUE_HEX + "}**" + L + ". " + o + "  ◀**{/color}" + (co.has(i) ? tick : "") :
+    co.has(i) ? "{color:#C0392B}" + L + ". " + o + "{/color}" + tick : L + ". " + o).join("\n");
 }
 function respRecord(doc, R, h){
   const { font, SANS, INK, MUTED, PW, PH, ML, MR } = h, BLUE = [31, 79, 184];

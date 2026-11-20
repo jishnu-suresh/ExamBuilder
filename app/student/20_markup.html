@@ -10,7 +10,7 @@
     <h1 id="stTitle">Exam</h1>
     <div class="muted" id="stSub"></div>
     <dl class="facts" id="stFacts"></dl>
-    <ul class="rules">
+    <ul class="rules" id="stRules">
       <li>Your answers save themselves on this computer every few seconds.</li>
       <li>Stay on this screen. <b>If you leave it, the test locks</b> with a sound and only your teacher can open it again.</li>
       <li>When you have finished, press <b>End the test</b>. Give the answers file to your teacher.</li>
@@ -43,7 +43,9 @@
     <button class="btn" id="bView" title="Text size, spacing, colours, easy-read fonts">Aa</button>
     <button class="btn" id="bTeacher" title="For the teacher">👩‍🏫</button>
     <span class="timer hidden" id="bTimer" title="Time left"></span>
+    <button class="btn hidden" id="bReadAll" title="Read the paper aloud from the beginning">▶ Read from the start</button>
     <button class="btn danger" id="bEnd">End the test</button>
+    <button class="btn danger hidden" id="bFinish">Finish</button>
   </div>
   <div class="wrap">
     <nav class="nav" aria-label="Questions"><h4>Questions</h4><div class="grid" id="navGrid"></div>
@@ -71,7 +73,6 @@
   <label>Line spacing</label><div class="seg" data-pref="space"><button data-v="">Normal</button><button data-v="wide">Wide</button></div>
   <label>Font</label><div class="seg" data-pref="font"><button data-v="">Standard</button><button data-v="easy" style="font-family:'Atkinson Hyperlegible'">Easy-read</button><button data-v="dys" style="font-family:'OpenDyslexic'">OpenDyslexic</button></div>
   <label>Colours</label><div class="seg" data-pref="colour"><button data-v="">White</button><button data-v="cream">Cream</button><button data-v="dark">Dark</button></div>
-  <label id="vVoiceLab">Reading voice speed</label><div class="seg" data-pref="rate" id="vVoice"><button data-v="0.8">Slow</button><button data-v="1">Normal</button><button data-v="1.2">Fast</button></div>
   <div class="row"><button class="btn primary" data-close>Done</button></div>
 </div></div>
 
@@ -81,6 +82,13 @@
   <div id="endInfo"></div>
   <p><b>After this you can't change your answers.</b></p>
   <div class="row"><button class="btn" data-close>← Back to the test</button><span style="flex:1"></span><button class="btn danger" id="endGo">Yes, end the test</button></div>
+</div></div>
+
+<!-- finish (read-aloud version) -->
+<div class="modal hidden" id="mFinish"><div class="box">
+  <h2>Close the read-aloud paper?</h2>
+  <p>Only do this when you have finished. Your answers are on your printed paper.</p>
+  <div class="row"><button class="btn" data-close>← Back to the paper</button><span style="flex:1"></span><button class="btn danger" id="finGo">Yes, close it</button></div>
 </div></div>
 
 <!-- teacher -->
@@ -107,5 +115,15 @@
 </div></div>
 
 <div class="accents hidden" id="accBar" aria-label="French accents"></div>
+<div class="tts hidden" id="tts" role="region" aria-label="Reading aloud">
+  <span class="tts-lab" id="ttsLab">🔊</span>
+  <button class="tb" id="ttsPrev" title="Read the part before">⏮</button>
+  <button class="tb big" id="ttsPlay" title="Pause / carry on">⏸</button>
+  <button class="tb" id="ttsStop" title="Stop">⏹</button>
+  <button class="tb" id="ttsNext" title="Read the next part">⏭</button>
+  <label class="tts-rate" title="Reading speed">🐢<input type="range" id="ttsRate" min="0.5" max="1.5" step="0.05" value="1">🐇<b id="ttsRateV">1.0×</b></label>
+  <select id="ttsVoice" title="Voice"></select>
+  <label class="tts-go" title="Carry on to the next question by itself"><input type="checkbox" id="ttsGo"> Keep reading</label>
+</div>
 <div class="toast hidden" id="toast"></div>
 <script>

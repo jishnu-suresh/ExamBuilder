@@ -6,7 +6,7 @@ function applyPrefs(){
   B.classList.toggle("f-easy", p.font === "easy"); B.classList.toggle("f-dys", p.font === "dys");
   B.classList.toggle("c-cream", p.colour === "cream"); B.classList.toggle("c-dark", p.colour === "dark");
   $("#bMathKb").classList.toggle("on", !!p.mathKb); $("#bAccents").classList.toggle("on", !!p.accents);
-  $$("#mView .seg").forEach(s => { const k = s.dataset.pref, v = String(p[k] == null ? (k === "size" ? 17 : k === "rate" ? 1 : "") : p[k]); s.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === v)); });
+  $$("#mView .seg").forEach(s => { const k = s.dataset.pref, v = String(p[k] == null ? (k === "size" ? 17 : "") : p[k]); s.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === v)); });
   if(!p.accents) $("#accBar").classList.add("hidden");
   $$("#paper textarea").forEach(t => { t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px"; });
 }
@@ -39,30 +39,91 @@ $("#accBar").addEventListener("click", e => {
   if(accShift){ accShift = false; accBar(); }
 });
 
-/* 🔊 read aloud (the computer's own voice, works offline) */
-let speaking = null;
-function voiceFor(lang){
-  const vs = speechSynthesis.getVoices(), L = lang || "en";
-  return vs.find(v => v.lang && v.lang.toLowerCase().startsWith(L) && v.localService) || vs.find(v => v.lang && v.lang.toLowerCase().startsWith(L)) || null;
+/* 🔊 read aloud — the computer's own voices (they work offline); sentence by sentence, with pause, stop, speed and voice */
+const TTS = { i: -1, chunks: [], k: 0, paused: false, tok: 0 };
+const hasTTS = () => "speechSynthesis" in window;
+function voiceList(){
+  if(!hasTTS()) return [];
+  const L = (PAPER && PAPER.lang) || EXAM.lang || "en", want = (EXAM.accent || (L === "fr" ? "fr-FR" : "en-GB")).toLowerCase();
+  return speechSynthesis.getVoices().filter(v => (v.lang || "").toLowerCase().replace("_", "-").startsWith(L)).map(v => {
+    const lang = v.lang.toLowerCase().replace("_", "-");
+    let score = 0;
+    if(/natural|neural|premium|enhanced|siri/i.test(v.name)) score += 6;      // the most human-sounding voices
+    if(/google/i.test(v.name)) score += 3;
+    if(lang === want) score += 4;
+    if(!v.localService && !navigator.onLine) score -= 20;                       // online voices need the internet
+    if(v.localService) score += 1;
+    const acc = lang.endsWith("-gb") ? "British" : lang.endsWith("-us") ? "American" : lang.endsWith("-au") ? "Australian" : lang.endsWith("-ie") ? "Irish" : lang.endsWith("-ca") ? "Canadian" : lang.endsWith("-in") ? "Indian" : lang.endsWith("-fr") ? "France" : lang.split("-")[1] ? lang.split("-")[1].toUpperCase() : "";
+    const nm = v.name.replace(/^(Microsoft|Google|Apple)\s+/i, "").replace(/\s*\(.*?\)\s*/g, " ").replace(/\s+-\s+.*$/, "").replace(/Online|Natural/g, "").trim();
+    return { v, score, label: (nm || v.name) + (acc ? " — " + acc : "") + (/natural|neural|premium|enhanced/i.test(v.name) ? " ★" : "") + (!v.localService ? " (internet)" : "") };
+  }).sort((a, b) => b.score - a.score);
 }
-function say(text, btn){
-  if(!("speechSynthesis" in window)) return toast("This computer can't read aloud.");
+function fillVoices(){
+  const vs = voiceList(), sel = $("#ttsVoice");
+  sel.innerHTML = vs.map((x, k) => `<option value="${esc(x.v.voiceURI)}">${esc(x.label)}</option>`).join("");
+  sel.classList.toggle("hidden", !vs.length);
+  const keep = ST && ST.prefs.voice && vs.find(x => x.v.voiceURI === ST.prefs.voice);
+  if(keep) sel.value = ST.prefs.voice; else if(vs[0]) sel.value = vs[0].v.voiceURI;
+}
+if(hasTTS()) speechSynthesis.addEventListener("voiceschanged", () => { if(PAPER) fillVoices(); });
+function curVoice(){ const id = $("#ttsVoice").value; return speechSynthesis.getVoices().find(v => v.voiceURI === id) || null; }
+// short pieces: Chrome stops long readings, and a pause or a new speed is quicker to apply
+function chunks(t){
+  const parts = String(t || "").replace(/\s+/g, " ").match(/[^.!?;:]+[.!?;:]*\s*/g) || [t], out = [];
+  for(const p of parts){ if(out.length && (out[out.length - 1] + p).length < 160) out[out.length - 1] += p; else out.push(p); }
+  return out.map(x => x.trim()).filter(Boolean);
+}
+function mark(){ $$(".reading").forEach(e => e.classList.remove("reading")); const u = UNITS[TTS.i]; if(u && u.el){ u.el.classList.add("reading"); const r = u.el.getBoundingClientRect(); if(r.top < 70 || r.bottom > innerHeight - 100) u.el.scrollIntoView({ behavior: "smooth", block: "center" }); } }
+function readUnit(i){
+  if(!hasTTS()) return toast("This computer can't read aloud.");
+  if(i < 0 || i >= UNITS.length) return stopReading();
   speechSynthesis.cancel();
-  if(speaking === btn){ speaking = null; btn.classList.remove("on"); return; }
-  $$("[data-say].on").forEach(b => b.classList.remove("on"));
-  const u = new SpeechSynthesisUtterance(text), v = voiceFor(PAPER.lang);
-  if(v) u.voice = v; u.lang = (v && v.lang) || (PAPER.lang === "fr" ? "fr-FR" : "en-GB");
-  u.rate = ST.prefs.rate || 1;
-  u.onend = u.onerror = () => { btn.classList.remove("on"); if(speaking === btn) speaking = null; };
-  speaking = btn; btn.classList.add("on"); speechSynthesis.speak(u);
+  TTS.i = i; TTS.chunks = chunks(UNITS[i].text); TTS.k = 0; TTS.paused = false; TTS.tok++;
+  $("#tts").classList.remove("hidden"); document.body.classList.add("tts-up");
+  $("#ttsLab").textContent = "🔊 " + UNITS[i].label; $("#ttsPlay").textContent = "⏸";
+  mark(); speakChunk();
   logEv("read aloud");
+}
+function speakChunk(){
+  const tok = ++TTS.tok;
+  if(TTS.k >= TTS.chunks.length){
+    if($("#ttsGo").checked && TTS.i + 1 < UNITS.length) return readUnit(TTS.i + 1);
+    TTS.paused = false; $("#ttsPlay").textContent = "▶"; return;
+  }
+  const u = new SpeechSynthesisUtterance(TTS.chunks[TTS.k]), v = curVoice();
+  if(v){ u.voice = v; u.lang = v.lang; } else u.lang = (PAPER.lang === "fr" ? "fr-FR" : EXAM.accent || "en-GB");
+  u.rate = ST.prefs.rate || 1;
+  u.onend = () => { if(tok !== TTS.tok) return; TTS.k++; speakChunk(); };
+  u.onerror = e => { if(tok !== TTS.tok || e.error === "interrupted" || e.error === "canceled") return; TTS.k++; speakChunk(); };
+  speechSynthesis.speak(u);
+}
+function stopReading(){ TTS.tok++; if(hasTTS()) speechSynthesis.cancel(); TTS.i = -1; TTS.paused = false; $$(".reading").forEach(e => e.classList.remove("reading")); $("#tts").classList.add("hidden"); document.body.classList.remove("tts-up"); }
+function again(){ TTS.tok++; speechSynthesis.cancel(); TTS.paused = false; $("#ttsPlay").textContent = "⏸"; speakChunk(); }   // the same sentence again, with a new speed or voice
+$("#ttsPlay").onclick = () => {
+  if(TTS.i < 0) return;
+  if(TTS.k >= TTS.chunks.length) return readUnit(TTS.i);              // finished: read it again
+  if(TTS.paused){
+    TTS.paused = false; $("#ttsPlay").textContent = "⏸"; speechSynthesis.resume();
+    setTimeout(() => { if(!TTS.paused && !speechSynthesis.speaking) again(); }, 400);   // some voices can't carry on after a pause
+  }else{ TTS.paused = true; $("#ttsPlay").textContent = "▶"; speechSynthesis.pause(); }
+};
+$("#ttsStop").onclick = stopReading;
+$("#ttsPrev").onclick = () => readUnit(Math.max(0, TTS.i - 1));
+$("#ttsNext").onclick = () => readUnit(Math.min(UNITS.length - 1, TTS.i + 1));
+$("#ttsRate").addEventListener("input", e => { ST.prefs.rate = +e.target.value; $("#ttsRateV").textContent = (+e.target.value).toFixed(2).replace(/0$/, "") + "×"; changed(); });
+$("#ttsRate").addEventListener("change", () => { if(TTS.i >= 0 && !TTS.paused) again(); });
+$("#ttsVoice").addEventListener("change", e => { ST.prefs.voice = e.target.value; changed(); if(TTS.i >= 0 && !TTS.paused) again(); });
+$("#ttsGo").addEventListener("change", e => { ST.prefs.keepReading = e.target.checked; changed(); });
+function setupReading(){
+  if(!EXAM.readAloud) return;
+  fillVoices();
+  $("#ttsRate").value = ST.prefs.rate || 1; $("#ttsRateV").textContent = (+(ST.prefs.rate || 1)).toFixed(2).replace(/0$/, "") + "×";
+  $("#ttsGo").checked = ST.prefs.keepReading != null ? !!ST.prefs.keepReading : READ_ONLY();
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-say]"); if(!b) return;
-  let text = "";
-  const sub = b.closest(".sl"), note = b.closest(".note"), q = b.closest(".q");
-  if(sub) text = sub.querySelector("[data-plain]").dataset.plain;
-  else if(note) text = note.dataset.plain;
-  else if(q){ text = [q.querySelector(".body > .rich").dataset.plain].concat($$(`#${q.id} .opt .rich`).map(o => o.dataset.plain)).join(". \n"); }
-  if(text) say(text, b);
+  const i = +b.dataset.say;
+  if(TTS.i === i && !TTS.paused && TTS.k < TTS.chunks.length) return stopReading();
+  readUnit(i);
 });
+$("#bReadAll").onclick = () => readUnit(0);

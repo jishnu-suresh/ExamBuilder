@@ -123,6 +123,7 @@ Questions are plain text with small tags. The same format is used when typing, p
 | `62_ai_prompts.js` | The ready-made AI prompts |
 | `63_formatting_and_rubric.js` | Format bar, ＋ Insert and ⋯ More menus, rubric page |
 | `64_versions_find_arrange_label.js` | Versions A/B/C, find & replace, arrange view, labelled diagrams |
+| `66_speech.js` | 🔊 `SPEECH.tex()` / `SPEECH.text()`: maths, units and chemistry in spoken words (English, French, British/American) |
 | `65_student_version.js` | 💻 Making the student file, teacher key, invigilator sheet, 📥 opening student answers, answer record page, ZIP |
 | `70_events_and_start.js` | Buttons, settings tabs, start screen, demo exam, welcome tour, PWA, start-up |
 | `99_end.html` | Closing tags |
@@ -189,7 +190,7 @@ A new version shows the "Fresh honey in the hive!" bar. The page only reloads af
 | `50_answers.js` | Answer areas made of blocks (text, maths via MathLive, drawing), and the maths keyboard tabs |
 | `55_drawing.js` | The drawing pad |
 | `60_guard.js` | Full screen, beep and lock when the student leaves, the teacher code, no paste, wake lock, the clock, the teacher menu |
-| `70_access.js` | Text size, spacing, fonts (Atkinson Hyperlegible, OpenDyslexic), colours, French accents, read aloud |
+| `70_access.js` | Text size, spacing, fonts (Atkinson Hyperlegible, OpenDyslexic), colours, French accents. Read aloud: the reading bar (⏮ ⏯ ⏹ ⏭, speed, voice list with natural voices first, Keep reading), sentence by sentence over `UNITS` |
 | `80_flow.js` | Start or carry on, USB backup and carrying on from it, End the test → a sealed `.bee-answers` file → "This test has ended" |
 
 **Back in BEE:** 📥 *Open student answers* unseals the answers and the exam, then builds the PDF with `buildPDF({ resp })`:
@@ -199,9 +200,21 @@ A new version shows the "Fresh honey in the hive!" bar. The page only reloads af
 - The student's exam replaces `S` only while the PDF is drawn, with no waiting in between, so an autosave can never store it.
 - Several files can be downloaded together as a ZIP with a CSV summary (`zipStore()`).
 
+**Two kinds of file** (`EXAM.mode`):
+
+| Mode | What the student does |
+|---|---|
+| `answer` | Answers on the computer. |
+| `read` | The read-aloud version: the paper on screen with 🔊 everywhere and *Read from the start*. There are no answer boxes and no name; *Finish* closes it. Students write on the printed paper. The start code and the lock still apply. |
+
+**Spoken text:** BEE writes the words to be said when it makes the file (`SAY` sets the language and accent), so the student file needs no maths engine to read aloud.
+
+**Marking copy:** in 📥 Student answers, *Add the answer key* draws the model answers in red under the student's blue answers, and ✓ on the right MCQ options. In `buildPDF`, `opt.resp` and `opt.key` can be used together.
+
 **Limits to know:**
 - A web page can't truly lock a computer. The soft lock is full screen, a beep, a lock that needs the teacher code, and a record of every exit. A lockdown browser needs IT.
 - Passage line numbers are not shown in the student version.
+- Voices come from the laptop. The most natural ones (Edge "Natural", Chrome Google voices) need the internet. Offline, Windows has its standard voices, and a Mac has downloadable Enhanced/Premium voices.
 
 ## 7. Building, testing and releasing
 

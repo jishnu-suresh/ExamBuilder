@@ -66,6 +66,15 @@ player_html = fill("\n".join(rd(os.path.normpath(os.path.join(PS, n))) for n in 
 })
 single["/*__PLAYER__*/null"] = json.dumps(player_html).replace("</", "<\\/")
 single_html = fill(src, single)
+# every script must parse: one stray character would break all of BEE (needs Node; skipped if it isn't there)
+def check_js(html, where):
+    import subprocess, tempfile
+    if not shutil.which("node"): return
+    for k, m in enumerate(re.finditer(r"<script>([\s\S]*?)</script>", html)):
+        with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as t: t.write("(function(){\n" + m.group(1) + "\n})")
+        r = subprocess.run(["node", "--check", t.name], capture_output=True, text=True); os.unlink(t.name)
+        if r.returncode: raise SystemExit("JavaScript error in %s, script %d:\n%s" % (where, k, r.stderr[-1500:]))
+check_js(single_html, "the offline file"); check_js(player_html, "the student version")
 
 # ---------------------------------------------------------------- web app (PWA)
 # keep hand-made demo files across rebuilds

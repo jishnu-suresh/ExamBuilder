@@ -90,6 +90,13 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+.seg-pick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 12px}
+.seg-pick label{display:block;border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;font-size:13px;line-height:1.35}
+.seg-pick label:has(input:checked){border-color:var(--gold);background:var(--gold-xl)}
+.seg-pick input{float:right;margin:2px 0 0 6px;accent-color:var(--gold)}
+.seg-pick b{display:block;margin-bottom:3px;font-size:13.5px}
+.seg-pick span{color:var(--muted)}
+@media (max-width:560px){.seg-pick{grid-template-columns:1fr}}
 .key-row{margin-top:12px;padding:9px 12px;border-radius:10px;background:var(--gold-xl);border:1px solid var(--line);font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .key-row.warn{background:#FDF0EC;border-color:#E9B4AD}
 .codes{display:flex;gap:14px;margin:12px 0}

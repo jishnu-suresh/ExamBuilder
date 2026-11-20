@@ -9,6 +9,9 @@ WEB = "http://127.0.0.1:8765/"
 os.makedirs(OUT, exist_ok=True)
 P = lambda n: os.path.join(OUT, "stu_" + n)
 res = []
+FAKE_TTS = """() => { const f = { speaking: false, paused: false, q: [], speak(u){ this.q.push(u); this.speaking = true; }, cancel(){ this.q = []; this.speaking = false; this.paused = false; },
+  pause(){ this.paused = true; }, resume(){ this.paused = false; }, getVoices(){ return []; }, addEventListener(){} };
+  Object.defineProperty(window, "speechSynthesis", { configurable: true, value: f }); }"""   # a voice that keeps talking until it is stopped
 def ok(name, cond, info=""):
     res.append(bool(cond)); print(("PASS " if cond else "FAIL ") + name + ("" if cond else f"   → {info}"))
 
@@ -50,6 +53,12 @@ async def main():
         sheet = await dl.value; await sheet.save_as(P("sheet.pdf"))
         ok("invigilator sheet (PDF)", open(P("sheet.pdf"), "rb").read(4) == b"%PDF", sheet.suggested_filename)
         await pg.evaluate("document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'))")
+        # maths and science said the way a teacher would say them
+        cases = [["tex", r"\frac{3}{5}\times 45", "en", {}], ["tex", r"9.8\,\mathrm{m/s^2}", "en", {}], ["tex", r"\ce{CH4 + 2O2 -> CO2 + 2H2O}", "en", {}],
+                 ["tex", r"25^\circ\mathrm{C}", "en", {}], ["tex", r"\sin^{-1}(0.5)", "en", {}], ["text", "Water (H₂O) boils at 100 °C; 3 cm² ", "en", {}], ["tex", r"\frac{3}{4}+x^2", "fr", {}], ["tex", r"\frac{1}{4}", "en", {"us": True}]]
+        said = await pg.evaluate("cs => cs.map(([k, s, l, o]) => SPEECH[k](s, l, o))", cases)
+        want = ["three fifths times 45", "9.8 metres per second squared", "C H 4, plus 2 O 2, gives C O 2, plus 2 H 2 O", "25 degrees Celsius", "inverse sine of 0.5", "Water (H 2 O) boils at 100 degrees Celsius; 3 square centimetres", "trois quarts plus x au carré", "one fourth"]
+        ok("read aloud: maths, units and chemistry in words (English, French, US)", said == want, [x for x in zip(said, want) if x[0] != x[1]])
 
         # ---------- student answers
         sc, sp, serrs = await student(b, P("exam.html"))
@@ -102,8 +111,19 @@ async def main():
         ok("view options: size, dyslexia font, dark", look[0] == "24px" and "f-dys" in look[1] and "c-dark" in look[1], look)
         await sp.screenshot(path=P("look.png"))
         await sp.click("#mView [data-pref=size] [data-v='17']"); await sp.click("#mView [data-pref=font] [data-v='']"); await sp.click("#mView [data-pref=colour] [data-v='']"); await sp.click("#mView [data-close]")
-        await sp.click(f"#q-{qs[0]} [data-say]"); await sp.wait_for_timeout(200)
-        ok("read aloud button works", not serrs, serrs)
+        await sp.evaluate(FAKE_TTS)
+        await sp.click(f"#q-{qs[0]} .tools [data-say]"); await sp.wait_for_timeout(300)
+        r = await sp.evaluate("({ bar: !$('#tts').classList.contains('hidden'), lab: $('#ttsLab').textContent, hi: !!document.querySelector('#q-' + PAPER.items.filter(i => i.k === 'q')[0].id + ' .reading'), text: UNITS[TTS.i].text })")
+        ok("read aloud: the reading bar opens and the question is highlighted", r["bar"] and "Question 1" in r["lab"] and r["hi"], r)
+        ok("read aloud: the question is said in words", "three fifths times 45" in r["text"], r["text"])
+        await sp.click("#ttsPlay"); pz = await sp.evaluate("[TTS.paused, $('#ttsPlay').textContent]")
+        await sp.click("#ttsPlay"); rs = await sp.evaluate("TTS.paused")
+        await sp.click("#ttsNext"); nx = await sp.evaluate("[TTS.i, $('#ttsLab').textContent]")
+        await sp.fill("#ttsRate", "0.7"); await sp.dispatch_event("#ttsRate", "change")
+        ok("read aloud: pause, carry on, next, slower", pz == [True, "▶"] and rs is False and "Question 2" in nx[1] and await sp.evaluate("ST.prefs.rate") == 0.7, [pz, rs, nx])
+        await sp.click("#ttsStop")
+        ok("read aloud: stop closes the bar", await sp.evaluate("$('#tts').classList.contains('hidden') && !document.querySelector('.reading')"))
+        ok("read aloud works without errors", not serrs, serrs)
         # no pasting
         await sp.evaluate(f"document.querySelector(\"[data-area='{qs[2]}|main'] textarea\").dispatchEvent(new ClipboardEvent('paste', {{ bubbles: true, cancelable: true }}))")
         ok("pasting is blocked and recorded", await sp.evaluate("ST.log.some(l => l.kind === 'tried to paste')"))
@@ -168,6 +188,8 @@ async def main():
         ok("record knows she left the test once", info["left"] == 1, info)
         n = await pg.evaluate("(async () => { const r = await answerPDF(ANS[0]); const plain = buildPDF({ final: true }).getNumberOfPages(); return [r.doc.getNumberOfPages(), plain]; })()")
         ok("PDF = answer record + the whole paper", n[0] >= n[1] + 1, n)
+        k = await pg.evaluate("(async () => { $('#ansKey').checked = true; const r = await answerPDF(ANS[0]); $('#ansKey').checked = false; return [r.name, r.doc.getNumberOfPages()]; })()")
+        ok("answers + answer key in red, for marking", k[0].endswith("(answers + key).pdf") and k[1] >= n[0], k)
         async with pg.expect_file_chooser() as fc: await pg.click("#ansMore")
         await (await fc.value).set_files(P("tom.bee-answers")); await pg.wait_for_timeout(1500)
         rows = await pg.evaluate("ANS.map(r => r.P && r.P.name)")
@@ -198,6 +220,34 @@ async def main():
         await d3.save_as(P("offline_exam.html"))
         ok("offline BEE makes the student file without internet", os.path.getsize(P("offline_exam.html")) > 1_000_000 and not e3, e3)
         await c3.close()
+        # 🔊 read-aloud only: the paper on screen, answers on the printed paper
+        c5 = await b.new_context(accept_downloads=True, viewport={"width": 1300, "height": 900}); p5 = await c5.new_page()
+        await p5.goto(WEB); await p5.wait_for_timeout(1500); await p5.evaluate("loadDemo()"); await p5.wait_for_timeout(2500); await p5.evaluate("tourAt >= 0 && endTour()")
+        await p5.evaluate("openStudentDialog()"); await p5.wait_for_timeout(300)
+        await p5.check("input[name=stuMode][value=read]"); await p5.select_option("#stuVoice", "en-US")
+        ok("read-aloud option in the dialog", await p5.text_content("#stuGo") == "⬇ Download the read-aloud file" and not await p5.is_visible("#stuDrawRow"))
+        await p5.fill("#stuCode", "READ-2345"); await p5.fill("#stuTCode", "9753")
+        async with p5.expect_download(timeout=180000) as dl: await p5.click("#stuGo")
+        rd = await dl.value; await rd.save_as(P("read.html"))
+        ok("read-aloud file is made", rd.suggested_filename.endswith("read-aloud version.html"), rd.suggested_filename)
+        await p5.evaluate("document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')); $('#stuModal').classList.add('open')")
+        async with p5.expect_download() as dl: await p5.click("#stuSheet")
+        await (await dl.value).save_as(P("read_sheet.pdf")); await c5.close()
+        sc5, sp5, e5 = await student(b, P("read.html"))
+        ok("read-aloud: no name needed, opens with the start code", not await sp5.is_visible("#stName") and await sp5.text_content("#stGo") == "Open the paper")
+        await sp5.fill("#stCode", "READ-2345"); await sp5.click("#stGo"); await sp5.wait_for_timeout(2500)
+        ro = await sp5.evaluate("({ exam: !$('#scrExam').classList.contains('hidden'), boxes: document.querySelectorAll('#paper textarea, #paper math-field, #paper input').length, says: document.querySelectorAll('[data-say]').length, end: !$('#bEnd').classList.contains('hidden'), fin: !$('#bFinish').classList.contains('hidden'), opts: document.querySelectorAll('.ro-opts div').length })")
+        ok("read-aloud: the paper with 🔊 everywhere and no answer boxes", ro["exam"] and ro["boxes"] == 0 and ro["says"] >= 22 and not ro["end"] and ro["fin"] and ro["opts"] >= 10, ro)
+        await sp5.evaluate(FAKE_TTS); await sp5.click("#bReadAll"); await sp5.wait_for_timeout(300)
+        rr = await sp5.evaluate("[TTS.i, $('#ttsGo').checked, UNITS.length, UNITS.map(u => u.text).join(' ').includes('three fourths')]")
+        ok("read-aloud: ▶ Read from the start keeps reading (American voice words)", rr[0] == 0 and rr[1] and rr[2] > 30, rr)
+        await sp5.evaluate("left('test')"); await sp5.wait_for_timeout(300)
+        ok("read-aloud: leaving locks it too", await sp5.is_visible("#scrLock"))
+        await sp5.fill("#lkCode", "9753"); await sp5.click("#lkGo"); await sp5.wait_for_timeout(1500)
+        await sp5.click("#bFinish"); await sp5.click("#finGo"); await sp5.wait_for_timeout(800)
+        ok("read-aloud: Finish closes it (nothing to hand in from the laptop)", await sp5.is_visible("#scrEnded") and await sp5.text_content("#scrEnded h1") == "Finished" and not await sp5.is_visible("#enAgain"))
+        ok("read-aloud: no errors", not e5, e5)
+        await sc5.close()
         # phone-sized laptop window
         sc4, sp4, _ = await student(b, P("offline_exam.html"), (390, 844))
         await sp4.fill("#stName", "Sam"); await sp4.fill("#stCode", "QWER-TYUP"); await sp4.click("#stGo"); await sp4.wait_for_timeout(2500)

@@ -19,7 +19,7 @@ The PDFs the tests make go into `tests/out/` (not committed).
 | `tfeat.py` | Sub-questions, answer spaces, answer key, versions A/B/C, find & replace. |
 | `tpwa.py` | The installable app: offline cache, update, photo reader. |
 | `trubric.py`, `twrap.py`, `tcover.py` | Rubric page, text wrapping beside pictures, cover page fitting. |
-| `tstudent.py` | 💻 The computer version: making the file, the questions locked by the start code, answering (MCQ, accents, maths keyboard, drawing), the lock and teacher code, adding time, no paste, carrying on after a crash and from a USB backup, End the test, the sealed answers, the PDF with automatic MCQ marks, a class ZIP, the teacher key on another computer, the offline BEE, small screens. |
+| `tstudent.py` | 💻 The computer version: making the file, the questions locked by the start code, answering (MCQ, accents, maths keyboard, drawing), the lock and teacher code, adding time, no paste, carrying on after a crash and from a USB backup, End the test, the sealed answers, the PDF with automatic MCQ marks (and with the answer key), maths and chemistry read in words, the reading bar, the read-aloud-only version, a class ZIP, the teacher key on another computer, the offline BEE, small screens. |
 | `suite.py` | One check per later feature or bug fix: phones, sticky preview, AI paste with details and rubric, strikethrough, PDF guard, ✂ cut from PDF, AI drawings, passages after MCQs, sub-question and MCQ page breaks, page-break items, click-to-jump, Insert menu, Save as, prompts, French and colourful styles, molecules. |
 
 `_bee.py` holds the shared bits: where the app is and which browser to use (set `BEE_CHROME` to choose one).

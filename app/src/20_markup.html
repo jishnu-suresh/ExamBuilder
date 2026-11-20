@@ -516,15 +516,20 @@ x = 3
     <div id="stuForm">
       <h3>💻 Computer version for students</h3>
       <p class="hint" style="margin:4px 0 10px">One file the student opens on a laptop, with no internet. They answer on screen (typing, maths keyboard, drawing) and press <b>End the test</b>. Their answers come back as a <b>sealed file</b> that only your BEE can open, and BEE turns it into a PDF to mark.</p>
+      <div class="seg-pick" id="stuMode">
+        <label><input type="radio" name="stuMode" value="answer" checked><b>💻 Students answer on the computer</b><span>Typing, maths keyboard, drawing. Answers come back sealed for you.</span></label>
+        <label><input type="radio" name="stuMode" value="read"><b>🔊 Read-aloud only</b><span>The paper on screen with its questions read aloud. Students write their answers on the printed paper.</span></label>
+      </div>
       <div class="fields">
         <label class="f">Time (minutes)<input type="number" id="stuMin" min="1" max="600" step="1"></label>
         <label class="f">Extra time<select id="stuExtra"><option value="0">None</option><option value="10">+10%</option><option value="25">+25%</option><option value="33">+33%</option><option value="50">+50%</option><option value="100">+100% (double time)</option></select></label>
+        <label class="f" id="stuVoiceRow">Reading voice<select id="stuVoice"><option value="en-GB">British English</option><option value="en-US">American English</option></select></label>
         <label class="f">Version<select id="stuVer"><option value="">Same order as the paper</option><option>A</option><option>B</option><option>C</option><option>D</option></select></label>
       </div>
       <div class="checks" style="flex-direction:column;gap:6px;margin-top:8px">
         <label><input type="checkbox" id="stuNoTime"> No time limit</label>
-        <label><input type="checkbox" id="stuRead" checked> 🔊 Students may have questions read aloud <span class="hint">(turn off for reading tests)</span></label>
-        <label><input type="checkbox" id="stuDraw" checked> ✏️ Drawing pad (sketches, graphs, labelling pictures)</label>
+        <label id="stuReadRow"><input type="checkbox" id="stuRead" checked> 🔊 Students may have questions read aloud <span class="hint">(turn off for reading tests)</span></label>
+        <label id="stuDrawRow"><input type="checkbox" id="stuDraw" checked> ✏️ Drawing pad (sketches, graphs, labelling pictures)</label>
       </div>
       <p class="hint" id="stuTotal" style="margin:8px 0 0"></p>
       <div class="fields" style="margin-top:10px">
@@ -549,6 +554,7 @@ x = 3
   <div class="box" style="max-width:760px">
     <h3>📥 Student answers</h3>
     <div id="ansList"></div>
+    <label class="hint" style="display:flex;gap:6px;align-items:center;margin:4px 0 0"><input type="checkbox" id="ansKey"> <span>Add the answer key for marking: model answers in red under each student answer, and ✓ on the right MCQ options</span></label>
     <div class="actions" style="justify-content:flex-end"><button class="btn" id="ansMore">＋ Add more files</button><button class="btn" id="ansCsv">⬇ Summary (CSV)</button><button class="btn primary" id="ansZip">⬇ All PDFs (ZIP)</button><button class="btn" data-close>Close</button></div>
   </div>
 </div>

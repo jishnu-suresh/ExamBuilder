@@ -17,10 +17,17 @@ async function boot(){
   facts.push(["Questions", EXAM.nq]);
   $("#stFacts").innerHTML = facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
   if(!("showDirectoryPicker" in window)) $("#stUsbRow").classList.add("hidden");
+  if(READ_ONLY()){
+    $("#stSub").textContent = (EXAM.subject ? EXAM.subject + " · " : "") + "Read-aloud version";
+    $("#stRules").innerHTML = "<li>Click 🔊 next to a question to hear it. You can pause, slow down, change the voice, or let it keep reading.</li><li><b>Write your answers on your printed paper.</b></li><li>Stay on this screen. <b>If you leave it, it locks</b> with a sound and only your teacher can open it again.</li>";
+    ["#stNew", "#stUsbRow", "#stBackup"].forEach(s => $(s).classList.add("hidden"));
+    $("#stGo").textContent = "Open the paper";
+  }
   const done = await DB.get(DONE());
   if(done) return showEnded(done);
   const run = await DB.get(RUN());
-  if(run && !run.ended) setResume(run, "this computer");
+  if(run && !run.ended && !READ_ONLY()) setResume(run, "this computer");
+  if(run && !run.ended && READ_ONLY()) RESUME = Object.assign(run, { where: "this computer" });
   show("#scrStart"); setTimeout(() => (RESUME ? $("#stCode") : $("#stName")).focus(), 60);
 }
 function setResume(run, where){
@@ -35,7 +42,7 @@ $("#stClass").addEventListener("keydown", e => { if(e.key === "Enter") $("#stCod
 $("#stGo").onclick = async () => {
   const err = $("#stErr"); err.textContent = "";
   const name = $("#stName").value.trim();
-  if(!RESUME && name.length < 2){ err.textContent = "Please type your name first."; $("#stName").focus(); return; }
+  if(!RESUME && !READ_ONLY() && name.length < 2){ err.textContent = "Please type your name first."; $("#stName").focus(); return; }
   const code = $("#stCode").value;
   if(!code){ err.textContent = "Your teacher needs to type the start code."; $("#stCode").focus(); return; }
   goFull();                                   // must happen right away, while the click still counts
@@ -59,11 +66,15 @@ $("#stGo").onclick = async () => {
     if(e.message !== "code") console.error(e);
     err.textContent = e.message === "code" ? "That start code isn't right. Check it with your teacher." : "Something went wrong: " + e.message;
     if(document.fullscreenElement) document.exitFullscreen().catch(() => {});
-  }finally{ $("#stGo").disabled = false; $("#stGo").textContent = RESUME ? "Carry on with the test" : "Start the test"; }
+  }finally{ $("#stGo").disabled = false; $("#stGo").textContent = READ_ONLY() ? "Open the paper" : RESUME ? "Carry on with the test" : "Start the test"; }
 };
 function startExam(){
-  $("#bTitle").textContent = EXAM.title; $("#bWho").textContent = "· " + ST.name + (ST.cls ? " · " + ST.cls : "");
-  show("#scrExam"); setupMathKeyboard(); renderPaper(); applyPrefs(); if(ST.prefs.accents){ accBar(); $("#accBar").classList.remove("hidden"); }
+  const RO = READ_ONLY();
+  $("#bTitle").textContent = EXAM.title; $("#bWho").textContent = RO ? "· read-aloud version" : "· " + ST.name + (ST.cls ? " · " + ST.cls : "");
+  ["#bMathKb", "#bAccents", "#bEnd"].forEach(s => $(s).classList.toggle("hidden", RO));
+  ["#bFinish", "#bReadAll"].forEach(s => $(s).classList.toggle("hidden", !RO));
+  $(".nav .key").classList.toggle("hidden", RO);
+  show("#scrExam"); if(!RO) setupMathKeyboard(); renderPaper(); applyPrefs(); setupReading(); if(ST.prefs.accents && !RO){ accBar(); $("#accBar").classList.remove("hidden"); }
   guardStart(); tick(); changed(); saveNow();
   window.scrollTo(0, 0);
 }
@@ -107,12 +118,25 @@ $("#bEnd").onclick = () => {
   openM("#mEnd");
 };
 $("#endGo").onclick = () => { closeM("#mEnd"); endTest("student"); };
+$("#bFinish").onclick = () => openM("#mFinish");
+$("#finGo").onclick = () => { closeM("#mFinish"); finishReading("student"); };
+async function finishReading(by){
+  if(!ST || ST.endedAt) return;
+  ST.endedAt = now(); ST.endedBy = by; logEv("finished", { by });
+  guardStop(); stopReading(); $("#scrLock").classList.add("hidden"); $$(".modal").forEach(m => m.classList.add("hidden"));
+  await saveNow();
+  show("#scrEnded");
+  $("#scrEnded h1").textContent = "Finished";
+  $("#enWho").textContent = by === "time" ? "Time is up." : by === "teacher" ? "Your teacher closed the paper." : "";
+  $("#scrEnded p:nth-of-type(2)").textContent = "Hand in your printed paper. You can close this window.";
+  $("#enWhere").classList.add("hidden"); $("#enAgain").classList.add("hidden");
+}
 async function endTest(by){
+  if(READ_ONLY()) return finishReading(by);
   if(!ST || ST.endedAt) return;
   ST.endedAt = now(); ST.endedBy = by; logEv("ended", { by });
-  guardStop(); $("#scrLock").classList.add("hidden"); $$(".modal").forEach(m => m.classList.add("hidden"));
+  guardStop(); stopReading(); $("#scrLock").classList.add("hidden"); $$(".modal").forEach(m => m.classList.add("hidden"));
   if(window.mathVirtualKeyboard) try{ mathVirtualKeyboard.hide(); }catch(_){}
-  speechSynthesis && speechSynthesis.cancel();
   const payload = { examId: EXAM.examId, name: ST.name, cls: ST.cls, startedAt: ST.startedAt, endedAt: ST.endedAt, endedBy: by,
     timeMin: EXAM.timeMin, baseMin: EXAM.baseMin, extraPct: EXAM.extraPct, extraMin: ST.extraMin || 0, log: ST.log, answers: ST.answers, flags: ST.flags, prefs: ST.prefs, ua: ST.ua };
   const file = { bee: "answers", v: 1, kid: EXAM.kid, examId: EXAM.examId, title: EXAM.title, created: now(), sealed: await BC.seal(payload, EXAM.pub), teacher: EXAM.teacher };
