@@ -100,7 +100,13 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .hidden{display:none!important}
 .cut-stage{position:relative;max-height:68vh;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#eee;touch-action:none;user-select:none}
 .cut-stage canvas{display:block;margin:0 auto;background:#fff;cursor:crosshair}
-.cut-sel{position:absolute;border:2px solid #D4A017;background:rgba(212,160,23,.15);pointer-events:none}
+.cut-sel{position:absolute;border:2px solid #D4A017;background:rgba(212,160,23,.13);cursor:move;touch-action:none;box-shadow:0 0 0 9999px rgba(0,0,0,.18)}
+.cut-sel i{position:absolute;width:14px;height:14px;background:#fff;border:2px solid #D4A017;border-radius:3px;margin:-8px 0 0 -8px}
+.cut-sel i[data-h=nw]{left:0;top:0;cursor:nwse-resize}.cut-sel i[data-h=n]{left:50%;top:0;cursor:ns-resize}.cut-sel i[data-h=ne]{left:100%;top:0;cursor:nesw-resize}
+.cut-sel i[data-h=e]{left:100%;top:50%;cursor:ew-resize}.cut-sel i[data-h=se]{left:100%;top:100%;cursor:nwse-resize}.cut-sel i[data-h=s]{left:50%;top:100%;cursor:ns-resize}
+.cut-sel i[data-h=sw]{left:0;top:100%;cursor:nesw-resize}.cut-sel i[data-h=w]{left:0;top:50%;cursor:ew-resize}
+@media (pointer:coarse){.cut-sel i{width:22px;height:22px;margin:-12px 0 0 -12px}}
+.cut-zoom{display:inline-flex;gap:4px;align-items:center;margin-left:10px}
 .svg-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
 @media (max-width:800px){.svg-grid{grid-template-columns:1fr}}
 #svgCode{min-height:340px;font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;border:1px solid var(--line);border-radius:8px;padding:8px;white-space:pre;overflow:auto}
@@ -632,9 +638,10 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
     </div>
     <div class="row" style="gap:6px;align-items:center;margin-bottom:6px">
       <button class="btn sm" id="cutPrev">‹</button><span id="cutPageLbl" class="hint">–</span><button class="btn sm" id="cutNext">›</button>
-      <span class="hint" style="margin-left:8px" id="cutTip">Drag a box around the picture you want.</span>
+      <span class="cut-zoom"><button class="btn sm" id="cutZoomOut" title="Zoom out">−</button><button class="btn sm" id="cutZoomFit" title="Fit the page to the window">Fit</button><button class="btn sm" id="cutZoomIn" title="Zoom in">＋</button><span class="hint" id="cutZoomLbl">100%</span></span>
+      <span class="hint" style="margin-left:8px" id="cutTip">Drag a box around the picture. Then drag its edges or corners to adjust it, or drag inside it to move it.</span>
     </div>
-    <div class="cut-stage" id="cutStage"><canvas id="cutCanvas"></canvas><div class="cut-sel hidden" id="cutSel"></div></div>
+    <div class="cut-stage" id="cutStage"><canvas id="cutCanvas"></canvas><div class="cut-sel hidden" id="cutSel"><i data-h="nw"></i><i data-h="n"></i><i data-h="ne"></i><i data-h="e"></i><i data-h="se"></i><i data-h="s"></i><i data-h="sw"></i><i data-h="w"></i></div></div>
     <div class="row" style="justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn" data-close>Cancel</button><button class="btn primary" id="cutGo" disabled>Use this part</button></div>
   </div>
 </div>
@@ -5912,7 +5919,7 @@ function placePicture(T, img, size){
   render(); changed(); focusItem(it.id);
 }
 /* ---------- 📄 cut a picture out of a PDF (works for drawn diagrams and scans alike) ---------- */
-let PDFSRC = null, cutT = null, cutPage = 1, cutScale = 1, cutRect = null;
+let PDFSRC = null, cutT = null, cutPage = 1, cutScale = 1, cutRect = null, cutZoom = 1;   // cutRect: {fx, fy, fw, fh} as parts of the page
 async function loadPdfSource(file){
   if(!window.pdfjsLib) throw new Error("The PDF viewer isn't loaded");
   const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), isEvalSupported: false }).promise;
@@ -5920,7 +5927,7 @@ async function loadPdfSource(file){
   return PDFSRC;
 }
 async function openCut(T){
-  cutT = T; cutRect = null; $("#cutSel").classList.add("hidden"); $("#cutGo").disabled = true;
+  cutT = T; cutRect = null; cutZoom = 1; $("#cutSel").classList.add("hidden"); $("#cutGo").disabled = true;
   openModal("#cutModal");
   if(!PDFSRC){ $("#cutName").textContent = "no PDF yet"; $("#cutPageLbl").textContent = "–"; const c = $("#cutCanvas"); c.width = 10; c.height = 10; $("#pdfSrcIn").click(); return; }
   $("#cutName").textContent = PDFSRC.name;
@@ -5931,43 +5938,77 @@ async function drawCutPage(){
   if(!PDFSRC) return;
   const page = await PDFSRC.doc.getPage(cutPage), st = $("#cutStage");
   const base = page.getViewport({ scale: 1 }), fit = Math.min(1.6, (st.clientWidth - 20) / base.width);
-  cutScale = fit; const vp = page.getViewport({ scale: fit * (window.devicePixelRatio || 1) });
-  const c = $("#cutCanvas"); c.width = vp.width; c.height = vp.height; c.style.width = (base.width * fit) + "px"; c.style.height = (base.height * fit) + "px";
+  cutScale = fit * cutZoom; const vp = page.getViewport({ scale: cutScale * (window.devicePixelRatio || 1) });
+  $("#cutZoomLbl").textContent = Math.round(cutZoom * 100) + "%";
+  const c = $("#cutCanvas"); c.width = vp.width; c.height = vp.height; c.style.width = (base.width * cutScale) + "px"; c.style.height = (base.height * cutScale) + "px";
   await page.render({ canvasContext: c.getContext("2d"), viewport: vp }).promise;
   $("#cutPageLbl").textContent = "page " + cutPage + " of " + PDFSRC.doc.numPages;
-  cutRect = null; $("#cutSel").classList.add("hidden"); $("#cutGo").disabled = true;
+  cutPaint();
 }
+// draw the selection box from its page fractions (works at any zoom)
+function cutPaint(){
+  const sel = $("#cutSel"), cv = $("#cutCanvas");
+  if(!cutRect){ sel.classList.add("hidden"); $("#cutGo").disabled = true; return; }
+  sel.style.left = (cv.offsetLeft + cutRect.fx * cv.clientWidth) + "px"; sel.style.top = (cv.offsetTop + cutRect.fy * cv.clientHeight) + "px";
+  sel.style.width = (cutRect.fw * cv.clientWidth) + "px"; sel.style.height = (cutRect.fh * cv.clientHeight) + "px";
+  sel.classList.remove("hidden"); $("#cutGo").disabled = !(cutRect.fw * cv.clientWidth > 8 && cutRect.fh * cv.clientHeight > 8);
+}
+async function cutSetZoom(z, keepCenter){
+  const st = $("#cutStage"), cv = $("#cutCanvas");
+  // keep the selection (or the middle of the view) in sight
+  const cx = cutRect ? cutRect.fx + cutRect.fw / 2 : (st.scrollLeft + st.clientWidth / 2 - cv.offsetLeft) / Math.max(1, cv.clientWidth);
+  const cy = cutRect ? cutRect.fy + cutRect.fh / 2 : (st.scrollTop + st.clientHeight / 2 - cv.offsetTop) / Math.max(1, cv.clientHeight);
+  cutZoom = Math.max(.5, Math.min(4, z)); await drawCutPage();
+  st.scrollLeft = cv.offsetLeft + cx * cv.clientWidth - st.clientWidth / 2; st.scrollTop = cv.offsetTop + cy * cv.clientHeight - st.clientHeight / 2;
+}
+document.getElementById("cutZoomIn").onclick = () => cutSetZoom(cutZoom * 1.25);
+document.getElementById("cutZoomOut").onclick = () => cutSetZoom(cutZoom / 1.25);
+document.getElementById("cutZoomFit").onclick = () => cutSetZoom(1);
+document.getElementById("cutStage").addEventListener("wheel", e => { if(!(e.ctrlKey || e.metaKey)) return; e.preventDefault(); cutSetZoom(cutZoom * (e.deltaY < 0 ? 1.12 : 1 / 1.12)); }, { passive: false });
 document.getElementById("pdfSrcIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if(!f) return;
   try{ await loadPdfSource(f); $("#cutName").textContent = f.name; if($("#cutModal").classList.contains("open")){ cutPage = Math.min(Math.max(1, (cutT && cutT.page) || 1), PDFSRC.doc.numPages); await drawCutPage(); } }
   catch(err){ toast("Couldn't open that PDF: " + (err.message || err)); }
 });
 document.getElementById("cutChoose").onclick = () => $("#pdfSrcIn").click();
-document.getElementById("cutPrev").onclick = () => { if(PDFSRC && cutPage > 1){ cutPage--; drawCutPage(); } };
-document.getElementById("cutNext").onclick = () => { if(PDFSRC && cutPage < PDFSRC.doc.numPages){ cutPage++; drawCutPage(); } };
+document.getElementById("cutPrev").onclick = () => { if(PDFSRC && cutPage > 1){ cutPage--; cutRect = null; drawCutPage(); } };
+document.getElementById("cutNext").onclick = () => { if(PDFSRC && cutPage < PDFSRC.doc.numPages){ cutPage++; cutRect = null; drawCutPage(); } };
 (() => {
-  const st = document.getElementById("cutStage"), sel = document.getElementById("cutSel"), cv = document.getElementById("cutCanvas");
-  let a = null;
-  const pt = e => { const r = cv.getBoundingClientRect(); return { x: Math.max(0, Math.min(r.width, e.clientX - r.left)), y: Math.max(0, Math.min(r.height, e.clientY - r.top)), r }; };
-  const show = (p, q) => { const r = cv.getBoundingClientRect(), s0 = st.getBoundingClientRect();
-    const x = Math.min(p.x, q.x), y = Math.min(p.y, q.y), w = Math.abs(q.x - p.x), h = Math.abs(q.y - p.y);
-    sel.style.left = (r.left - s0.left + st.scrollLeft + x) + "px"; sel.style.top = (r.top - s0.top + st.scrollTop + y) + "px"; sel.style.width = w + "px"; sel.style.height = h + "px";
-    sel.classList.toggle("hidden", w < 3 || h < 3); cutRect = w > 8 && h > 8 ? { x, y, w, h, cw: r.width, ch: r.height } : null; document.getElementById("cutGo").disabled = !cutRect; };
-  cv.addEventListener("pointerdown", e => { if(!PDFSRC) return; a = pt(e); cv.setPointerCapture(e.pointerId); show(a, a); });
-  cv.addEventListener("pointermove", e => { if(a) show(a, pt(e)); });
-  cv.addEventListener("pointerup", e => { if(a){ show(a, pt(e)); a = null; } });
+  const sel = document.getElementById("cutSel"), cv = document.getElementById("cutCanvas");
+  let drag = null;   // {mode: "new" | "move" | handle, start point, rect at start}
+  const P = e => { const r = cv.getBoundingClientRect(); return { x: Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), y: Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) }; };
+  const begin = (e, mode) => { if(!PDFSRC) return; e.preventDefault(); e.stopPropagation(); const p = P(e);
+    drag = { mode, p, r: cutRect ? Object.assign({}, cutRect) : { fx: p.x, fy: p.y, fw: 0, fh: 0 } };
+    if(mode === "new") cutRect = { fx: p.x, fy: p.y, fw: 0, fh: 0 };
+    (e.target.setPointerCapture ? e.target : cv).setPointerCapture(e.pointerId); cutPaint(); };
+  cv.addEventListener("pointerdown", e => begin(e, "new"));
+  sel.addEventListener("pointerdown", e => begin(e, e.target.dataset.h || "move"));
+  const move = e => {
+    if(!drag) return; const p = P(e), dx = p.x - drag.p.x, dy = p.y - drag.p.y, r0 = drag.r; let { fx, fy, fw, fh } = r0;
+    if(drag.mode === "new"){ fx = Math.min(drag.p.x, p.x); fy = Math.min(drag.p.y, p.y); fw = Math.abs(p.x - drag.p.x); fh = Math.abs(p.y - drag.p.y); }
+    else if(drag.mode === "move"){ fx = Math.max(0, Math.min(1 - fw, r0.fx + dx)); fy = Math.max(0, Math.min(1 - fh, r0.fy + dy)); }
+    else{
+      let x0 = r0.fx, y0 = r0.fy, x1 = r0.fx + r0.fw, y1 = r0.fy + r0.fh; const h = drag.mode;
+      if(h.includes("w")) x0 = Math.min(x1 - .005, Math.max(0, r0.fx + dx)); if(h.includes("e")) x1 = Math.max(x0 + .005, Math.min(1, r0.fx + r0.fw + dx));
+      if(h.includes("n")) y0 = Math.min(y1 - .005, Math.max(0, r0.fy + dy)); if(h.includes("s")) y1 = Math.max(y0 + .005, Math.min(1, r0.fy + r0.fh + dy));
+      fx = x0; fy = y0; fw = x1 - x0; fh = y1 - y0;
+    }
+    cutRect = { fx, fy, fw, fh }; cutPaint();
+  };
+  const end = () => { if(drag && cutRect && (cutRect.fw * cv.clientWidth < 4 || cutRect.fh * cv.clientHeight < 4) && drag.mode === "new") cutRect = null; drag = null; cutPaint(); };
+  [cv, sel].forEach(el => { el.addEventListener("pointermove", move); el.addEventListener("pointerup", end); el.addEventListener("pointercancel", end); });
+  sel.querySelectorAll("i").forEach(h => { h.addEventListener("pointermove", move); h.addEventListener("pointerup", end); });
 })();
 document.getElementById("cutGo").onclick = async () => {
   if(!PDFSRC || !cutRect || !cutT) return;
   const page = await PDFSRC.doc.getPage(cutPage), base = page.getViewport({ scale: 1 });
-  const k = 3 * Math.max(1, 1.4 / cutScale), vp = page.getViewport({ scale: cutScale * k });   // sharp: about 3× the screen
+  const vp = page.getViewport({ scale: Math.max(4, cutScale * 3) });   // sharp, whatever the zoom
   const big = document.createElement("canvas"); big.width = vp.width; big.height = vp.height;
   await page.render({ canvasContext: big.getContext("2d"), viewport: vp }).promise;
-  const fx = big.width / cutRect.cw, fy = big.height / cutRect.ch;
-  const out = document.createElement("canvas"); out.width = Math.round(cutRect.w * fx); out.height = Math.round(cutRect.h * fy);
+  const out = document.createElement("canvas"); out.width = Math.round(cutRect.fw * big.width); out.height = Math.round(cutRect.fh * big.height);
   const g = out.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, out.width, out.height);
-  g.drawImage(big, cutRect.x * fx, cutRect.y * fy, out.width, out.height, 0, 0, out.width, out.height);
-  const size = Math.max(15, Math.min(100, Math.round(cutRect.w / cutRect.cw * 100 / .8 / 5) * 5));   // about as big as on the PDF page (its text is ~80% of the page wide)
+  g.drawImage(big, cutRect.fx * big.width, cutRect.fy * big.height, out.width, out.height, 0, 0, out.width, out.height);
+  const size = Math.max(15, Math.min(100, Math.round(cutRect.fw * 100 / .8 / 5) * 5));   // about as big as on the PDF page (its text is ~80% of the page wide)
   $("#cutModal").classList.remove("open");
   placePicture(cutT, { src: out.toDataURL("image/png"), w: out.width, h: out.height }, size);
   toast("Picture cut from the PDF — resize or move it under the text");
