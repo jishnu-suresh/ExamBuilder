@@ -90,6 +90,8 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+.modal.open{padding-bottom:var(--kbh,0px)!important;transition:padding .15s}
+.modal.open .box{max-height:calc(92vh - var(--kbh,0px))}
 .seg-pick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 12px}
 .seg-pick label{display:block;border:1.5px solid var(--line);border-radius:10px;padding:9px 11px;cursor:pointer;font-size:13px;line-height:1.35}
 .seg-pick label:has(input:checked){border-color:var(--gold);background:var(--gold-xl)}

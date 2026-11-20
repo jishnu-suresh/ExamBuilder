@@ -146,6 +146,23 @@ function insertEq(){
   const card = document.querySelector(`.card[data-id="${it ? it.id : S.items[S.items.length - 1].id}"]`);
   if(card){ card.scrollIntoView({ behavior: "smooth", block: "center" }); }
 }
+/* ✕ Close keyboard: a button on the top edge of the maths keyboard, whatever tab is showing */
+function kbCloseButton(){
+  const K = window.mathVirtualKeyboard; if(!K || document.getElementById("kbClose")) return;
+  const b = document.createElement("button"); b.id = "kbClose"; b.type = "button"; b.textContent = "✕ Close keyboard"; b.title = "Close the maths keyboard";
+  b.style.cssText = "position:fixed;right:14px;z-index:2147482000;display:none;font:600 13px system-ui,sans-serif;padding:6px 12px;border-radius:9px 9px 0 0;border:1px solid #c9c2b3;border-bottom:0;background:#fff;color:#2a2620;cursor:pointer;box-shadow:0 -2px 8px rgba(0,0,0,.12)";
+  b.addEventListener("pointerdown", e => e.preventDefault());       // keep the maths box focused
+  b.addEventListener("click", () => { try{ K.hide(); }catch(_){} });
+  document.body.appendChild(b);
+  const place = () => {
+    const h = K.visible ? (K.boundingRect && K.boundingRect.height) || 0 : 0;
+    b.style.display = h > 0 ? "block" : "none"; b.style.bottom = h + "px";
+    document.body.style.setProperty("--kbh", h + "px");
+  };
+  K.addEventListener("geometrychange", place); K.addEventListener("virtual-keyboard-toggle", place);
+  setInterval(place, 700);           // the keyboard sometimes changes without telling anyone
+}
+if(document.readyState !== "loading") setTimeout(kbCloseButton, 500); else document.addEventListener("DOMContentLoaded", () => setTimeout(kbCloseButton, 500));
 function closeEq(){ $("#eqModal").classList.remove("open"); if(window.mathVirtualKeyboard) try{ mathVirtualKeyboard.hide(); }catch(e){} }
 $("#eqTabs").addEventListener("click", e => { const b = e.target.closest("button"); if(b) eqSetTab(b.dataset.m, true); });
 $("#eqTex").addEventListener("input", eqPreview);

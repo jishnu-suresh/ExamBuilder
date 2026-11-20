@@ -272,9 +272,21 @@ async def switch_files(b):
     d = await pg.evaluate("Promise.all([S.d.title, __disk('B'), __disk('C')])")
     ok("switching files: a save still running doesn't cross files", d == ["TC", "B edited", "TC"], d); await c.close()
 
+async def maths_keyboard_close(b):
+    # the maths keyboard has its own ✕ Close button, and the equation dialog moves up above the keyboard
+    c, pg, errs = await fresh(b)
+    await pg.evaluate("openEq()"); await pg.wait_for_timeout(600)
+    await pg.click("#kbToggle"); await pg.wait_for_timeout(900)
+    st = await pg.evaluate("({ kb: mathVirtualKeyboard.visible, btn: getComputedStyle($('#kbClose')).display, pad: getComputedStyle($('#eqModal')).paddingBottom })")
+    ok("maths keyboard: ✕ Close button shows on the keyboard", st["kb"] and st["btn"] == "block", st)
+    ok("equation dialog moves up above the keyboard", float(st["pad"].replace("px", "")) > 100, st)
+    await pg.click("#kbClose"); await pg.wait_for_timeout(900)
+    ok("✕ Close hides the keyboard", not await pg.evaluate("mathVirtualKeyboard.visible") and await pg.evaluate("getComputedStyle($('#kbClose')).display") == "none")
+    await c.close()
+
 CHECKS = [phones, sticky_preview, paste_details_rubric, formatting, pdf_guard, cut_from_pdf, drawings, mcq_ends_after_options,
           sub_question_split, mcq_split, page_breaks, click_to_jump, insert_menu, save_dialog, prompts, looks,
-          lead_in, settings_tabs, more_menu, tour_and_demo, switch_files]
+          lead_in, settings_tabs, more_menu, tour_and_demo, switch_files, maths_keyboard_close]
 
 async def main():
     os.chdir(OUT)
