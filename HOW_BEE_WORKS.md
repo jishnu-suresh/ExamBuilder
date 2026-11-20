@@ -165,6 +165,8 @@ A new version shows the "Fresh honey in the hive!" bar. The page only reloads af
 
 ## 6b. 💻 The computer version for students
 
+> 🧪 **Not launched yet.** The menu items are hidden (`.beta-only`) unless a browser was switched on with `?beta=bee` (`?beta=off` switches it off; it's remembered in `localStorage`). To launch, make `BETA` always true in `65_student_version.js`.
+
 **What happens:**
 
 1. The teacher chooses ⬇ ▾ → *Computer version for students* in BEE.

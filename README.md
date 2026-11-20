@@ -32,16 +32,6 @@ No internet / no install? Download the single-file version: [`docs/download/Exam
 - Accommodations: large print (16 pt, double spacing) download; separate-answer-sheet mode (compact paper)
 - Auto-saves to a project file every minute (Chrome/Edge); double-click `.exam.json` files to open them in the app
 - **🕘 Version history:** earlier copies of the exam kept in the browser, one click to restore or download
-- **💻 Computer version for students** (accessibility arrangements):
-  - One offline file a student answers on a laptop: typing, a full maths keyboard, French accents, drawing and labelling, and questions read aloud.
-  - Read aloud: pause, stop, back and next, speed, a voice choice, and Keep reading. Maths, units and chemistry are said in words ("three fifths", "9.8 metres per second squared", "C H 4 plus 2 O 2 gives…").
-  - Or a **read-aloud-only version**: the paper on screen with every question read aloud, while students write on the printed paper.
-  - Text size, easy-read and OpenDyslexic fonts, and cream or dark colours.
-  - A timer with extra time.
-  - The questions stay locked until the teacher types the start code.
-  - If the student leaves the screen, the laptop beeps and the test locks until the teacher code is typed.
-  - Answers save every few seconds and carry on after a crash, or on another laptop from a USB backup.
-  - The answers come back as a **sealed file only your BEE can open**. BEE turns it into the usual paper with the answers in blue, plus a record page (times, exits, automatic MCQ marks). It can also add the answer key in red for marking. A whole class downloads as one ZIP.
 - A 1-minute welcome tour for first-time users
 
 ## For developers
@@ -52,7 +42,7 @@ build/fetch_vendor.sh      # once: downloads pinned libraries into .vendor/ (nee
 python3 build/build.py     # builds docs/ (the web app) and docs/download/Exam_Builder_offline.html
 ```
 - `app/src/` — the application (HTML/CSS/JS), split into sections; `ORDER.txt` sets the order
-- `app/student/` — the computer version for students (built into `docs/student/player.html` and into the offline file)
+- `app/student/` — 🧪 work in progress, not launched yet (see HOW_BEE_WORKS.md)
 - `build/` — build script, service-worker template, vendor fetcher
 - `docs/` — generated site served by GitHub Pages (Settings → Pages → Branch `main`, folder `/docs`)
 - `tests/` — browser tests: `python3 tests/run_all.py` (also run by GitHub on every push)

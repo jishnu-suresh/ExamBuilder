@@ -105,6 +105,7 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+body:not(.beta) .beta-only{display:none!important}
 .modal.open{padding-bottom:var(--kbh,0px)!important;transition:padding .15s}
 .modal.open .box{max-height:calc(92vh - var(--kbh,0px))}
 .seg-pick{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:4px 0 12px}
@@ -444,8 +445,8 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
       <button data-dl="key"><b>Answer key</b><span>Teacher copy: correct options ✓ and model answers in red</span></button>
       <button data-dl="versions"><b>Versions A, B, C…</b><span>Shuffled copies for students sitting side by side</span></button>
       <button data-dl="questions"><b>Questions only</b><span>Without the cover page</span></button>
-      <button data-dl="student"><b>💻 Computer version for students</b><span>Students answer on a laptop, offline. Answers come back sealed for you</span></button>
-      <button data-dl="answers"><b>📥 Open student answers</b><span>Turn sealed answer files into PDFs to mark</span></button>
+      <button data-dl="student" class="beta-only"><b>💻 Computer version for students</b><span>Students answer on a laptop, offline. Answers come back sealed for you</span></button>
+      <button data-dl="answers" class="beta-only"><b>📥 Open student answers</b><span>Turn sealed answer files into PDFs to mark</span></button>
     </div>
   </span>
 </header>
@@ -4967,6 +4968,17 @@ $("#labApply").onclick = () => {
    Export: the exam becomes one offline HTML file (app/student/). The questions inside are locked with the start code;
    the full exam (with the answer key) is sealed for the teacher only and simply carried along.
    Answers: the student's file seals their answers with the teacher's public key. Only this BEE (teacher key) opens them. */
+/* 🧪 not launched yet: hidden from everyone except browsers switched on with the secret link  …/?beta=bee
+   (…/?beta=off switches it off again). To launch: make BETA always true. */
+const BETA = (() => {
+  try{
+    const q = new URLSearchParams(location.search).get("beta");
+    if(q === "bee"){ localStorage.setItem("bee.beta", "1"); setTimeout(() => toast("🧪 Test features are on in this browser (💻 student version). ?beta=off turns them off."), 1500); }
+    if(q === "off"){ localStorage.removeItem("bee.beta"); setTimeout(() => toast("Test features are off in this browser."), 1500); }
+    return localStorage.getItem("bee.beta") === "1";
+  }catch(_){ return false; }
+})();
+document.body.classList.toggle("beta", BETA);
 const PLAYER = /*__PLAYER__*/null;        // the offline BEE carries the template inside; the website fetches it
 const BLUE_HEX = "#1F4FB8";
 

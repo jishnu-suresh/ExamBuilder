@@ -2,6 +2,17 @@
    Export: the exam becomes one offline HTML file (app/student/). The questions inside are locked with the start code;
    the full exam (with the answer key) is sealed for the teacher only and simply carried along.
    Answers: the student's file seals their answers with the teacher's public key. Only this BEE (teacher key) opens them. */
+/* 🧪 not launched yet: hidden from everyone except browsers switched on with the secret link  …/?beta=bee
+   (…/?beta=off switches it off again). To launch: make BETA always true. */
+const BETA = (() => {
+  try{
+    const q = new URLSearchParams(location.search).get("beta");
+    if(q === "bee"){ localStorage.setItem("bee.beta", "1"); setTimeout(() => toast("🧪 Test features are on in this browser (💻 student version). ?beta=off turns them off."), 1500); }
+    if(q === "off"){ localStorage.removeItem("bee.beta"); setTimeout(() => toast("Test features are off in this browser."), 1500); }
+    return localStorage.getItem("bee.beta") === "1";
+  }catch(_){ return false; }
+})();
+document.body.classList.toggle("beta", BETA);
 const PLAYER = /*__PLAYER__*/null;        // the offline BEE carries the template inside; the website fetches it
 const BLUE_HEX = "#1F4FB8";
 

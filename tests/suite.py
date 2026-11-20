@@ -284,9 +284,23 @@ async def maths_keyboard_close(b):
     ok("✕ Close hides the keyboard", not await pg.evaluate("mathVirtualKeyboard.visible") and await pg.evaluate("getComputedStyle($('#kbClose')).display") == "none")
     await c.close()
 
+async def beta_switch(b):
+    # the student version is hidden until launch; the secret link switches it on for one browser
+    c, pg, errs = await fresh(b)
+    vis = lambda: pg.evaluate("[...document.querySelectorAll('#dlMenu [data-dl=student], #dlMenu [data-dl=answers]')].map(x => getComputedStyle(x).display !== 'none')")
+    await pg.click("#dlMenuBtn"); hidden = await vis()
+    await pg.goto(pg.url.split("?")[0] + "?beta=bee"); await pg.wait_for_timeout(1500); await pg.evaluate("$('#startModal').classList.remove('open')")
+    await pg.click("#dlMenuBtn"); shown = await vis()
+    await pg.goto(pg.url.split("?")[0]); await pg.wait_for_timeout(1500); await pg.evaluate("$('#startModal').classList.remove('open')")
+    await pg.click("#dlMenuBtn"); kept = await vis()
+    await pg.goto(pg.url.split("?")[0] + "?beta=off"); await pg.wait_for_timeout(1500); await pg.evaluate("$('#startModal').classList.remove('open')")
+    await pg.click("#dlMenuBtn"); off = await vis()
+    ok("student version hidden until the secret link, remembered, and ?beta=off hides it again", hidden == [False, False] and shown == [True, True] and kept == [True, True] and off == [False, False], [hidden, shown, kept, off])
+    await c.close()
+
 CHECKS = [phones, sticky_preview, paste_details_rubric, formatting, pdf_guard, cut_from_pdf, drawings, mcq_ends_after_options,
           sub_question_split, mcq_split, page_breaks, click_to_jump, insert_menu, save_dialog, prompts, looks,
-          lead_in, settings_tabs, more_menu, tour_and_demo, switch_files, maths_keyboard_close]
+          lead_in, settings_tabs, more_menu, tour_and_demo, switch_files, maths_keyboard_close, beta_switch]
 
 async def main():
     os.chdir(OUT)
