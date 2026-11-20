@@ -100,6 +100,10 @@ body:not(.beta) .beta-only{display:none!important}
 .seg-pick b{display:block;margin-bottom:3px;font-size:13.5px}
 .seg-pick span{color:var(--muted)}
 @media (max-width:560px){.seg-pick{grid-template-columns:1fr}}
+.acc-box{margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#FCFAF5;font-size:13.5px}
+.acc-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;margin-top:6px}
+.acc-box .f{display:flex;flex-direction:column;gap:3px;font-size:13px}
+@media (max-width:560px){.acc-grid{grid-template-columns:1fr}}
 .key-row{margin-top:12px;padding:9px 12px;border-radius:10px;background:var(--gold-xl);border:1px solid var(--line);font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .key-row.warn{background:#FDF0EC;border-color:#E9B4AD}
 .codes{display:flex;gap:14px;margin:12px 0}

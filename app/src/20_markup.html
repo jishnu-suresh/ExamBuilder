@@ -537,6 +537,17 @@ x = 3
         <label id="stuReadRow"><input type="checkbox" id="stuRead" checked> 🔊 Students may have questions read aloud <span class="hint">(turn off for reading tests)</span></label>
         <label id="stuDrawRow"><input type="checkbox" id="stuDraw" checked> ✏️ Drawing pad (sketches, graphs, labelling pictures)</label>
       </div>
+      <div class="acc-box" id="stuAcc">
+        <b>Accommodations the student may switch on</b> <span class="hint">(text size, fonts and colours are always there)</span>
+        <div class="acc-grid">
+          <label><input type="checkbox" id="accOverlay" checked> 🟨 Coloured overlay</label>
+          <label><input type="checkbox" id="accRuler" checked> 📏 Reading ruler</label>
+          <label><input type="checkbox" id="accSpacing" checked> ↔ Wider letter and word spacing</label>
+          <label><input type="checkbox" id="accHigh" checked> 🖍 Highlighter</label>
+          <label><input type="checkbox" id="accBreaks" checked> ☕ Supervised rest breaks <span class="hint">(you pause the clock)</span></label>
+        </div>
+        <label class="f" style="margin-top:6px">⏱ Clock<select id="accClock"><option value="show">Show the countdown</option><option value="hide">Hide the countdown (only the 10 and 5 minute notices)</option><option value="checks">Countdown plus a time check every 15 minutes</option></select></label>
+      </div>
       <p class="hint" id="stuTotal" style="margin:8px 0 0"></p>
       <div class="fields" style="margin-top:10px">
         <label class="f">Start code <span class="hint">— you type it to start</span><span style="display:flex;gap:6px"><input type="text" id="stuCode" style="font:700 15px ui-monospace,monospace;letter-spacing:.08em"><button class="btn sm" type="button" id="stuCodeNew" title="New code">🔄</button></span></label>

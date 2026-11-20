@@ -204,6 +204,7 @@ A new version shows the "Fresh honey in the hive!" bar. The page only reloads af
 | `55_drawing.js` | The drawing pad |
 | `60_guard.js` | Full screen with the keyboard captured (Keyboard Lock: Esc, Alt+Tab, Windows key; holding Esc 2 s always gets out). On every exit: beep, lock and record, with an alarm every 2 s while away. The lock screen covers everything and needs the teacher code. Sound is switched on in the Start click (`soundOn()`). Also: no paste, wake lock, the clock, the teacher menu. |
 | `70_access.js` | Text size, spacing, fonts (Atkinson Hyperlegible, OpenDyslexic), colours, French accents. Read aloud: the reading bar (⏮ ⏯ ⏹ ⏭, speed, voice list with natural voices first, Keep reading), sentence by sentence over `UNITS` |
+| `75_support.js` | Accommodations the teacher allowed (`EXAM.acc`): coloured overlay, reading ruler, letter and word spacing, highlighter (saved in `ST.hl`), supervised rest breaks (`ST.breakAt`/`ST.paused` stop the clock). Also a big pointer, and Alt+↓/↑ for the next/previous question. The clock option (`acc.clock`: show / hide / checks) is in `60_guard.js`. |
 | `80_flow.js` | Start or carry on. The teacher's **save folder** (`chooseFolder()`, Chrome/Edge) gets backups every minute and the final answers file; without one, the answers go to Downloads. Carrying on from a backup. End the test → a sealed `.bee-answers` file → "This test has ended" |
 
 **Back in BEE:** 📥 *Open student answers* unseals the answers and the exam, then builds the PDF with `buildPDF({ resp })`:

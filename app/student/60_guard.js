@@ -87,14 +87,28 @@ document.addEventListener("keydown", e => {
 });
 
 /* ---- the clock ---- */
+// the clock, as the teacher chose: "show" (countdown), "hide" (no countdown, only the 10 and 5 minute notices),
+// "checks" (countdown plus a time check every 15 minutes). A rest break pauses it.
 function tick(){
   if(!ST || ST.endedAt || !EXAM.timeMin) return;
-  const ms = leftMs(), t = $("#bTimer");
-  t.classList.remove("hidden"); t.textContent = "⏱ " + dur(ms); t.classList.toggle("low", ms < 5 * 60000);
+  const ms = leftMs(), t = $("#bTimer"), mode = (EXAM.acc && EXAM.acc.clock) || "show";
+  t.classList.toggle("hidden", mode === "hide");
+  t.textContent = ST.breakAt ? "☕ paused" : "⏱ " + dur(ms); t.classList.toggle("low", ms < 5 * 60000);
+  if(ST.breakAt) return;
   ST.warned = ST.warned || {};
-  if(ms < 10 * 60000 && !ST.warned[10] && ms > 5 * 60000){ ST.warned[10] = 1; toast("10 minutes left.", 6000); }
-  if(ms < 5 * 60000 && !ST.warned[5] && ms > 0){ ST.warned[5] = 1; toast("5 minutes left. Check your answers.", 7000); }
+  const note = (txt, ms) => mode === "hide" ? timeNote(txt) : toast(txt, ms);
+  if(ms < 10 * 60000 && !ST.warned[10] && ms > 5 * 60000){ ST.warned[10] = 1; note("10 minutes left.", 6000); }
+  if(ms < 5 * 60000 && !ST.warned[5] && ms > 0){ ST.warned[5] = 1; note("5 minutes left. Check your answers.", 7000); }
+  if(mode === "checks"){
+    const q = Math.floor(ms / 900000);                 // every 15 minutes
+    if(ST.lastCheck == null) ST.lastCheck = q;
+    if(q < ST.lastCheck && ms > 10 * 60000){ ST.lastCheck = q; timeNote("Time check: " + Math.round(ms / 60000) + " minutes left."); }
+  }
   if(ms <= 0) endTest("time");
+}
+function timeNote(txt){
+  const n = document.createElement("div"); n.className = "time-note"; n.setAttribute("role", "status"); n.textContent = "⏱ " + txt;
+  document.body.appendChild(n); setTimeout(() => n.remove(), 9000);
 }
 setInterval(tick, 1000);
 

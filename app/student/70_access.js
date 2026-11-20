@@ -8,6 +8,7 @@ function applyPrefs(){
   $("#bMathKb").classList.toggle("on", !!p.mathKb); $("#bAccents").classList.toggle("on", !!p.accents);
   $$("#mView .seg").forEach(s => { const k = s.dataset.pref, v = String(p[k] == null ? (k === "size" ? 17 : "") : p[k]); s.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === v)); });
   if(!p.accents) $("#accBar").classList.add("hidden");
+  applySupport();
   $$("#paper textarea").forEach(t => { t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px"; });
 }
 $("#bView").onclick = () => openM("#mView");

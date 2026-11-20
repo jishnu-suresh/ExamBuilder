@@ -36,6 +36,7 @@ function renderPaper(){
       </div></section>`;
   }
   el.innerHTML = h;
+  restoreHighlights();
   UNITS.forEach((x, k) => { x.el = el.querySelector(`[data-u="${k}"]`); });
   if(!RO) for(const it of P.items){
     if(it.k !== "q") continue;

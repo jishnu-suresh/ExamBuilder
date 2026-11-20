@@ -78,6 +78,7 @@ function startExam(){
   show("#scrExam"); if(!RO) setupMathKeyboard(); renderPaper(); applyPrefs(); setupReading(); if(ST.prefs.accents && !RO){ accBar(); $("#accBar").classList.remove("hidden"); }
   guardStart(); tick(); changed(); saveNow();
   window.scrollTo(0, 0);
+  if(ST.breakAt) showBreak();          // carried on during a rest break: still paused
 }
 
 /* ---- backup copy on a USB stick or folder (Chrome / Edge) ---- */
@@ -132,7 +133,8 @@ $("#finGo").onclick = () => { closeM("#mFinish"); finishReading("student"); };
 async function finishReading(by){
   if(!ST || ST.endedAt) return;
   ST.endedAt = now(); ST.endedBy = by; logEv("finished", { by });
-  guardStop(); stopReading(); $("#scrLock").classList.add("hidden"); $$(".modal").forEach(m => m.classList.add("hidden"));
+  if(ST.breakAt){ ST.paused = (ST.paused || 0) + now() - ST.breakAt; ST.breakAt = null; }
+  guardStop(); stopReading(); $("#scrLock").classList.add("hidden"); $("#scrBreak").classList.add("hidden"); $$(".modal").forEach(m => m.classList.add("hidden"));
   await saveNow();
   show("#scrEnded");
   $("#scrEnded h1").textContent = "Finished";
@@ -144,10 +146,12 @@ async function endTest(by){
   if(READ_ONLY()) return finishReading(by);
   if(!ST || ST.endedAt) return;
   ST.endedAt = now(); ST.endedBy = by; logEv("ended", { by });
-  guardStop(); stopReading(); $("#scrLock").classList.add("hidden"); $$(".modal").forEach(m => m.classList.add("hidden"));
+  if(ST.breakAt){ ST.paused = (ST.paused || 0) + now() - ST.breakAt; ST.breakAt = null; }
+  guardStop(); stopReading(); $("#scrLock").classList.add("hidden"); $("#scrBreak").classList.add("hidden"); $$(".modal").forEach(m => m.classList.add("hidden"));
   if(window.mathVirtualKeyboard) try{ mathVirtualKeyboard.hide(); }catch(_){}
   const payload = { examId: EXAM.examId, name: ST.name, cls: ST.cls, startedAt: ST.startedAt, endedAt: ST.endedAt, endedBy: by,
-    timeMin: EXAM.timeMin, baseMin: EXAM.baseMin, extraPct: EXAM.extraPct, extraMin: ST.extraMin || 0, log: ST.log, answers: ST.answers, flags: ST.flags, prefs: ST.prefs, ua: ST.ua };
+    timeMin: EXAM.timeMin, baseMin: EXAM.baseMin, extraPct: EXAM.extraPct, extraMin: ST.extraMin || 0, log: ST.log, answers: ST.answers, flags: ST.flags, prefs: ST.prefs, ua: ST.ua,
+    paused: ST.paused || 0, breaks: ST.breaks || 0, hlCount: ST.hlCount || 0, acc: EXAM.acc || {} };
   const file = { bee: "answers", v: 1, kid: EXAM.kid, examId: EXAM.examId, title: EXAM.title, created: now(), sealed: await BC.seal(payload, EXAM.pub), teacher: EXAM.teacher };
   const name = safeName(EXAM.title + " - " + ST.name) + ".bee-answers", text = JSON.stringify(file);
   const done = { name, text, who: ST.name, at: ST.endedAt, by, folder: "" };

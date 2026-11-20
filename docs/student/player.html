@@ -3373,6 +3373,23 @@ body.tts-up .wrap{padding-bottom:90px}
 .ro-opts > div{display:flex;gap:10px;padding:6px 12px;border:1px solid var(--line);border-radius:10px}
 .ro-opts b{min-width:1.4em}
 
+/* accommodations */
+.overlay{position:fixed;inset:0;z-index:42;pointer-events:none;mix-blend-mode:multiply}
+.overlay.yellow{background:rgba(255,236,120,.38)}.overlay.blue{background:rgba(140,190,255,.32)}.overlay.green{background:rgba(150,225,160,.32)}.overlay.pink{background:rgba(255,170,200,.30)}.overlay.peach{background:rgba(255,195,140,.34)}
+.seg .ov-y{background:#FFF1A8}.seg .ov-b{background:#D4E6FF}.seg .ov-g{background:#D6F2DA}.seg .ov-p{background:#FFDDE8}.seg .ov-o{background:#FFE3CC}
+.ruler{position:fixed;left:0;right:0;z-index:41;pointer-events:none;background:rgba(20,16,8,.42)}
+#rulerTop{top:0}#rulerBot{bottom:0}
+body.lt-wide .paper{letter-spacing:.05em;word-spacing:.16em}
+body.lt-wider .paper{letter-spacing:.1em;word-spacing:.3em}
+body.big-ptr, body.big-ptr *{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cpath d='M3 2 L3 30 L11 22 L16 33 L21 31 L16 20 L27 20 Z' fill='black' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 3 2, auto!important}
+body.big-ptr :focus-visible, body.big-ptr :focus{outline:4px solid #1F4FB8!important;outline-offset:3px}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+mark.hl{background:#FFE94D;color:inherit;border-radius:2px;padding:0 1px;cursor:pointer}
+body.hl-on .paper .rich{cursor:text}
+body.hl-on #bHigh{background:#FFF1A8;border-color:#D9B900}
+body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
+.time-note{position:fixed;left:50%;top:80px;transform:translateX(-50%);z-index:60;background:#fff;border:2px solid var(--gold);border-radius:14px;padding:14px 22px;font-size:1.1em;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+
 /* screens and dialogs */
 .screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .box{background:var(--paper);border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 40px rgba(0,0,0,.08);padding:28px 30px;max-width:560px;width:100%}
@@ -3466,6 +3483,8 @@ body.tts-up .wrap{padding-bottom:90px}
     <button class="btn" id="bMathKb" title="Show the maths keyboard when you type maths">√x Maths keyboard</button>
     <button class="btn" id="bAccents" title="French accents: é è ê à ç …">é Accents</button>
     <button class="btn" id="bView" title="Text size, spacing, colours, easy-read fonts">Aa</button>
+    <button class="btn hidden" id="bRuler" title="Reading ruler: a band that follows the line you are reading">📏 Ruler</button>
+    <button class="btn hidden" id="bHigh" title="Highlighter: select words in a question to highlight them">🖍 Highlight</button>
     <button class="btn" id="bTeacher" title="For the teacher">👩‍🏫</button>
     <span class="timer hidden" id="bTimer" title="Time left"></span>
     <button class="btn hidden" id="bReadAll" title="Read the paper aloud from the beginning">▶ Read from the start</button>
@@ -3498,6 +3517,10 @@ body.tts-up .wrap{padding-bottom:90px}
   <label>Line spacing</label><div class="seg" data-pref="space"><button data-v="">Normal</button><button data-v="wide">Wide</button></div>
   <label>Font</label><div class="seg" data-pref="font"><button data-v="">Standard</button><button data-v="easy" style="font-family:'Atkinson Hyperlegible'">Easy-read</button><button data-v="dys" style="font-family:'OpenDyslexic'">OpenDyslexic</button></div>
   <label>Colours</label><div class="seg" data-pref="colour"><button data-v="">White</button><button data-v="cream">Cream</button><button data-v="dark">Dark</button></div>
+  <div data-acc="overlay"><label>Coloured overlay</label><div class="seg" data-pref="overlay"><button data-v="">None</button><button data-v="yellow" class="ov-y">Yellow</button><button data-v="blue" class="ov-b">Blue</button><button data-v="green" class="ov-g">Green</button><button data-v="pink" class="ov-p">Pink</button><button data-v="peach" class="ov-o">Peach</button></div></div>
+  <div data-acc="spacing"><label>Space between letters and words</label><div class="seg" data-pref="letters"><button data-v="">Normal</button><button data-v="wide">Wide</button><button data-v="wider">Wider</button></div></div>
+  <label>Mouse pointer and focus</label><div class="seg" data-pref="pointer"><button data-v="">Normal</button><button data-v="big">Big pointer, thick focus outline</button></div>
+  <p class="muted" style="font-size:.8em;margin-top:10px">Keyboard: Tab moves between answers · Alt + ↓ / Alt + ↑ go to the next / previous question.</p>
   <div class="row"><button class="btn primary" data-close>Done</button></div>
 </div></div>
 
@@ -3524,11 +3547,25 @@ body.tts-up .wrap{padding-bottom:90px}
   <div id="tMenu" class="hidden">
     <p class="muted" id="tInfo"></p>
     <p class="muted" id="tSaveInfo"></p>
+    <div class="row hidden" id="tBreakRow" style="margin:0 0 10px"><button class="btn" id="tBreak">☕ Start a rest break (pauses the clock)</button></div>
     <label>Add time</label><div class="seg"><button data-add="5">+5 min</button><button data-add="10">+10 min</button><button data-add="15">+15 min</button><button data-add="30">+30 min</button></div>
     <div class="row" style="margin-top:6px"><button class="btn" id="tSave">📁 Change where answers are saved</button></div>
     <div class="row"><button class="btn danger" id="tEnd">End the test for this student</button><span style="flex:1"></span><button class="btn primary" data-close>Close</button></div>
   </div>
 </div></div>
+
+<!-- supervised rest break: the clock is paused and the paper is covered -->
+<div class="lockscr hidden" id="scrBreak" style="background:#1E3A2F"><div class="box">
+  <div class="big">☕</div>
+  <h1>Rest break</h1>
+  <p><b>The clock is paused.</b> Your answers are safe.</p>
+  <p class="muted" id="brkSince"></p>
+  <label for="brkCode">Teacher code to carry on</label><input type="password" id="brkCode" class="code" autocomplete="off" inputmode="numeric">
+  <div class="err" id="brkErr"></div>
+  <div class="row"><button class="btn primary" id="brkGo">Carry on with the test</button></div>
+</div></div>
+<div class="overlay hidden" id="ovl" aria-hidden="true"></div>
+<div class="ruler hidden" id="rulerTop" aria-hidden="true"></div><div class="ruler hidden" id="rulerBot" aria-hidden="true"></div>
 
 <!-- locked: the student left the test -->
 <div class="lockscr hidden" id="scrLock"><div class="box">
@@ -3683,7 +3720,8 @@ function changed(){ dirty = true; }
 
 /* ---- time ---- */
 function allowedMs(){ return EXAM.timeMin ? (EXAM.timeMin + (ST.extraMin || 0)) * 60000 : 0; }
-function leftMs(){ return ST.startedAt + allowedMs() - now(); }
+// rest breaks pause the clock: finished breaks are in ST.paused (ms); a break in progress started at ST.breakAt
+function leftMs(){ return ST.startedAt + allowedMs() + (ST.paused || 0) + (ST.breakAt ? now() - ST.breakAt : 0) - now(); }
 
 /* ---- the question paper (the HTML was made by BEE, from the same text as the printed paper) ---- */
 const READ_ONLY = () => EXAM.mode === "read";
@@ -3723,6 +3761,7 @@ function renderPaper(){
       </div></section>`;
   }
   el.innerHTML = h;
+  restoreHighlights();
   UNITS.forEach((x, k) => { x.el = el.querySelector(`[data-u="${k}"]`); });
   if(!RO) for(const it of P.items){
     if(it.k !== "q") continue;
@@ -4168,14 +4207,28 @@ document.addEventListener("keydown", e => {
 });
 
 /* ---- the clock ---- */
+// the clock, as the teacher chose: "show" (countdown), "hide" (no countdown, only the 10 and 5 minute notices),
+// "checks" (countdown plus a time check every 15 minutes). A rest break pauses it.
 function tick(){
   if(!ST || ST.endedAt || !EXAM.timeMin) return;
-  const ms = leftMs(), t = $("#bTimer");
-  t.classList.remove("hidden"); t.textContent = "⏱ " + dur(ms); t.classList.toggle("low", ms < 5 * 60000);
+  const ms = leftMs(), t = $("#bTimer"), mode = (EXAM.acc && EXAM.acc.clock) || "show";
+  t.classList.toggle("hidden", mode === "hide");
+  t.textContent = ST.breakAt ? "☕ paused" : "⏱ " + dur(ms); t.classList.toggle("low", ms < 5 * 60000);
+  if(ST.breakAt) return;
   ST.warned = ST.warned || {};
-  if(ms < 10 * 60000 && !ST.warned[10] && ms > 5 * 60000){ ST.warned[10] = 1; toast("10 minutes left.", 6000); }
-  if(ms < 5 * 60000 && !ST.warned[5] && ms > 0){ ST.warned[5] = 1; toast("5 minutes left. Check your answers.", 7000); }
+  const note = (txt, ms) => mode === "hide" ? timeNote(txt) : toast(txt, ms);
+  if(ms < 10 * 60000 && !ST.warned[10] && ms > 5 * 60000){ ST.warned[10] = 1; note("10 minutes left.", 6000); }
+  if(ms < 5 * 60000 && !ST.warned[5] && ms > 0){ ST.warned[5] = 1; note("5 minutes left. Check your answers.", 7000); }
+  if(mode === "checks"){
+    const q = Math.floor(ms / 900000);                 // every 15 minutes
+    if(ST.lastCheck == null) ST.lastCheck = q;
+    if(q < ST.lastCheck && ms > 10 * 60000){ ST.lastCheck = q; timeNote("Time check: " + Math.round(ms / 60000) + " minutes left."); }
+  }
   if(ms <= 0) endTest("time");
+}
+function timeNote(txt){
+  const n = document.createElement("div"); n.className = "time-note"; n.setAttribute("role", "status"); n.textContent = "⏱ " + txt;
+  document.body.appendChild(n); setTimeout(() => n.remove(), 9000);
 }
 setInterval(tick, 1000);
 
@@ -4209,6 +4262,7 @@ function applyPrefs(){
   $("#bMathKb").classList.toggle("on", !!p.mathKb); $("#bAccents").classList.toggle("on", !!p.accents);
   $$("#mView .seg").forEach(s => { const k = s.dataset.pref, v = String(p[k] == null ? (k === "size" ? 17 : "") : p[k]); s.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.v === v)); });
   if(!p.accents) $("#accBar").classList.add("hidden");
+  applySupport();
   $$("#paper textarea").forEach(t => { t.style.height = "auto"; t.style.height = t.scrollHeight + 2 + "px"; });
 }
 $("#bView").onclick = () => openM("#mView");
@@ -4329,6 +4383,107 @@ document.addEventListener("click", e => {
 });
 $("#bReadAll").onclick = () => readUnit(0);
 
+/* ---- accommodations the teacher allowed (EXAM.acc): coloured overlay, reading ruler, letter spacing,
+        highlighter, supervised rest breaks — plus a big pointer and keyboard shortcuts for everyone ---- */
+const ALLOW = () => EXAM.acc || {};
+function applySupport(){
+  const p = ST.prefs, A = ALLOW(), B = document.body;
+  // only what the teacher allowed is offered
+  $$("#mView [data-acc]").forEach(el => el.classList.toggle("hidden", !A[el.dataset.acc]));
+  $("#bRuler").classList.toggle("hidden", !A.ruler);
+  $("#bHigh").classList.toggle("hidden", !A.highlight);
+  $("#tBreakRow").classList.toggle("hidden", !A.breaks);
+  const ov = A.overlay ? p.overlay || "" : "";
+  $("#ovl").className = "overlay" + (ov ? " " + ov : " hidden");
+  B.classList.toggle("lt-wide", !!A.spacing && p.letters === "wide"); B.classList.toggle("lt-wider", !!A.spacing && p.letters === "wider");
+  B.classList.toggle("big-ptr", p.pointer === "big");
+  setRuler(!!A.ruler && !!p.ruler);
+  B.classList.toggle("hl-on", !!A.highlight && !!HL.on);
+}
+
+/* 📏 reading ruler: everything is dimmed except a band around the line being read (follows the mouse, or the answer being typed) */
+let rulerY = innerHeight / 3;
+function setRuler(on){
+  document.body.classList.toggle("ruler-on", on);
+  $("#rulerTop").classList.toggle("hidden", !on); $("#rulerBot").classList.toggle("hidden", !on);
+  if(on) placeRuler();
+}
+function placeRuler(){
+  if(!document.body.classList.contains("ruler-on")) return;
+  const lh = parseFloat(getComputedStyle(document.body).fontSize) * 1.7 * 1.6, half = Math.max(26, lh);
+  $("#rulerTop").style.height = Math.max(0, rulerY - half) + "px";
+  $("#rulerBot").style.top = (rulerY + half) + "px";
+}
+document.addEventListener("pointermove", e => { if(document.body.classList.contains("ruler-on")){ rulerY = e.clientY; placeRuler(); } }, { passive: true });
+document.addEventListener("focusin", e => { if(!document.body.classList.contains("ruler-on")) return; const r = e.target.getBoundingClientRect && e.target.getBoundingClientRect(); if(r && r.height){ rulerY = r.top + Math.min(r.height, 60) / 2; placeRuler(); } });
+$("#bRuler").onclick = () => { ST.prefs.ruler = !ST.prefs.ruler; if(ST.prefs.ruler) logEv("reading ruler on"); changed(); applySupport(); };
+
+/* 🖍 highlighter: select words in a question to highlight them; click a highlight to remove it. Kept with the answers. */
+const HL = { on: false };
+$("#bHigh").onclick = () => { HL.on = !HL.on; applySupport(); toast(HL.on ? "Select words in a question to highlight them. Click a highlight to remove it." : "Highlighter off."); };
+function richOf(n){ const el = n && (n.nodeType === 1 ? n : n.parentElement); return el && el.closest("#paper .rich"); }
+function saveHighlights(){
+  ST.hl = {};
+  $$("#paper .rich[data-r]").forEach(el => { if(!el.querySelector("mark.hl")) return; const c = el.cloneNode(true); c.querySelectorAll(".drawon").forEach(x => x.remove()); ST.hl[el.dataset.r] = c.innerHTML; });
+  changed();
+}
+function restoreHighlights(){
+  $$("#paper .rich").forEach((el, k) => { el.dataset.r = k; if(ST.hl && ST.hl[k]) el.innerHTML = ST.hl[k]; });
+}
+document.addEventListener("mouseup", () => {
+  if(!HL.on || ST.endedAt) return;
+  const sel = getSelection(); if(!sel.rangeCount || sel.isCollapsed) return;
+  const range = sel.getRangeAt(0);
+  if(!richOf(range.startContainer) || !richOf(range.endContainer)) return;
+  // wrap every piece of text inside the selection (it can cross bold, italics, lines…)
+  const texts = [], root = range.commonAncestorContainer.nodeType === 1 ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => range.intersectsNode(n) && n.textContent.trim() && richOf(n) && !n.parentElement.closest("mark.hl, svg, button") ? 1 : 2 });
+  for(let n; (n = w.nextNode());) texts.push(n);
+  texts.forEach(n => {
+    let s = 0, e = n.textContent.length;
+    if(n === range.startContainer) s = range.startOffset;
+    if(n === range.endContainer) e = range.endOffset;
+    if(e <= s) return;
+    const mid = n.splitText(s); mid.splitText(e - s);
+    const m = document.createElement("mark"); m.className = "hl"; mid.before(m); m.appendChild(mid);
+  });
+  sel.removeAllRanges();
+  if(texts.length){ ST.hlCount = (ST.hlCount || 0) + 1; if(ST.hlCount === 1) logEv("used the highlighter"); saveHighlights(); }
+});
+document.addEventListener("click", e => {
+  const m = e.target.closest && e.target.closest("mark.hl"); if(!m || !HL.on) return;
+  m.replaceWith(...m.childNodes); saveHighlights();
+});
+
+/* ☕ supervised rest break: the teacher starts it (teacher code), the clock stops, the paper is covered */
+function showBreak(){
+  try{ stopReading(); }catch(_){}
+  $("#brkCode").value = ""; $("#brkErr").textContent = ""; $("#brkSince").textContent = "Started at " + hm(ST.breakAt) + ". Time left when you carry on: " + dur(leftMs()) + ".";
+  $("#scrBreak").classList.remove("hidden"); setTimeout(() => $("#brkCode").focus(), 60);
+}
+$("#tBreak").onclick = () => {
+  closeM("#mTeacher"); ST.breakAt = now(); logEv("rest break started"); changed(); saveNow(); showBreak();
+};
+$("#brkGo").onclick = async () => {
+  soundOn(); goFull();
+  if(!(await teacherOK($("#brkCode").value))){ $("#brkErr").textContent = "That's not the teacher code."; return; }
+  const ms = now() - ST.breakAt; ST.paused = (ST.paused || 0) + ms; ST.breakAt = null; ST.breaks = (ST.breaks || 0) + 1;
+  logEv("rest break ended", { ms }); $("#scrBreak").classList.add("hidden"); changed(); saveNow(); tick();
+};
+$("#brkCode").addEventListener("keydown", e => { if(e.key === "Enter") $("#brkGo").click(); });
+
+/* ⌨ keyboard: Alt+↓ / Alt+↑ go to the next / previous question (and into its answer) */
+document.addEventListener("keydown", e => {
+  if(!e.altKey || (e.key !== "ArrowDown" && e.key !== "ArrowUp") || !PAPER || $("#scrExam").classList.contains("hidden")) return;
+  e.preventDefault();
+  const qs = $$("#paper .q"); if(!qs.length) return;
+  const cur = document.activeElement && document.activeElement.closest && document.activeElement.closest(".q");
+  let i = cur ? qs.indexOf(cur) : qs.findIndex(q => q.getBoundingClientRect().top > 70) - (e.key === "ArrowDown" ? 1 : 0);
+  i = Math.max(0, Math.min(qs.length - 1, i + (e.key === "ArrowDown" ? 1 : -1)));
+  qs[i].scrollIntoView({ block: "start" });
+  const f = qs[i].querySelector("textarea, math-field, input, [data-say]"); if(f) f.focus({ preventScroll: true });
+});
+
 /* ---- start → test → end ---- */
 let RESUME = null, saveDir = null, lastBackup = 0, picking = false;
 const safeName = s => String(s || "").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 80) || "exam";
@@ -4409,6 +4564,7 @@ function startExam(){
   show("#scrExam"); if(!RO) setupMathKeyboard(); renderPaper(); applyPrefs(); setupReading(); if(ST.prefs.accents && !RO){ accBar(); $("#accBar").classList.remove("hidden"); }
   guardStart(); tick(); changed(); saveNow();
   window.scrollTo(0, 0);
+  if(ST.breakAt) showBreak();          // carried on during a rest break: still paused
 }
 
 /* ---- backup copy on a USB stick or folder (Chrome / Edge) ---- */
@@ -4463,7 +4619,8 @@ $("#finGo").onclick = () => { closeM("#mFinish"); finishReading("student"); };
 async function finishReading(by){
   if(!ST || ST.endedAt) return;
   ST.endedAt = now(); ST.endedBy = by; logEv("finished", { by });
-  guardStop(); stopReading(); $("#scrLock").classList.add("hidden"); $$(".modal").forEach(m => m.classList.add("hidden"));
+  if(ST.breakAt){ ST.paused = (ST.paused || 0) + now() - ST.breakAt; ST.breakAt = null; }
+  guardStop(); stopReading(); $("#scrLock").classList.add("hidden"); $("#scrBreak").classList.add("hidden"); $$(".modal").forEach(m => m.classList.add("hidden"));
   await saveNow();
   show("#scrEnded");
   $("#scrEnded h1").textContent = "Finished";
@@ -4475,10 +4632,12 @@ async function endTest(by){
   if(READ_ONLY()) return finishReading(by);
   if(!ST || ST.endedAt) return;
   ST.endedAt = now(); ST.endedBy = by; logEv("ended", { by });
-  guardStop(); stopReading(); $("#scrLock").classList.add("hidden"); $$(".modal").forEach(m => m.classList.add("hidden"));
+  if(ST.breakAt){ ST.paused = (ST.paused || 0) + now() - ST.breakAt; ST.breakAt = null; }
+  guardStop(); stopReading(); $("#scrLock").classList.add("hidden"); $("#scrBreak").classList.add("hidden"); $$(".modal").forEach(m => m.classList.add("hidden"));
   if(window.mathVirtualKeyboard) try{ mathVirtualKeyboard.hide(); }catch(_){}
   const payload = { examId: EXAM.examId, name: ST.name, cls: ST.cls, startedAt: ST.startedAt, endedAt: ST.endedAt, endedBy: by,
-    timeMin: EXAM.timeMin, baseMin: EXAM.baseMin, extraPct: EXAM.extraPct, extraMin: ST.extraMin || 0, log: ST.log, answers: ST.answers, flags: ST.flags, prefs: ST.prefs, ua: ST.ua };
+    timeMin: EXAM.timeMin, baseMin: EXAM.baseMin, extraPct: EXAM.extraPct, extraMin: ST.extraMin || 0, log: ST.log, answers: ST.answers, flags: ST.flags, prefs: ST.prefs, ua: ST.ua,
+    paused: ST.paused || 0, breaks: ST.breaks || 0, hlCount: ST.hlCount || 0, acc: EXAM.acc || {} };
   const file = { bee: "answers", v: 1, kid: EXAM.kid, examId: EXAM.examId, title: EXAM.title, created: now(), sealed: await BC.seal(payload, EXAM.pub), teacher: EXAM.teacher };
   const name = safeName(EXAM.title + " - " + ST.name) + ".bee-answers", text = JSON.stringify(file);
   const done = { name, text, who: ST.name, at: ST.endedAt, by, folder: "" };

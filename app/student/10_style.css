@@ -126,6 +126,23 @@ body.tts-up .wrap{padding-bottom:90px}
 .ro-opts > div{display:flex;gap:10px;padding:6px 12px;border:1px solid var(--line);border-radius:10px}
 .ro-opts b{min-width:1.4em}
 
+/* accommodations */
+.overlay{position:fixed;inset:0;z-index:42;pointer-events:none;mix-blend-mode:multiply}
+.overlay.yellow{background:rgba(255,236,120,.38)}.overlay.blue{background:rgba(140,190,255,.32)}.overlay.green{background:rgba(150,225,160,.32)}.overlay.pink{background:rgba(255,170,200,.30)}.overlay.peach{background:rgba(255,195,140,.34)}
+.seg .ov-y{background:#FFF1A8}.seg .ov-b{background:#D4E6FF}.seg .ov-g{background:#D6F2DA}.seg .ov-p{background:#FFDDE8}.seg .ov-o{background:#FFE3CC}
+.ruler{position:fixed;left:0;right:0;z-index:41;pointer-events:none;background:rgba(20,16,8,.42)}
+#rulerTop{top:0}#rulerBot{bottom:0}
+body.lt-wide .paper{letter-spacing:.05em;word-spacing:.16em}
+body.lt-wider .paper{letter-spacing:.1em;word-spacing:.3em}
+body.big-ptr, body.big-ptr *{cursor:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='36' height='36'%3E%3Cpath d='M3 2 L3 30 L11 22 L16 33 L21 31 L16 20 L27 20 Z' fill='black' stroke='white' stroke-width='2'/%3E%3C/svg%3E") 3 2, auto!important}
+body.big-ptr :focus-visible, body.big-ptr :focus{outline:4px solid #1F4FB8!important;outline-offset:3px}
+:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+mark.hl{background:#FFE94D;color:inherit;border-radius:2px;padding:0 1px;cursor:pointer}
+body.hl-on .paper .rich{cursor:text}
+body.hl-on #bHigh{background:#FFF1A8;border-color:#D9B900}
+body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
+.time-note{position:fixed;left:50%;top:80px;transform:translateX(-50%);z-index:60;background:#fff;border:2px solid var(--gold);border-radius:14px;padding:14px 22px;font-size:1.1em;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+
 /* screens and dialogs */
 .screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .box{background:var(--paper);border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 40px rgba(0,0,0,.08);padding:28px 30px;max-width:560px;width:100%}

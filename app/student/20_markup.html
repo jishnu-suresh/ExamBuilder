@@ -44,6 +44,8 @@
     <button class="btn" id="bMathKb" title="Show the maths keyboard when you type maths">√x Maths keyboard</button>
     <button class="btn" id="bAccents" title="French accents: é è ê à ç …">é Accents</button>
     <button class="btn" id="bView" title="Text size, spacing, colours, easy-read fonts">Aa</button>
+    <button class="btn hidden" id="bRuler" title="Reading ruler: a band that follows the line you are reading">📏 Ruler</button>
+    <button class="btn hidden" id="bHigh" title="Highlighter: select words in a question to highlight them">🖍 Highlight</button>
     <button class="btn" id="bTeacher" title="For the teacher">👩‍🏫</button>
     <span class="timer hidden" id="bTimer" title="Time left"></span>
     <button class="btn hidden" id="bReadAll" title="Read the paper aloud from the beginning">▶ Read from the start</button>
@@ -76,6 +78,10 @@
   <label>Line spacing</label><div class="seg" data-pref="space"><button data-v="">Normal</button><button data-v="wide">Wide</button></div>
   <label>Font</label><div class="seg" data-pref="font"><button data-v="">Standard</button><button data-v="easy" style="font-family:'Atkinson Hyperlegible'">Easy-read</button><button data-v="dys" style="font-family:'OpenDyslexic'">OpenDyslexic</button></div>
   <label>Colours</label><div class="seg" data-pref="colour"><button data-v="">White</button><button data-v="cream">Cream</button><button data-v="dark">Dark</button></div>
+  <div data-acc="overlay"><label>Coloured overlay</label><div class="seg" data-pref="overlay"><button data-v="">None</button><button data-v="yellow" class="ov-y">Yellow</button><button data-v="blue" class="ov-b">Blue</button><button data-v="green" class="ov-g">Green</button><button data-v="pink" class="ov-p">Pink</button><button data-v="peach" class="ov-o">Peach</button></div></div>
+  <div data-acc="spacing"><label>Space between letters and words</label><div class="seg" data-pref="letters"><button data-v="">Normal</button><button data-v="wide">Wide</button><button data-v="wider">Wider</button></div></div>
+  <label>Mouse pointer and focus</label><div class="seg" data-pref="pointer"><button data-v="">Normal</button><button data-v="big">Big pointer, thick focus outline</button></div>
+  <p class="muted" style="font-size:.8em;margin-top:10px">Keyboard: Tab moves between answers · Alt + ↓ / Alt + ↑ go to the next / previous question.</p>
   <div class="row"><button class="btn primary" data-close>Done</button></div>
 </div></div>
 
@@ -102,11 +108,25 @@
   <div id="tMenu" class="hidden">
     <p class="muted" id="tInfo"></p>
     <p class="muted" id="tSaveInfo"></p>
+    <div class="row hidden" id="tBreakRow" style="margin:0 0 10px"><button class="btn" id="tBreak">☕ Start a rest break (pauses the clock)</button></div>
     <label>Add time</label><div class="seg"><button data-add="5">+5 min</button><button data-add="10">+10 min</button><button data-add="15">+15 min</button><button data-add="30">+30 min</button></div>
     <div class="row" style="margin-top:6px"><button class="btn" id="tSave">📁 Change where answers are saved</button></div>
     <div class="row"><button class="btn danger" id="tEnd">End the test for this student</button><span style="flex:1"></span><button class="btn primary" data-close>Close</button></div>
   </div>
 </div></div>
+
+<!-- supervised rest break: the clock is paused and the paper is covered -->
+<div class="lockscr hidden" id="scrBreak" style="background:#1E3A2F"><div class="box">
+  <div class="big">☕</div>
+  <h1>Rest break</h1>
+  <p><b>The clock is paused.</b> Your answers are safe.</p>
+  <p class="muted" id="brkSince"></p>
+  <label for="brkCode">Teacher code to carry on</label><input type="password" id="brkCode" class="code" autocomplete="off" inputmode="numeric">
+  <div class="err" id="brkErr"></div>
+  <div class="row"><button class="btn primary" id="brkGo">Carry on with the test</button></div>
+</div></div>
+<div class="overlay hidden" id="ovl" aria-hidden="true"></div>
+<div class="ruler hidden" id="rulerTop" aria-hidden="true"></div><div class="ruler hidden" id="rulerBot" aria-hidden="true"></div>
 
 <!-- locked: the student left the test -->
 <div class="lockscr hidden" id="scrLock"><div class="box">

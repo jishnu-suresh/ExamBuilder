@@ -289,6 +289,7 @@ $("#stuGo").onclick = async () => {
     const EXAM = {
       bee: "student-exam", v: 1, examId: BC.b64e(BC.rnd(12)).replace(/[+/=]/g, "x"), title: S.d.title || "Exam", subject: S.d.subject || "", version: ver,
       nq, total: total ? fmt(total) : "", timeMin: noTime ? 0 : Math.round(base * (1 + extraPct / 100)), baseMin: base, extraPct,
+      acc: { overlay: $("#accOverlay").checked, ruler: $("#accRuler").checked, spacing: $("#accSpacing").checked, highlight: $("#accHigh").checked, breaks: $("#accBreaks").checked, clock: $("#accClock").value },
       mode, accent, readAloud: mode === "read" || $("#stuRead").checked, drawing: mode !== "read" && $("#stuDraw").checked, lang: S.d.lang || "en",
       kid: key.kid, pub: key.pub, salt, iter, paper: await BC.lock(await BC.codeKey(code, salt, iter), paper),
       unlock: { salt: salt2, iter: iter2, hash: await BC.codeHash(tcode, salt2, iter2) },
@@ -334,7 +335,7 @@ $("#stuSheet").onclick = () => {
   }else{
     step("1", "Before the test", ["Copy “" + X.name + "” to each student's laptop (USB stick or shared folder). The questions stay locked inside it until you type the start code.", "Open it with Chrome or Edge (Firefox and Safari also work). No internet is needed.", "Plug in the chargers. Close other programs and switch off notifications if you can.", "Chrome/Edge: press “Choose a folder or USB stick” on the start screen. Backup copies (every minute) and the final answers file are saved there. Without it, the answers file goes to the laptop’s Downloads folder."]);
     step("2", "Starting", ["The student types their name. You type the START CODE and press Start. The test goes full screen and the clock starts."]);
-    step("3", "During the test", ["If the student leaves the test screen (another window, Alt+Tab, Esc), the laptop beeps and the test LOCKS. Type the TEACHER CODE to unlock it. Every time is recorded on the answer PDF.", "Teacher menu (the teacher button at the top, then the TEACHER CODE): add time, or end the test for this student.", "If the laptop crashes or the file closes: open the same file again and type the START CODE. The student carries on where they were; the clock kept running (add time if needed).", "On another laptop: copy the same file there, press “Carry on from a backup”, choose the backup file from the save folder, type the START CODE."]);
+    step("3", "During the test", ["If the student leaves the test screen (another window, Alt+Tab, Esc), the laptop beeps and the test LOCKS. Type the TEACHER CODE to unlock it. Every time is recorded on the answer PDF.", "Teacher menu (the teacher button at the top, then the TEACHER CODE): add time, or end the test for this student.", "Rest break (if allowed): teacher menu, then “Start a rest break”. The paper is covered and the clock stops; type the TEACHER CODE to carry on. Breaks are on the answer record.", "If the laptop crashes or the file closes: open the same file again and type the START CODE. The student carries on where they were; the clock kept running (add time if needed).", "On another laptop: copy the same file there, press “Carry on from a backup”, choose the backup file from the save folder, type the START CODE."]);
     step("4", "At the end", ["The student presses End the test (or time runs out). A sealed answers file is saved in the folder you chose, or in Downloads: “<title> - <name>.bee-answers”. Collect these files.", "In BEE: the small arrow next to Download PDF, then Open student answers. BEE makes a PDF of each paper with the answers in blue, ready to mark, plus the record of times and exits.", "Only a BEE with the school key (" + X.kid.slice(0, 6) + ") and its password can open these files."]);
   }
   doc.setFont("helvetica", "italic"); doc.setFontSize(8.5); doc.setTextColor(118, 110, 98);
@@ -486,21 +487,39 @@ function respRecord(doc, R, h){
   font(SANS, "normal", 9.5, BLUE); doc.text((R.cls ? R.cls + "  ·  " : "") + "Answered on a computer  ·  answers in blue", ML + 5, y + 13);
   y += 25;
   const T = t => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const used = R.endedAt - R.startedAt, allowed = R.timeMin ? R.timeMin + (R.extraMin || 0) : 0;
+  const used = R.endedAt - R.startedAt - (R.paused || 0), allowed = R.timeMin ? R.timeMin + (R.extraMin || 0) : 0;
   const facts = [
     ["Date", new Date(R.startedAt).toLocaleDateString([], { weekday: "long", day: "numeric", month: "long", year: "numeric" })],
     ["Started", T(R.startedAt)], ["Ended", T(R.endedAt) + (R.endedBy === "time" ? "  (time was up)" : R.endedBy === "teacher" ? "  (ended by the teacher)" : "  (the student ended it)")],
-    ["Time used", Math.round(used / 60000) + " minutes"],
+    ["Time used", Math.round(used / 60000) + " minutes" + (R.paused ? "  (+ " + (R.paused < 60000 ? "less than 1" : Math.round(R.paused / 60000)) + " min of rest breaks, clock paused)" : "")],
+    ...(R.breaks ? [["Rest breaks", R.breaks + " (supervised)"]] : []),
     ["Time allowed", allowed ? allowed + " minutes" + (R.extraPct ? `  (${R.baseMin} + ${R.extraPct}% extra)` : "") + (R.extraMin ? `  + ${R.extraMin} added by the teacher` : "") : "no limit"]
   ];
   facts.forEach(([k, v]) => { font(SANS, "normal", 10, MUTED); doc.text(k, ML, y); font(SANS, "bold", 10, INK); doc.text(String(v), ML + 34, y); y += 6; });
+  // what the student used (access arrangements record)
+  const p = R.prefs || {}, used2 = [];
+  if(p.size && p.size !== 17) used2.push("text size " + (p.size > 17 ? "larger" : "smaller") + " (" + p.size + " px)");
+  if(p.font) used2.push(p.font === "dys" ? "OpenDyslexic font" : "easy-read font");
+  if(p.space) used2.push("wide line spacing");
+  if(p.colour) used2.push(p.colour + " colours");
+  if(p.overlay) used2.push(p.overlay + " overlay");
+  if(p.letters) used2.push(p.letters + " letter spacing");
+  if(p.pointer) used2.push("big pointer");
+  if((R.log || []).some(l => l.kind === "reading ruler on")) used2.push("reading ruler");
+  if(R.hlCount) used2.push("highlighter");
+  const reads = (R.log || []).filter(l => l.kind === "read aloud").length; if(reads) used2.push("read aloud (" + reads + "×)");
+  if(p.accents) used2.push("French accents");
+  if(used2.length){
+    font(SANS, "normal", 10, MUTED); doc.text("Used", ML, y);
+    font(SANS, "bold", 10, INK); doc.splitTextToSize(used2.join(" · "), PW - ML - MR - 34).forEach(l => { doc.text(l, ML + 34, y); y += 5.2; }); y += .8;
+  }
   y += 4;
   // leaving the test
   const lefts = (R.log || []).filter(l => l.kind === "left");
   font(SANS, "bold", 11.5, INK); doc.text(lefts.length ? `Left the test screen: ${lefts.length} time${lefts.length === 1 ? "" : "s"}` : "Left the test screen: never", ML, y); y += 6;
-  const shown = (R.log || []).filter(l => !/^(read aloud)$/.test(l.kind));
-  const say = l => l.kind === "left" ? "left the test — " + (l.how || "") : l.kind === "back" ? "came back after " + Math.max(1, Math.round((l.ms || 0) / 1000)) + " s" : l.kind === "time added by teacher" ? "teacher added " + l.min + " minutes" : l.kind === "ended" ? "ended" : l.kind === "tried to leave with the keyboard" ? "tried to leave with the keyboard (" + (l.key || "") + ")" : l.kind === "test reopened" || /backup/.test(l.kind) ? l.kind + (l.ms ? " (" + Math.round(l.ms / 60000) + " min after the last save)" : "") : l.kind;
-  if(lefts.length || shown.some(l => /paste|reopened|backup|wrong|tried/.test(l.kind))){
+  const shown = (R.log || []).filter(l => !/^(read aloud|reading ruler on|used the highlighter)$/.test(l.kind));
+  const say = l => l.kind === "rest break ended" ? "rest break ended (" + Math.max(1, Math.round((l.ms || 0) / 60000)) + " min)" : l.kind === "left" ? "left the test — " + (l.how || "") : l.kind === "back" ? "came back after " + Math.max(1, Math.round((l.ms || 0) / 1000)) + " s" : l.kind === "time added by teacher" ? "teacher added " + l.min + " minutes" : l.kind === "ended" ? "ended" : l.kind === "tried to leave with the keyboard" ? "tried to leave with the keyboard (" + (l.key || "") + ")" : l.kind === "test reopened" || /backup/.test(l.kind) ? l.kind + (l.ms ? " (" + Math.round(l.ms / 60000) + " min after the last save)" : "") : l.kind;
+  if(lefts.length || shown.some(l => /paste|reopened|backup|wrong|tried|rest break/.test(l.kind))){
     const list = shown.slice(0, 40);
     list.forEach(l => { if(y > PH - 60) return; font(SANS, "normal", 9, /left|paste|wrong|tried/.test(l.kind) ? [180, 69, 47] : INK); doc.text(T(l.t), ML + 2, y); doc.text(say(l), ML + 18, y); y += 4.6; });
     if(shown.length > list.length){ font(SANS, "italic", 8.5, MUTED); doc.text("… and " + (shown.length - list.length) + " more", ML + 18, y); y += 4.6; }

@@ -56,4 +56,5 @@ function changed(){ dirty = true; }
 
 /* ---- time ---- */
 function allowedMs(){ return EXAM.timeMin ? (EXAM.timeMin + (ST.extraMin || 0)) * 60000 : 0; }
-function leftMs(){ return ST.startedAt + allowedMs() - now(); }
+// rest breaks pause the clock: finished breaks are in ST.paused (ms); a break in progress started at ST.breakAt
+function leftMs(){ return ST.startedAt + allowedMs() + (ST.paused || 0) + (ST.breakAt ? now() - ST.breakAt : 0) - now(); }
