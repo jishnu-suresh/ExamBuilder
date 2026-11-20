@@ -9,7 +9,7 @@ CASES = {
 }
 async def main():
     async with async_playwright() as p:
-        b=await p.chromium.launch(executable_path='/usr/bin/google-chrome'); pg=await b.new_page()
+        b=await p.chromium.launch(**__import__('_bee').chrome()); pg=await b.new_page()
         await pg.goto(APP); await pg.wait_for_timeout(1500)
         for name,c in CASES.items():
             items=[]

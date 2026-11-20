@@ -3,11 +3,11 @@ from playwright.async_api import async_playwright
 import os; APP='file://' + os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'docs', 'download', 'Exam_Builder_offline.html'))
 async def main():
     async with async_playwright() as p:
-        b=await p.chromium.launch(executable_path='/usr/bin/google-chrome'); pg=await b.new_page(viewport={'width':1440,'height':1000})
+        b=await p.chromium.launch(**__import__('_bee').chrome()); pg=await b.new_page(viewport={'width':1440,'height':1000})
         errs=[]; pg.on('pageerror',lambda e: errs.append(str(e))); pg.on('console',lambda m: m.type=='error' and errs.append(m.text[:150]))
         await pg.goto(APP); await pg.wait_for_timeout(1500)
         await pg.evaluate("__exam.set({d:{subject:'Biology'}, items:[]})"); await pg.click('#stSkip')
-        await pg.set_input_files('#fileIn',['photo.jpg','photo.jpg','photo.jpg']); await pg.wait_for_timeout(1500)
+        await pg.set_input_files('#fileIn',[__import__('_bee').fx('photo.jpg'),__import__('_bee').fx('photo.jpg'),__import__('_bee').fx('photo.jpg')]); await pg.wait_for_timeout(1500)
         long = "Look at the diagram of the flower. " + "Describe the function of each labelled part and explain how the structure of the flower is adapted for pollination by insects. " * 4
         await pg.evaluate("""(t)=>{ const q=__exam.S().items.filter(x=>x.type=='q');
           q[0].text=t; q[0].marks='6'; q[0].lines='3';

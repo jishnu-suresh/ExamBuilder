@@ -31,7 +31,7 @@ Part II: Maths
 """
 async def main():
     async with async_playwright() as p:
-        b=await p.chromium.launch(executable_path='/usr/bin/google-chrome'); pg=await b.new_page(viewport={'width':1440,'height':1100})
+        b=await p.chromium.launch(**__import__('_bee').chrome()); pg=await b.new_page(viewport={'width':1440,'height':1100})
         errs=[]; pg.on('pageerror',lambda e: errs.append(str(e))); pg.on('console',lambda m: m.type=='error' and errs.append(m.text[:200]))
         await pg.goto(APP); await pg.wait_for_timeout(1500)
         await pg.evaluate("__exam.set({d:{subject:'Science & Maths'}, items:[]})"); await pg.click('#stSkip')

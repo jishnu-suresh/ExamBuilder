@@ -4,7 +4,7 @@ R=[]
 def ok(n,c,x=""): R.append(c); print(("PASS " if c else "FAIL ")+n, x)
 async def main():
     async with async_playwright() as p:
-        b=await p.chromium.launch(executable_path='/usr/bin/google-chrome'); pg=await b.new_page(viewport={'width':1440,'height':1000})
+        b=await p.chromium.launch(**__import__('_bee').chrome()); pg=await b.new_page(viewport={'width':1440,'height':1000})
         errs=[]; pg.on('pageerror',lambda e: errs.append(str(e))); pg.on('console',lambda m: m.type=='error' and errs.append(m.text[:150]))
         await pg.goto('file://' + __import__('os').path.abspath(__import__('os').path.join(__import__('os').path.dirname(__file__), '..', 'docs', 'download', 'Exam_Builder_offline.html')) + ''); await pg.wait_for_timeout(1500)
         await pg.evaluate("__exam.set({d:{subject:'Toggle test'}, items:[]})"); await pg.click('#stSkip')
@@ -54,7 +54,7 @@ async def main():
         await pg.keyboard.press('Control+y'); await pg.wait_for_timeout(200)
         # 3: separate answer sheet
         await pg.evaluate("__exam.set({d:{subject:'Sheet test'}, items:[]})")
-        await pg.click('#tilePaste'); await pg.fill('#pasteArea', open('ai_paste.txt').read()); await pg.click('#pasteGo'); await pg.wait_for_timeout(1200)
+        await pg.click('#tilePaste'); await pg.fill('#pasteArea', open(__import__('_bee').fx('ai_paste.txt')).read()); await pg.click('#pasteGo'); await pg.wait_for_timeout(1200)
         async def pages(large=False):
             return await pg.evaluate(f"(async()=>{{await prepareMath(); const d=__exam.buildPDF({{large:{str(large).lower()}}}); return [d.getNumberOfPages(), d.output('datauristring')]}})()")
         p1=(await pages())[0]

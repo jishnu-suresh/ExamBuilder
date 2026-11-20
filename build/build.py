@@ -11,7 +11,10 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 V = os.path.join(ROOT, ".vendor"); A = os.path.join(ROOT, "assets"); OUT = os.path.join(ROOT, "docs")
 rd = lambda p: open(p, encoding="utf-8").read()
 b64 = lambda p: base64.b64encode(open(p, "rb").read()).decode()
-src = rd(os.path.join(ROOT, "app", "app.html"))
+# BEE's source lives in app/src/, one file per part of the app, joined in the order of app/src/ORDER.txt
+SRC = os.path.join(ROOT, "app", "src")
+ORDER = [l.strip() for l in rd(os.path.join(SRC, "ORDER.txt")).splitlines() if l.strip() and not l.startswith("#")]
+src = "\n".join(rd(os.path.join(SRC, n)) for n in ORDER)
 logo = os.path.join(A, "logo.png"); LW, LH = Image.open(logo).size
 common = {"__LOGO__": "data:image/png;base64," + b64(logo), "__LOGO_W__": str(LW), "__LOGO_H__": str(LH)}
 

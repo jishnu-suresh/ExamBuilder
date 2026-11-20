@@ -17,7 +17,7 @@ async def pdf(pg, name, large=False):
     open(name,'wb').write(base64.b64decode(d[0].split(',',1)[1])); return d[1]
 async def main():
     async with async_playwright() as p:
-        b = await p.chromium.launch(executable_path='/usr/bin/google-chrome')
+        b = await p.chromium.launch(**__import__('_bee').chrome())
         ctx = await b.new_context(viewport={'width':1440,'height':1000})
         await ctx.add_init_script(MOCK)
         pg = await ctx.new_page()
@@ -39,7 +39,7 @@ async def main():
         f = json.loads(await pg.evaluate("Object.values(__files)[0]"))
         ok("A5 autosave after 1 minute overwrote same file", await pg.evaluate("__writes")==w0+1 and f['d']['subject']=='Science Dry Run' and len(await pg.evaluate("Object.keys(__files)"))==1)
         # B: paste from AI
-        await pg.click('#tilePaste'); await pg.fill('#pasteArea', open('ai_paste.txt').read()); await pg.dispatch_event('#pasteArea','input'); await pg.clock.run_for(200)
+        await pg.click('#tilePaste'); await pg.fill('#pasteArea', open(__import__('_bee').fx('ai_paste.txt')).read()); await pg.dispatch_event('#pasteArea','input'); await pg.clock.run_for(200)
         ok("B1 paste count preview", 'Found 11 questions in 3 parts' in await pg.text_content('#pasteCount'), await pg.text_content('#pasteCount'))
         await pg.click('#pasteGo'); await pg.clock.run_for(1500)
         S = await pg.evaluate("__exam.S().items")
@@ -100,7 +100,7 @@ async def main():
         await pg.click('#stContinueLocal')
         n_after = await pg.evaluate("__exam.S().items.filter(x=>x.type=='q').length"); ok("H2 work restored after reload", n_after==13, n_after)
         # I: open old-format project with edge cases
-        await pg.evaluate("window.__openName='edge.exam.json'; __files['edge.exam.json']=" + json.dumps(open('edge.exam.json').read()))
+        await pg.evaluate("window.__openName='edge.exam.json'; __files['edge.exam.json']=" + json.dumps(open(__import__('_bee').fx('edge.exam.json')).read()))
         await pg.click('#btnOpen')
         for _ in range(40):   # wait for the file to be read (instead of a fixed delay)
             await pg.clock.run_for(500)

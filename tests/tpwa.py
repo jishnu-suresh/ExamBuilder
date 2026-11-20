@@ -4,7 +4,7 @@ R=[]
 def ok(n,c,x=""): R.append(c); print(("PASS " if c else "FAIL ")+n, x)
 async def main():
     async with async_playwright() as p:
-        b=await p.chromium.launch(executable_path='/usr/bin/google-chrome')
+        b=await p.chromium.launch(**__import__('_bee').chrome())
         ctx=await b.new_context(viewport={'width':1440,'height':1000})
         pg=await ctx.new_page(); errs=[]
         pg.on('pageerror',lambda e: errs.append(str(e))); pg.on('console',lambda m: m.type=='error' and errs.append(m.text[:160]))
@@ -20,7 +20,7 @@ async def main():
         lazy_n = await pg.evaluate("(async()=>{const c=await caches.open((await caches.keys()).find(k=>k.startsWith('eb-lazy'))); return (await c.keys()).length})()")
         ok("photo reader pre-cached for offline", lazy_n>=5, lazy_n)
         await pg.click('#stSkip')
-        await pg.click('#tilePaste'); await pg.fill('#pasteArea', open('ai_paste.txt').read() + "\n12. Ελληνικά and кириллица text test. [1]"); await pg.click('#pasteGo')
+        await pg.click('#tilePaste'); await pg.fill('#pasteArea', open(__import__('_bee').fx('ai_paste.txt')).read() + "\n12. Ελληνικά and кириллица text test. [1]"); await pg.click('#pasteGo')
         await pg.wait_for_function("document.querySelectorAll('#pv canvas').length>=2", timeout=20000)
         ok("pdf.js preview renders pages", await pg.evaluate("document.querySelectorAll('#pv canvas').length")>=2)
         ok("unicode fonts lazy-loaded", await pg.evaluate("!!window.__FONTS__ && FONT_R.length>1000"))
@@ -32,7 +32,7 @@ async def main():
         await pg.screenshot(path='pwa_ui.png')
         # OCR via lazy path
         await pg.click('#photoMode button[data-m=offline]')
-        await pg.set_input_files('#fileIn',['page_photo.jpg'])
+        await pg.set_input_files('#fileIn',[__import__('_bee').fx('page_photo.jpg')])
         await pg.wait_for_function("document.querySelector('#ocrText').value.length>20 || /⚠/.test(document.querySelector('#ocrMsg').textContent)", timeout=120000)
         txt = await pg.input_value('#ocrText'); ok("offline photo reader works (lazy-loaded)", 'passive voice' in txt, txt[:60].replace('\n',' | '))
         await pg.click('#ocrCancel')

@@ -1,0 +1,54 @@
+# Runs on every push and pull request. A red ✗ next to a commit on GitHub means BEE may be broken.
+name: BEE tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    name: Browser tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Playwright
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
+      - name: Run all tests
+        run: python tests/run_all.py
+      - name: Keep the PDFs the tests made (for checking a failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: tests/out/
+
+  build-is-current:
+    name: docs/ matches app/src/
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Download the pinned libraries
+        run: bash build/fetch_vendor.sh
+      - name: Rebuild
+        run: python3 build/build.py
+      - name: The committed docs/ must equal a fresh build
+        run: |
+          if ! git diff --quiet -- docs; then
+            echo "::error::docs/ is out of date — run 'python3 build/build.py' and commit docs/."
+            git diff --stat -- docs
+            exit 1
+          fi

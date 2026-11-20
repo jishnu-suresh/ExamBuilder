@@ -1,0 +1,565 @@
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <img id="topLogo" alt="">
+  <h1 class="brand"><span class="bee" aria-hidden="true">🐝</span><span class="bee-name">BEE</span><span class="bee-tag">Build&nbsp;•&nbsp;Edit&nbsp;•&nbsp;Evaluate</span></h1>
+  <button class="savechip" id="saveChip" title="Your project is saved automatically every minute">…</button>
+  <span class="sp"></span>
+  <button class="btn sm hidden" id="btnInstall" title="Install BEE as an app on this computer">⤓ <span class="lbl">Install app</span></button>
+  <button class="btn sm icon" id="btnUndo" title="Undo (Ctrl/⌘ + Z)" disabled>↶</button>
+  <button class="btn sm icon" id="btnRedo" title="Redo (Ctrl/⌘ + Shift + Z, or Ctrl + Y)" disabled>↷</button>
+  <button class="btn sm" id="btnNew" title="Start a new exam">＋ <span class="lbl">New</span></button>
+  <button class="btn sm" id="btnOpen" title="Open a saved .exam.json project">📂 <span class="lbl">Open</span></button>
+  <button class="btn sm" id="btnSave" title="Save the project to a (new) file">💾 <span class="lbl">Save as…</span></button>
+  <span class="dl-wrap">
+    <button class="btn primary" id="btnDownload">⬇ <span class="lbl-m">PDF</span><span class="lbl">Download PDF</span></button><button class="btn primary dl-caret" id="dlMenuBtn" title="More download options">▾</button>
+    <div class="dl-menu hidden" id="dlMenu">
+      <button data-dl="full"><b>Full exam</b><span>Cover page + all questions</span></button>
+      <button data-dl="large"><b>Large-print exam</b><span>16 pt, double spacing (accommodations)</span></button>
+      <button data-dl="cover"><b>Cover page only</b><span>Just the front page</span></button>
+      <button data-dl="rubric" id="dlRubric" class="hidden"><b>Rubric page only</b><span>The teacher's scoring page</span></button>
+      <button data-dl="key"><b>Answer key</b><span>Teacher copy: correct options ✓ and model answers in red</span></button>
+      <button data-dl="versions"><b>Versions A, B, C…</b><span>Shuffled copies for students sitting side by side</span></button>
+      <button data-dl="questions"><b>Questions only</b><span>Without the cover page</span></button>
+    </div>
+  </span>
+</header>
+
+<main class="grid">
+  <div>
+    <!-- STEP 1 -->
+    <section class="panel">
+      <h2><span class="step">1</span>Exam details</h2>
+      <div class="fields">
+        <label class="f">Exam title<input data-k="title" placeholder="Semester 1 Exam"></label>
+        <label class="f"><span>Subtitle <span class="hint">· optional, under the title</span></span><input data-k="subtitle" placeholder="e.g. Unit 3 — Fractions &amp; Percentages"></label>
+        <label class="f">Academic year<input data-k="year" placeholder="2025-2026"></label>
+        <label class="f">Subject<input data-k="subject" placeholder="e.g. English Language"></label>
+        <label class="f">Duration<input data-k="duration" placeholder="2 hrs"></label>
+        <label class="f">Teacher name<input data-k="teacher" placeholder="e.g. Jenifer Clark"></label>
+        <label class="f"><span>Class / Grade <span class="hint">· leave blank → students fill in</span></span><input data-k="className" placeholder="e.g. Grade 8B"></label>
+        <label class="f"><span>Date <span class="hint">· leave blank → students fill in</span></span><input data-k="date" placeholder="e.g. 12 Dec 2025"></label>
+        <label class="f"><span>Total marks <span class="hint" id="autoTotalHint">· auto: 0</span></span><input data-k="totalOverride" type="number" min="0" step="0.5" placeholder="auto from questions"></label>
+        <label class="f full">Where do students write their answers?
+          <select data-k="answerMode">
+            <option value="paper">On the question paper — with answer lines</option>
+            <option value="sheet">On a separate answer sheet — compact question paper, no answer lines</option>
+          </select></label>
+        <label class="f full">Instructions <span class="hint">one instruction per line — each becomes a bullet</span><textarea data-k="instructions"></textarea></label>
+      </div>
+
+      <details class="more">
+        <summary>Layout &amp; branding</summary>
+        <div class="fields" style="margin-top:12px">
+          <label class="f">School name<input data-k="school" placeholder="The Hive Academy"></label>
+          <label class="f">Language on the paper<select data-k="lang"><option value="">English</option><option value="fr">Français</option></select></label>
+          <label class="f">Paper size<select data-k="paper"><option value="a4">A4</option><option value="letter">US Letter</option></select></label>
+          <label class="f">Question font size<select data-k="fontSize"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt</option><option value="13">13 pt</option><option value="14">14 pt</option><option value="16">16 pt</option><option value="18">18 pt</option></select></label>
+          <label class="f">Line spacing<select data-k="lineSpacing"><option value="1">Normal</option><option value="1.5">1.5 lines</option><option value="2">Double</option></select></label>
+          <label class="f">Style<select data-k="style"><option value="">Classic (black &amp; white friendly)</option><option value="colour">🎨 Colourful</option></select></label>
+          <label class="f" data-show-colour>Colours<select data-k="palette"><option value="">🌈 Rainbow</option><option value="honey">🍯 Honey</option><option value="ocean">🌊 Ocean</option><option value="garden">🌿 Garden</option><option value="berry">🫐 Berry</option></select></label>
+          <label class="f">Accent colour<input data-k="accent" type="color" style="height:36px;padding:3px"></label>
+          <div class="f full">
+            <span class="kind" style="margin-bottom:6px">Logo</span>
+            <div class="logo-row">
+              <img class="thumb" id="logoThumb" alt="logo">
+              <button class="btn sm" id="btnLogo">Change logo…</button>
+              <button class="btn sm" id="btnLogoReset">Use Hive Academy logo</button>
+              <button class="btn sm danger" id="btnLogoNone">No logo</button>
+            </div>
+          </div>
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" data-k="showMarks"> Show marks beside questions</label>
+          <label><input type="checkbox" data-k="nameEveryPage"> Name field on every page</label>
+          <label><input type="checkbox" data-k="restartNumbering"> Restart numbering in each part</label>
+          <label title="Paragraphs get a straight right edge, like a book. Single lines, options and tables stay as they are."><input type="checkbox" data-k="justify"> Justify paragraphs (straight right edge)</label>
+          <label><input type="checkbox" data-k="sectionNewPage"> Start each part on a new page</label>
+          <label><input type="checkbox" data-k="endMarker"> “End of exam” marker</label>
+          <label><input type="checkbox" data-k="scoreTable"> Points per part on cover</label>
+          <label><input type="checkbox" data-k="bigInline"> Full-size fractions &amp; limits inside sentences</label>
+          <label><input type="checkbox" data-k="largePrint"> <b>Accommodation / large print</b> (16 pt, double spacing)</label>
+        </div>
+      </details>
+    </section>
+
+    <!-- RUBRIC -->
+    <section class="panel rubric-panel">
+      <h2 style="margin-bottom:6px"><span class="step">R</span>Rubric page <span class="hint" style="font:400 12.5px system-ui;margin-left:4px">for the teacher, after the cover</span>
+        <label class="switch" title="Add a rubric page after the cover"><input type="checkbox" id="rbOn"><span></span></label></h2>
+      <div id="rubricBox" class="hidden"></div>
+    </section>
+
+    <!-- STEP 2 -->
+    <section class="panel">
+      <h2><span class="step">2</span>Questions</h2>
+      <div class="drop add-tiles" id="drop">
+        <button class="tile-add main" id="tilePaste"><span class="ic">🤖</span><b>Paste from AI</b><span class="hint">ChatGPT, Claude, Gemini… or any typed questions</span></button>
+        <button class="tile-add" id="tilePhoto"><span class="ic">📷</span><b>Add photos</b><span class="hint">read the text offline, or insert as pictures</span></button>
+        <button class="tile-add" id="tileFile"><span class="ic">📄</span><b>Open a .txt / .md file</b><span class="hint">or drag files onto this box</span></button>
+      </div>
+      <div class="photo-mode">
+        <span class="lbl">When I add a photo:</span>
+        <span class="seg" id="photoMode">
+          <button data-m="image">Insert as picture</button>
+          <button data-m="offline">Read the text (offline)</button>
+        </span>
+        <div class="ai-prompts">
+          <span class="hint">Handwriting, lots of maths or a PDF? Give it to your favourite AI with one of our ready-made prompts, then paste its answer with 📋 Paste:</span>
+          <div class="ai-pbtns">
+            <button type="button" class="btn sm open-prompt" data-p="gen"><b>1.</b>&nbsp;🤖 Generic AI prompt <span class="hint">· for everything</span></button>
+            <button type="button" class="btn sm open-prompt" data-p="ixl"><b>2.</b>&nbsp;🧮 IXL printed worksheet</button>
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn sm" id="addQ">＋ Question</button>
+        <button class="btn sm" id="addS">＋ Part / section</button>
+        <button class="btn sm" id="addN">＋ Text / passage</button>
+        <button class="btn sm" id="addSub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-part</button>
+        <button class="btn sm" id="addBreak" title="Everything after this starts on a new page">＋ Page break</button>
+        <button class="btn sm" id="addMCQ">＋ MCQ</button>
+        <button class="btn sm" id="arrangeBtn" title="See all questions as small tiles and drag them into a new order">⇅ Arrange</button>
+        <button class="btn sm hidden" id="eqGlobal">∑ Equation</button>
+        <button class="btn sm hidden" id="graphGlobal">📈 Graph</button>
+        <button class="btn sm" id="pasteText">📋 Paste questions</button>
+        <button class="btn sm open-prompt">🤖 Prompt for your AI</button>
+        <button class="btn sm" id="frBtn" title="Find &amp; replace in all questions (Ctrl/⌘ + H)">🔎 Find &amp; replace</button>
+        <button class="btn sm" id="formatHelp">ⓘ Format &amp; maths help</button>
+        <span class="sp" style="flex:1"></span>
+        <button class="btn sm danger" id="clearAll">Clear all</button>
+      </div>
+      <div class="summary" id="summary"></div>
+      <div class="list" id="list"></div>
+      <div class="actions bottom-bar" id="bottomBar">
+        <button class="btn sm" data-add="q">＋ Question</button>
+        <button class="btn sm" data-add="mcq">＋ MCQ</button>
+        <button class="btn sm" data-add="s">＋ Part</button>
+        <button class="btn sm" data-add="n">＋ Text / passage</button>
+        <button class="btn sm" data-add="sub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-part</button>
+        <button class="btn sm" data-add="brk" title="Everything after this starts on a new page">＋ Page break</button>
+        <span style="flex:1"></span>
+        <button class="btn sm" data-add="arrange">⇅ Arrange</button>
+      </div>
+    </section>
+  </div>
+
+  <!-- STEP 3 -->
+  <aside class="preview">
+    <div class="bar">
+      <span class="step">3</span><h2>Preview</h2>
+      <span class="status" id="status"></span>
+      <span class="zoom"><button class="btn icon" id="zoomOut" title="Zoom out">−</button><span id="zoomLbl">Fit</span><button class="btn icon" id="zoomIn" title="Zoom in">+</button></span>
+      <label class="keytog" title="Preview the answer key (teacher copy)"><input type="checkbox" id="pvKey"> Key</label>
+      <button class="btn sm" id="btnOpenTab" title="Open the PDF in a new tab">⤢</button>
+      <button class="btn sm" id="btnRefresh">↻ Refresh</button>
+      <button class="btn sm primary" id="btnDownload2">⬇ PDF</button>
+    </div>
+    <div id="pv" class="pv" aria-label="PDF preview"><div class="pv-empty">Preparing preview…</div></div>
+  </aside>
+</main>
+
+<input type="file" id="fileIn" multiple accept=".txt,.text,.md,.markdown,.tex,text/plain,text/markdown,image/*" class="hidden">
+<input type="file" id="logoIn" accept="image/*" class="hidden">
+<input type="file" id="projIn" accept=".json,application/json" class="hidden">
+
+<div class="modal" id="pasteModal">
+  <div class="box">
+    <h3>Paste questions from your AI (or any text)</h3>
+    <div class="paste-help">
+      <span><b>1.</b> <a href="#" id="pasteCopyPrompt">Copy our prompt</a> (or the <a href="#" id="pasteCopyIxl">IXL prompt</a> for an IXL worksheet) and give it to your AI with your photo, PDF or idea.</span>
+      <span><b>2.</b> Copy the AI's whole answer and paste it below.</span>
+    </div>
+    <p class="hint" style="margin:0 0 8px">Numbered questions become separate questions. Lines like <b>Part I: Grammar</b> or <b># Reading</b> start a new part. Marks in square brackets at the end of a question, e.g. <b>[5]</b>, are picked up automatically.</p>
+    <textarea id="pasteArea" placeholder="Part I: Reading comprehension
+Read the passage below and answer the questions.
+1. What is the main idea of the passage? [4]
+2. Choose the correct answer: [2]
+a) ...
+b) ..."></textarea>
+    <div class="actions" style="justify-content:flex-end;align-items:center">
+      <span class="hint" id="pasteCount" style="flex:1"></span>
+      <button class="btn" id="pasteClip">📋 Paste from clipboard</button>
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn primary" id="pasteGo">Add questions</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="helpModal">
+  <div class="box">
+    <h3>How to write questions (.txt / .md)</h3>
+    <p style="margin:6px 0">Any plain-text file works. These patterns are recognised:</p>
+    <pre># Part I: Reading            ← a line starting with # or “Part …” / “Section …” starts a part
+Read the passage carefully.  ← text before the first question becomes an instruction/passage
+1. Who is the narrator? [3]  ← numbered lines (1.  1)  Q1.  Question 1:) start a question
+2. Choose the best answer. [2 marks]
+a) Option one                ← following lines belong to the same question
+b) Option two
+3. Explain your reasoning. (5 marks) {lines: 6}
+
+Part II: Writing
+4. Write a 200-word essay about your summer. [20] {lines: 15}</pre>
+    <ul style="margin:6px 0 0 18px;padding:0">
+      <li>Marks: <b>[5]</b>, <b>[5 marks]</b> or <b>(5 marks)</b> at the end of the first or last line.</li>
+      <li>Answer lines: add <b>{lines: 6}</b> to print 6 ruled lines under a question.</li>
+      <li>If there are no numbers at all, each paragraph (separated by a blank line) becomes a question.</li>
+      <li>Photos become their own question — add text or marks to it afterwards.</li>
+    </ul>
+    <h3 style="margin-top:16px">Maths, science &amp; formatting</h3>
+    <pre>5. Solve $x^2 - 5x + 6 = 0$. [3]           ← $…$ = maths inside a sentence (LaTeX)
+6. Evaluate: [4]
+$$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own line, centred
+7. Balance $\ce{Fe + O2 -> Fe2O3}$ [2]         ← \ce{…} = chemistry (formulas, arrows, ions)
+8. A car accelerates at $3\,\mathrm{m/s^2}$ for $5\,\mathrm{s}$. **Find** its *final* speed.
+| Time (s) | 0 | 1 | 2 |                     ← a Markdown table
+|---|---|---|---|
+| Distance (m) | 0 | 4 | 16 |</pre>
+    <ul style="margin:6px 0 0 18px;padding:0">
+      <li><b>{numberline: -10..10}</b> and <b>{axes: -6..6}</b> after the marks give a number line or a coordinate grid to answer on; <b>{mol: CCO}</b> on its own line draws a molecule.</li>
+      <li><b>{center}</b> or <b>{right}</b> at the start of a line aligns it, <b>{big}</b> / <b>{bigger}</b> / <b>{huge}</b> / <b>{small}</b> changes its size; <b>🖼 Picture here</b> puts a picture exactly where the cursor is.</li>
+      <li><b>**bold**</b>, <i>*italic*</i>, <u>++underline++</u>, <s>~~strikethrough~~</s>, and lines starting with <b>- </b> become bullet points.</li>
+      <li>Don't know LaTeX? Use <b>∑ Equation</b> — click buttons to build the formula; it writes the LaTeX for you.</li>
+      <li>A price like “$5 and $10” stays as normal text. Write <b>\$</b> if a dollar sign is ever mistaken for maths.</li>
+      <li>Sub-questions: lines like <b>(a) Name the gas. [1] {lines: 2}</b> inside a question become parts (a), (b)… with their own marks.</li>
+      <li>Answer key: <b>{correct}</b> after the right MCQ option, and a line <b>Model answer: …</b> under a question or sub-question. Both only appear on the answer key.</li>
+      <li>Multiple choice: add <b>{mcq}</b> (one answer, ○ bubbles) or <b>{mcq: multi}</b> (several answers, ☐ boxes); <b>{cols: 2}</b> puts options in 2 columns. Or choose <b>Type</b> on the question card.</li>
+      <li>Biology: <b>*Escherichia coli*</b> → italics; <b>▦ Table</b> on a card inserts a table (Punnett squares, results tables); <b>🏷 Label diagram</b> on an image adds label lines for students.</li>
+      <li>Chemistry examples: <b>\ce{H2SO4}</b>, <b>\ce{Na+ + Cl- -> NaCl}</b>, <b>\ce{N2 + 3H2 &lt;=&gt; 2NH3}</b>, <b>\ce{CaCO3 v}</b>.</li>
+    </ul>
+    <div class="actions" style="justify-content:flex-end"><button class="btn primary" data-close>Got it</button></div>
+  </div>
+</div>
+
+<div class="modal" id="ocrModal">
+  <div class="box wide">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <h3 style="margin:0;flex:1" id="ocrTitle">Read text from photo</h3>
+    </div>
+    <div class="ocr-grid">
+      <div class="ocr-img"><img id="ocrImg" alt=""></div>
+      <div class="ocr-right">
+        <div class="prog" id="ocrProg"><div></div></div>
+        <div class="hint" id="ocrMsg"></div>
+        <textarea id="ocrText" spellcheck="true" placeholder="The recognised text will appear here…"></textarea>
+        <span class="hint">Maths or handwriting not read well? Use the <a href="#" class="open-prompt" style="color:var(--gold-d);font-weight:600">prompt for your AI</a> with this photo instead. Check and fix the text before adding it. Numbered lines become questions, <b>Part …</b> lines start a part, <b>[5]</b> sets marks, <b>{lines: 4}</b> adds answer lines.</span>
+      </div>
+    </div>
+    <div class="actions" style="justify-content:flex-end;margin-top:14px">
+      <button class="btn" id="ocrCancel">Cancel</button>
+      <button class="btn" id="ocrKeep">Add text &amp; keep photo</button>
+      <button class="btn primary" id="ocrReplace">Replace photo with text</button>
+    </div>
+  </div>
+</div>
+
+<!-- EQUATION EDITOR -->
+<div class="modal" id="cutModal">
+  <div class="box wide" style="max-width:980px">
+    <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+      <h3 style="margin:0">📄 Cut a picture from the PDF</h3><span class="grow"></span>
+      <button class="btn sm" id="cutChoose">Choose PDF…</button><span class="hint" id="cutName"></span>
+    </div>
+    <div class="row" style="gap:6px;align-items:center;margin-bottom:6px">
+      <button class="btn sm" id="cutPrev">‹</button><span id="cutPageLbl" class="hint">–</span><button class="btn sm" id="cutNext">›</button>
+      <span class="cut-zoom"><button class="btn sm" id="cutZoomOut" title="Zoom out">−</button><button class="btn sm" id="cutZoomFit" title="Fit the page to the window">Fit</button><button class="btn sm" id="cutZoomIn" title="Zoom in">＋</button><span class="hint" id="cutZoomLbl">100%</span></span>
+      <span class="hint" style="margin-left:8px" id="cutTip">Drag a box around the picture. Then drag its edges or corners to adjust it, or drag inside it to move it.</span>
+    </div>
+    <div class="cut-stage" id="cutStage"><canvas id="cutCanvas"></canvas><div class="cut-sel hidden" id="cutSel"><i data-h="nw"></i><i data-h="n"></i><i data-h="ne"></i><i data-h="e"></i><i data-h="se"></i><i data-h="s"></i><i data-h="sw"></i><i data-h="w"></i></div></div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn" data-close>Cancel</button><button class="btn primary" id="cutGo" disabled>Use this part</button></div>
+  </div>
+</div>
+<input type="file" id="pdfSrcIn" accept=".pdf,application/pdf" class="hidden">
+<div class="modal" id="svgModal">
+  <div class="box wide" style="max-width:900px">
+    <h3 style="margin:0 0 4px">✏️ Edit drawing</h3>
+    <p class="hint" style="margin:0 0 10px">This drawing was made by the AI as SVG code. Change numbers or labels in the code and watch the preview, or ask your AI to change it and paste the new code here.</p>
+    <div class="svg-grid"><textarea id="svgCode" spellcheck="false"></textarea><div class="svg-prev"><img id="svgPrev" alt=""><div class="hint" id="svgErr"></div></div></div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:10px"><button class="btn" data-close>Cancel</button><button class="btn primary" id="svgGo">Update drawing</button></div>
+  </div>
+</div>
+<div class="modal" id="pdfModal">
+  <div class="box" style="max-width:560px">
+    <h3 style="margin:0 0 6px" id="pdfTitle">📄 BEE can't open PDF files</h3>
+    <p style="margin:0 0 12px;line-height:1.5" id="pdfWhy">A PDF is made for printing, so BEE can't take the questions out of it. Your AI tool can do that in a few seconds, using BEE's ready-made prompt:</p>
+    <ol class="pdf-steps">
+      <li><b>Copy BEE's prompt.</b><br><button class="btn sm primary" id="pdfCopy">📋 Copy the AI prompt</button> <button class="btn sm" id="pdfCopyIxl" title="For a quiz or worksheet printed from IXL">🧮 IXL worksheet? Copy the IXL prompt</button></li>
+      <li><b>Open your AI</b> (ChatGPT, Claude, Gemini, Copilot…), <b>attach your <span class="pdf-kind">PDF</span></b>, paste the prompt and send.</li>
+      <li><b>Copy the AI's answer</b> and paste it into BEE.<br><button class="btn sm" id="pdfPaste">📋 Paste the AI answer</button></li>
+    </ol>
+    <p class="hint" style="margin:10px 0 0">Simple diagrams are drawn by the AI; other pictures come back as red “picture missing” boxes. <b id="pdfKept">BEE keeps this PDF open:</b> fill those boxes with <b>📄 Cut from PDF</b>.</p>
+    <p class="hint" style="margin:6px 0 0" id="pdfFiles"></p>
+    <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn" data-close>OK</button></div>
+  </div>
+</div>
+<div class="modal" id="saveModal">
+  <div class="box" style="max-width:520px">
+    <h3 style="margin:0 0 4px" id="svTitle">💾 Save exam as</h3>
+    <p class="hint" style="margin:0 0 12px" id="svHint"></p>
+    <label class="f">File name
+      <div class="sv-name"><input id="svName" autocomplete="off" spellcheck="false" placeholder="e.g. Grade 7 ELA - Unit 3 Test"><span>.exam.json</span></div>
+    </label>
+    <div class="sv-quick" id="svQuick"></div>
+    <label class="sv-pdf"><input type="checkbox" id="svPdf"> Also download the PDF now</label>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:14px"><button class="btn" data-close>Cancel</button><button class="btn primary" id="svGo">💾 Save</button></div>
+  </div>
+</div>
+<div class="modal" id="molModal">
+  <div class="box wide">
+    <h3 style="margin:0 0 4px">⌬ Molecule — chemical structure</h3>
+    <p class="hint" style="margin:0 0 10px">Pick a molecule or type its <b>SMILES</b> code (ask any AI: “give me the SMILES for …”). Drawn in black and white, like a textbook.</p>
+    <div class="mol-grid">
+      <div>
+        <label class="f">SMILES<input id="molSmi" placeholder="e.g. CCO for ethanol" autocomplete="off" spellcheck="false"></label>
+        <label class="f" style="margin-top:8px">Caption under the drawing <span class="hint">· optional — leave empty for “name this compound”</span><input id="molCap" placeholder="e.g. ethanol"></label>
+        <div class="mol-presets" id="molPresets"></div>
+      </div>
+      <div class="mol-prev"><div id="molPrev"></div><div class="hint" id="molMsg"></div></div>
+    </div>
+    <div class="row" style="justify-content:flex-end;gap:8px;margin-top:12px"><button class="btn" data-close>Cancel</button><button class="btn primary" id="molGo">Insert molecule</button></div>
+  </div>
+</div>
+<div class="modal" id="eqModal">
+  <div class="box wide">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <h3 style="margin:0;flex:1">Equation editor</h3>
+      <span class="seg" id="eqTabs">
+        <button data-m="visual">Visual (click to build)</button>
+        <button data-m="latex">LaTeX</button>
+        <button data-m="chem">Chemistry</button>
+      </span>
+    </div>
+    <div class="eq-pal" id="eqPal"></div>
+    <div id="eqVisual" class="eq-pane">
+      <div id="mfHost"></div>
+      <div class="row" style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+        <button class="btn sm" id="kbToggle">⌨ Maths keyboard</button>
+        <span class="hint">Type normally: <b>/</b> makes a fraction, <b>^</b> a power, <b>_</b> a subscript, <b>sqrt</b> a root, <b>pi</b> → π, <b>&lt;=</b> → ≤. Arrow keys move between boxes.</span>
+      </div>
+    </div>
+    <div id="eqLatex" class="eq-pane hidden">
+      <textarea id="eqTex" spellcheck="false" placeholder="e.g. \frac{-b \pm \sqrt{b^2-4ac}}{2a}"></textarea>
+    </div>
+    <div id="eqChem" class="eq-pane hidden">
+      <input type="text" id="eqCe" spellcheck="false" placeholder="e.g. 2H2 + O2 -> 2H2O">
+      <span class="hint">Write formulas as you would by hand — numbers become subscripts automatically. Arrows: <b>-&gt;</b>  <b>&lt;=&gt;</b>  <b>&lt;-</b>. Charges: <b>Na+</b>, <b>SO4^2-</b>. States: <b>(aq)</b> <b>(s)</b>. Gas ↑ <b>^</b>, precipitate ↓ <b>v</b>.</span>
+    </div>
+    <div class="eq-prev-wrap"><span class="kind">Preview</span><div id="eqPrev" class="eq-prev"></div><code id="eqCode" class="eq-code"></code></div>
+    <div class="actions" style="justify-content:space-between;margin-top:12px">
+      <span class="checks" style="margin:0">
+        <label><input type="radio" name="eqMode" value="inline" checked> Inside the sentence</label>
+        <label><input type="radio" name="eqMode" value="display"> On its own line (centred)</label>
+      </span>
+      <span style="display:flex;gap:8px">
+        <button class="btn" data-close>Cancel</button>
+        <button class="btn primary" id="eqInsert">Insert equation</button>
+      </span>
+    </div>
+  </div>
+</div>
+
+<!-- GRAPH TOOL -->
+<div class="modal" id="graphModal">
+  <div class="box wide">
+    <h3>Graph &amp; grid</h3>
+    <div class="graph-grid">
+      <div class="graph-form">
+        <label class="f">Functions, points or lines <span class="hint">one per line · leave empty for blank axes</span>
+          <textarea id="gFuncs" spellcheck="false" placeholder="y = x^2 - 4
+y = 2x + 1
+x = 3
+(2, 0) A"></textarea></label>
+        <div class="fields">
+          <label class="f">x from<input type="number" id="gX0" value="-5"></label>
+          <label class="f">x to<input type="number" id="gX1" value="5"></label>
+          <label class="f">y from<input type="number" id="gY0" value="-5"></label>
+          <label class="f">y to<input type="number" id="gY1" value="5"></label>
+          <label class="f">Grid step<input type="number" id="gStep" placeholder="auto" min="0" step="any"></label>
+          <label class="f">Shape<select id="gShape"><option value="square">Square</option><option value="wide">Wide</option><option value="tall">Tall</option></select></label>
+          <label class="f">x-axis label<input id="gXL" value="x"></label>
+          <label class="f">y-axis label<input id="gYL" value="y"></label>
+        </div>
+        <div class="checks">
+          <label><input type="checkbox" id="gGrid" checked> Grid</label>
+          <label><input type="checkbox" id="gFine"> Fine grid (graph paper)</label>
+          <label><input type="checkbox" id="gNums" checked> Numbers on axes</label>
+          <label><input type="checkbox" id="gLabels" checked> Label curves</label>
+        </div>
+        <p class="hint" style="margin:8px 0 0">Use <b>^</b> for powers, <b>sqrt( )</b>, <b>sin cos tan</b>, <b>ln log abs exp</b>, <b>pi</b>. Write <b>2x</b> or <b>2*x</b>. A point: <b>(2, 3)</b> with an optional label after it.</p>
+        <p class="hint" id="gErr" style="color:var(--danger)"></p>
+      </div>
+      <div class="graph-prev"><canvas id="gCanvas"></canvas></div>
+    </div>
+    <div class="actions" style="justify-content:flex-end">
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn primary" id="gInsert">Insert graph</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROMPT FOR YOUR AI -->
+<div class="modal" id="promptModal">
+  <div class="box">
+    <h3>Use your favourite AI (ChatGPT, Claude, Gemini, Copilot…)</h3>
+    <div class="seg pk-seg" id="promptKind"><button type="button" data-k="gen">🤖 Generic — for everything</button><button type="button" data-k="ixl">🧮 IXL printed worksheet</button></div>
+    <ol style="margin:6px 0 10px 18px;padding:0">
+      <li>Copy this prompt and paste it into your AI chat.</li>
+      <li id="promptFor">Attach your photo/PDF of the exam, or paste the questions, or describe the exam you want.</li>
+      <li>Copy the AI's answer and paste it here with <b>📋 Paste questions</b>.</li>
+    </ol>
+    <textarea id="promptText" readonly style="width:100%;min-height:300px;border:1px solid var(--line);border-radius:8px;padding:10px;font:12.5px/1.45 ui-monospace,Menlo,Consolas,monospace"></textarea>
+    <div class="actions" style="justify-content:flex-end">
+      <button class="btn" data-close>Close</button>
+      <button class="btn" id="promptToPaste">📋 Paste the AI's answer…</button>
+      <button class="btn primary" id="promptCopy">Copy prompt</button>
+    </div>
+  </div>
+</div>
+
+<!-- ARRANGE -->
+<div class="modal" id="arrModal">
+  <div class="box wide">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <h3 style="margin:0;flex:1">Arrange questions</h3>
+      <span class="hint">Drag tiles to reorder · a question takes the part it is dropped into</span>
+    </div>
+    <div class="actions" style="align-items:center;margin-top:10px">
+      Move question <input type="number" id="mvFrom" min="1" style="width:70px;border:1px solid var(--line);border-radius:7px;padding:5px 8px">
+      to position <input type="number" id="mvTo" min="1" style="width:70px;border:1px solid var(--line);border-radius:7px;padding:5px 8px">
+      <button class="btn sm primary" id="mvGo">Move</button>
+    </div>
+    <div class="arr-grid" id="arrGrid"></div>
+    <div class="actions" style="justify-content:flex-end"><button class="btn primary" data-close>Done</button></div>
+  </div>
+</div>
+
+<!-- LABEL DIAGRAM -->
+<div class="modal" id="labModal">
+  <div class="box wide">
+    <h3>Label a diagram</h3>
+    <p class="hint" style="margin:2px 0 0">Click on the picture where each label should point. Leave the text empty to give students a blank line to write on.</p>
+    <div class="lab-grid">
+      <div class="lab-canvas"><canvas id="labCanvas"></canvas></div>
+      <div>
+        <div class="fields" style="margin-bottom:10px">
+          <label class="f">Label style<select id="labStyle"><option value="blank">Blank lines</option><option value="letters">Letters A, B, C + lines</option><option value="numbers">Numbers 1, 2, 3 + lines</option><option value="lettersOnly">Letters only (A, B, C)</option></select></label>
+          <label class="f">Text size<select id="labSize"><option value="1">Normal</option><option value="1.3">Large</option><option value="0.8">Small</option></select></label>
+        </div>
+        <div class="lab-list" id="labList"></div>
+        <div class="actions"><button class="btn sm danger" id="labClear">Remove all labels</button></div>
+      </div>
+    </div>
+    <div class="actions" style="justify-content:flex-end">
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn primary" id="labApply">Apply labels</button>
+    </div>
+  </div>
+</div>
+
+<!-- START / PROJECT FILE -->
+<div class="modal" id="startModal" data-sticky>
+  <div class="box start-box">
+    <img id="startLogo" alt="" style="height:30px;display:block;margin:0 auto 10px;opacity:.9">
+    <div class="start-brand"><span class="bee">🐝</span><span class="bee-name">BEE</span></div>
+    <div class="start-tag">Build&nbsp;•&nbsp;Edit&nbsp;•&nbsp;Evaluate</div>
+    <p class="hint" style="text-align:center;margin:4px 0 14px">Each exam is a project file. It's saved automatically every minute, so your work is never lost.</p>
+    <div class="start-opts">
+      <button class="start-btn primary hidden" id="stContinueFile"><b id="stFileName">Continue</b><span>Reopen your last project file and keep saving to it</span></button>
+      <button class="start-btn hidden" id="stContinueLocal"><b>Continue where you left off</b><span id="stLocalInfo">kept in this browser</span></button>
+      <button class="start-btn" id="stNew"><b>＋ New exam</b><span>First choose where to save the project file</span></button>
+      <button class="start-btn" id="stOpen"><b>📂 Open a saved exam</b><span>An .exam.json project file</span></button>
+    </div>
+    <p class="hint" id="stNote" style="margin:12px 0 0"></p>
+    <p style="text-align:center;margin:14px 0 0;font:italic 12px Georgia,serif;color:var(--muted)">🐝 BEE · Build • Edit • Evaluate · © Jishnu</p>
+    <p style="text-align:center;margin:6px 0 0"><a href="#" id="stSkip" style="color:var(--muted);font-size:13px">Continue without a project file</a></p>
+  </div>
+</div>
+
+<div class="updbar hidden" id="updBar"><span class="upd-hex" aria-hidden="true">🍯</span><span><b>Fresh honey in the hive!</b><br><small>A new version of 🐝 BEE is ready — your work stays safe.</small></span><button class="btn sm primary" id="updGo">🐝 Update now</button></div>
+<button class="pvfab" id="pvFab" title="Jump to the preview">👁 <span>Preview</span></button>
+<div class="wm" aria-hidden="true">🐝 BEE · © Jishnu</div>
+<!-- VERSIONS -->
+<div class="modal" id="verModal">
+  <div class="box">
+    <h3>Print versions A, B, C…</h3>
+    <p class="hint" style="margin:4px 0 10px">Each version has the same questions in a different order, so students sitting side by side get different papers. Your exam itself doesn't change — the shuffling only happens in the downloaded PDFs, and it is the same every time (Version B is always the same Version B).</p>
+    <div class="fields"><label class="f">Number of versions<select id="verN"><option>2</option><option selected>3</option><option>4</option></select></label></div>
+    <div class="checks" style="flex-direction:column;gap:8px;margin-top:10px">
+      <label><input type="checkbox" id="verQ" checked> Shuffle the order of the questions inside each part</label>
+      <label><input type="checkbox" id="verO" checked> Shuffle the MCQ options (“All / None of the above” stay last)</label>
+      <label><input type="checkbox" id="verK" checked> Also download an answer key for each version</label>
+      <label><input type="checkbox" id="verL"> Large print (16 pt, double spacing)</label>
+    </div>
+    <p class="hint" style="margin:10px 0 0">Questions never move past a part heading or a text/passage, so they stay with the reading, table or picture they belong to. Your browser may ask once to allow several downloads.</p>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" data-close>Cancel</button><button class="btn primary" id="verGo">Download versions</button></div>
+  </div>
+</div>
+
+<!-- FIND & REPLACE -->
+<div class="modal" id="frModal">
+  <div class="box">
+    <h3>Find &amp; replace</h3>
+    <div class="fields" style="margin-top:8px">
+      <label class="f">Find<input id="frFind" autocomplete="off"></label>
+      <label class="f">Replace with<input id="frRep" autocomplete="off"></label>
+    </div>
+    <div class="checks"><label><input type="checkbox" id="frCase"> Match case</label><label><input type="checkbox" id="frWord"> Whole words only</label></div>
+    <div class="hint" id="frInfo" style="margin-top:8px"></div>
+    <div class="fr-list" id="frList"></div>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" data-close>Close</button><button class="btn primary" id="frGo" disabled>Replace all</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>/*__JSPDF__*/</script>
+<script>
+window.MathJax = {
+  loader: { load: [] },
+  tex: {
+    inlineMath: [["$", "$"], ["\\(", "\\)"]],
+    packages: { "[+]": ["ams", "mhchem", "cancel", "color", "boldsymbol", "braket", "mathtools", "gensymb", "upgreek", "textmacros", "enclose", "extpfeil", "centernot", "bbox", "noundefined"] }
+  },
+  svg: { fontCache: "none" },
+  startup: { typeset: false }
+};
+</script>
+<script>/*__MATHJAX__*/</script>
+<style>/*__MLFONTS__*/</style>
+<script>window.__ce = console.error; console.error = function(){ const t = String(arguments[0] || ""); if(/assets location|^\s*\[?\s*at /.test(t) || Array.isArray(arguments[0])) return; window.__ce.apply(console, arguments); };</script>
+<script>/*__MATHLIVE__*/</script>
+<script>setTimeout(() => { console.error = window.__ce; }, 1500);</script>
+<script>
+(function(){ const M = window.MathfieldElement || (window.MathLive && MathLive.MathfieldElement);
+  if(M){ try{ M.fontsDirectory = null; M.soundsDirectory = null; M.keypressSound = null; M.plonkSound = null; }catch(e){} } })();
+</script>
+<script>/*__TESS_LIB__*/</script>
+<script>/*__SORTABLE__*/</script>
+<script>/*__SMILES__*/</script>
+<script>/*__PDFJS__*/</script>
+<script type="text/plain" id="pdfjs-worker">__PDFJS_WORKER__</script>
+<script>
+if(window.pdfjsLib){
+  if(window.__PWA__) pdfjsLib.GlobalWorkerOptions.workerSrc = "vendor/pdfjs/pdf.worker.min.js";
+  else { const w = document.getElementById("pdfjs-worker"); if(w && w.textContent.length > 1000) pdfjsLib.GlobalWorkerOptions.workerSrc = URL.createObjectURL(new Blob([w.textContent], { type: "text/javascript" })); }
+}
+</script>
+<script type="text/plain" id="tess-worker">__TESS_WORKER__</script>
+<script type="text/plain" id="tess-core">__TESS_CORE__</script>
+<script type="text/plain" id="tess-eng">__TESS_ENG__</script>
+<script>
+"use strict";
+const DEFAULT_LOGO = "__LOGO__";
+const DEFAULT_LOGO_SIZE = [__LOGO_W__, __LOGO_H__];
+let FONT_R = "__FONT_R__";
+let FONT_B = "__FONT_B__";
+let FONT_I = "__FONT_I__";
+function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Couldn't load " + src)); document.head.appendChild(s); }); }
+async function ensureFonts(){
+  if(FONT_R) return;
+  if(!window.__FONTS__) await loadScript("vendor/fonts.js");
+  FONT_R = __FONTS__.r; FONT_B = __FONTS__.b; FONT_I = __FONTS__.i;
+}
+const STORE_KEY = "examBuilder.v1";
