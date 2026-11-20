@@ -5,7 +5,7 @@
 Usage:  build/fetch_vendor.sh   (once)   then   python3 build/build.py
 """
 import base64, hashlib, json, os, re, shutil
-from PIL import Image
+from PIL import Image, ImageChops
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 V = os.path.join(ROOT, ".vendor"); A = os.path.join(ROOT, "assets"); OUT = os.path.join(ROOT, "docs")
@@ -54,6 +54,11 @@ single_html = fill(src, single)
 # ---------------------------------------------------------------- web app (PWA)
 # keep hand-made demo files across rebuilds
 DEMO = os.path.join(ROOT, "demo")
+# the committed icons are kept byte-for-byte when they look the same as freshly drawn ones
+# (PNG compression differs between machines, which would make every build look "changed")
+OLD_ICONS = {}
+if os.path.isdir(os.path.join(OUT, "icons")):
+    for n in os.listdir(os.path.join(OUT, "icons")): OLD_ICONS[n] = open(os.path.join(OUT, "icons", n), "rb").read()
 if os.path.isdir(OUT): shutil.rmtree(OUT)
 os.makedirs(OUT)
 if os.path.isdir(DEMO): shutil.copytree(DEMO, os.path.join(OUT, "demo"))
@@ -130,6 +135,13 @@ bee_icon(32, .02, "favicon-32.png", rounded=False, hexagon=False)
 fav = Image.open(os.path.join(OUT, "icons", "favicon-32.png")).convert("RGBA")
 fav2 = Image.new("RGBA", fav.size, (0, 0, 0, 0)); b = bee_img(30)
 if b: fav2.alpha_composite(b, ((32 - b.width) // 2, (32 - b.height) // 2)); fav2.save(os.path.join(OUT, "icons", "favicon-32.png"))
+import io
+for n, old in OLD_ICONS.items():
+    p = os.path.join(OUT, "icons", n)
+    if not os.path.exists(p): continue
+    a1, a2 = Image.open(io.BytesIO(old)).convert("RGBA"), Image.open(p).convert("RGBA")
+    if a1.size == a2.size and max(hi for lo, hi in (ImageChops.difference(a1, a2).getextrema())) <= 3:
+        open(p, "wb").write(old)
 
 manifest = {
     "name": "BEE — Build • Edit • Evaluate", "short_name": "BEE", "id": "./", "start_url": "./", "scope": "./",
