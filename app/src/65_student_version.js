@@ -1,0 +1,400 @@
+/* ---------------- 💻 computer version for students ----------------
+   Export: the exam becomes one offline HTML file (app/student/). The questions inside are locked with the start code;
+   the full exam (with the answer key) is sealed for the teacher only and simply carried along.
+   Answers: the student's file seals their answers with the teacher's public key. Only this BEE (teacher key) opens them. */
+const PLAYER = /*__PLAYER__*/null;        // the offline BEE carries the template inside; the website fetches it
+const BLUE_HEX = "#1F4FB8";
+
+/* ---- teacher key: kept in this browser, one backup file for safety ---- */
+async function teacherKeys(){ return (await IDB.get("teacherKeys")) || []; }
+async function currentKey(create){
+  let ks = await teacherKeys();
+  if(!ks.length && create){ const k = await BC.newTeacherKey(); ks = [k]; await IDB.set("teacherKeys", ks); }
+  return ks[0] || null;
+}
+async function keyRow(){
+  const k = await currentKey(false), el = $("#stuKey"), backed = await IDB.get("teacherKeyBackup");
+  if(!k){ el.className = "key-row"; el.innerHTML = `🔑 A teacher key will be made for you now, so only you can open the answers. <button class="btn sm" type="button" data-keymodal>About the key</button>`; }
+  else if(backed !== k.kid){ el.className = "key-row warn"; el.innerHTML = `🔑 Teacher key <b>${esc(k.kid.slice(0, 6))}</b> — <b>no backup yet</b>. Keep a copy, or you could lose your students' answers. <button class="btn sm primary" type="button" data-keymodal>Back up now</button>`; }
+  else { el.className = "key-row"; el.innerHTML = `🔑 Teacher key <b>${esc(k.kid.slice(0, 6))}</b> · backed up ✓ <button class="btn sm" type="button" data-keymodal>Manage</button>`; }
+}
+document.addEventListener("click", e => { if(e.target.closest("[data-keymodal]")) openKeyModal(); });
+async function openKeyModal(){
+  const k = await currentKey(false), ks = await teacherKeys();
+  $("#keyInfo").textContent = k ? `Your key: ${k.kid.slice(0, 6)} · made ${new Date(k.created).toLocaleDateString()}` + (ks.length > 1 ? ` · ${ks.length - 1} older key${ks.length > 2 ? "s" : ""} kept for older answers` : "") : "You don't have a key yet. One is made the first time you download a computer version.";
+  $("#keyBackup").disabled = !k;
+  openModal("#keyModal");
+}
+$("#keyBackup").onclick = async () => {
+  const k = await currentKey(false); if(!k) return;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ bee: "teacher-key", v: 1, kid: k.kid, created: k.created, pub: k.pub, priv: k.priv })], { type: "application/json" }));
+  a.download = "BEE teacher key " + k.kid.slice(0, 6) + ".beekey"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  await IDB.set("teacherKeyBackup", k.kid);
+  toast("Key saved. Keep it somewhere safe and private (not on the students' laptops)."); keyRow();
+};
+$("#keyImport").onclick = () => {
+  const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".beekey,.json";
+  inp.onchange = async () => {
+    try{
+      const o = JSON.parse(await inp.files[0].text());
+      if(o.bee !== "teacher-key" || !o.pub || !o.priv) throw new Error("This isn't a BEE teacher key.");
+      const kid = await BC.kidOf(o.pub);
+      const ks = (await teacherKeys()).filter(k => k.kid !== kid);
+      ks.unshift({ pub: o.pub, priv: o.priv, kid, created: o.created || Date.now() });
+      await IDB.set("teacherKeys", ks); await IDB.set("teacherKeyBackup", kid);
+      toast("Teacher key " + kid.slice(0, 6) + " is ready in this browser."); openKeyModal(); keyRow();
+    }catch(e){ toast("Couldn't use that key: " + e.message); }
+  };
+  inp.click();
+};
+
+/* ---- time ---- */
+function parseDur(s){
+  s = String(s || "").toLowerCase().replace(",", ".").replace("½", ".5");
+  let m = 0;
+  const h = s.match(/(\d+(?:\.\d+)?)\s*(?:h|hr|hrs|hour|hours|heure|heures)\b/), mm = s.match(/(\d+)\s*(?:m|min|mins|minute|minutes)\b/), hm = s.match(/(\d+)\s*h\s*(\d{1,2})\b/);
+  if(hm) return +hm[1] * 60 + +hm[2];
+  if(h) m += Math.round(parseFloat(h[1]) * 60);
+  if(mm) m += +mm[1];
+  if(!m && /^\s*\d+\s*$/.test(s)) m = +s;
+  return m;
+}
+function stuTotal(){
+  const no = $("#stuNoTime").checked, base = Math.max(0, +$("#stuMin").value || 0), ex = +$("#stuExtra").value;
+  $("#stuMin").disabled = $("#stuExtra").disabled = no;
+  $("#stuTotal").innerHTML = no ? "The student has as long as they need." : base ? `Total time: <b>${Math.round(base * (1 + ex / 100))} minutes</b>${ex ? ` (${base} + ${ex}% extra)` : ""}. You can add more during the test (👩‍🏫 teacher menu).` : "Type the time in minutes.";
+}
+["#stuMin", "#stuExtra", "#stuNoTime"].forEach(s => $(s).addEventListener("input", stuTotal));
+$("#stuCodeNew").onclick = () => { $("#stuCode").value = BC.newCode(8); };
+$("#stuTCodeNew").onclick = () => { $("#stuTCode").value = BC.newCode(6, true); };
+async function openStudentDialog(){
+  if(!S.items.some(it => it.type === "q")){ toast("Add some questions first."); return; }
+  if(!(window.crypto && crypto.subtle)){ toast("This browser can't make sealed files. Please use Chrome, Edge, Firefox or Safari."); return; }
+  $("#stuForm").classList.remove("hidden"); $("#stuDone").classList.add("hidden");
+  $("#stuMin").value = parseDur(S.d.duration) || 60; $("#stuExtra").value = "0"; $("#stuNoTime").checked = false; $("#stuVer").value = "";
+  $("#stuCode").value = BC.newCode(8); $("#stuTCode").value = BC.newCode(6, true);
+  stuTotal(); keyRow(); openModal("#stuModal");
+}
+
+/* ---- the paper as HTML (same reader as the printed paper) ---- */
+function speakTex(t){
+  return " " + String(t || "")
+    .replace(/\\frac\{([^{}]*)\}\{([^{}]*)\}/g, " $1 over $2 ").replace(/\\sqrt\{([^{}]*)\}/g, " square root of $1 ")
+    .replace(/\^\{?2\}?/g, " squared ").replace(/\^\{?3\}?/g, " cubed ").replace(/\^\{([^{}]*)\}|\^(\w)/g, " to the power $1$2 ")
+    .replace(/_\{([^{}]*)\}|_(\w)/g, " $1$2 ")
+    .replace(/\\times/g, " times ").replace(/\\div/g, " divided by ").replace(/\\pm/g, " plus or minus ").replace(/\\cdot/g, " times ")
+    .replace(/\\le(q)?\b/g, " less than or equal to ").replace(/\\ge(q)?\b/g, " greater than or equal to ").replace(/\\neq?\b/g, " not equal to ")
+    .replace(/</g, " less than ").replace(/>/g, " greater than ").replace(/=/g, " equals ").replace(/\\approx/g, " approximately ")
+    .replace(/\\pi/g, " pi ").replace(/\\theta/g, " theta ").replace(/\\alpha/g, " alpha ").replace(/\\beta/g, " beta ").replace(/\\infty/g, " infinity ")
+    .replace(/\\degree|\^\\circ|\\circ/g, " degrees ").replace(/\\%/g, " percent ").replace(/\\(sin|cos|tan|log|ln)\b/g, " $1 ")
+    .replace(/\\[a-zA-Z]+/g, " ").replace(/[{}\\]/g, " ").replace(/-/g, " minus ").replace(/\s+/g, " ") + " ";
+}
+function studentRich(text, q, pics){
+  const plain = [];
+  const runsH = rs => rs.map(r => {
+    if(r.t === "math"){ const m = texSVG(r.tex, !!r.display); plain.push(speakTex(r.tex)); return m.err || !m.svg ? esc(r.tex) : `<span class="math" role="img" aria-label="${esc(speakTex(r.tex).trim())}">${m.svg}</span>`; }
+    plain.push(r.s);
+    let h = esc(r.s); if(r.b) h = "<b>" + h + "</b>"; if(r.i) h = "<i>" + h + "</i>"; if(r.u) h = "<u>" + h + "</u>"; if(r.x) h = "<s>" + h + "</s>"; if(r.c) h = `<span style="color:${esc(cssHex(r.c))}">` + h + "</span>"; return h;
+  }).join("");
+  const pic = (id, P, size, align) => { pics[id] = { src: P.src, w: P.w, h: P.h }; plain.push(" (picture) "); return `<div class="picwrap" style="text-align:${align || "center"}"><img class="pic" data-pic="${esc(id)}" src="${P.src}" alt="Picture" style="width:${size || 100}%"></div>`; };
+  const html = parseRich(text, fmtOf(q)).map(b => {
+    if(b.type === "gap"){ plain.push(". "); return "<div style='height:.6em'></div>"; }
+    if(b.type === "img"){ const P = picData(b.id); return P ? pic(b.id, P, b.size, b.align) : ""; }
+    if(b.type === "pic"){ plain.push(" (picture: " + b.desc + ") "); return `<div class="picmiss">Picture: ${esc(b.desc)}</div>`; }
+    if(b.type === "mol"){ const m = MOLS[b.smi]; plain.push(" (molecule " + (b.cap || "") + ") "); return m && m.png ? `<div class="molbox"><img src="${m.png}" alt="Molecule ${esc(b.cap || b.smi)}">${b.cap ? `<div>${esc(b.cap)}</div>` : ""}</div>` : esc(b.smi); }
+    if(b.type === "display"){ const m = texSVG(b.tex, true); plain.push(speakTex(b.tex)); return `<div class="disp"><span class="math" role="img" aria-label="${esc(speakTex(b.tex).trim())}">${m.err || !m.svg ? esc(b.tex) : m.svg}</span></div>`; }
+    if(b.type === "table"){ const h = "<table>" + b.rows.map((r, i) => "<tr>" + r.map(c => { const t = b.header && i === 0 ? "th" : "td"; const x = `<${t}>` + runsH(c) + `</${t}>`; plain.push(", "); return x; }).join("") + "</tr>").join("") + "</table>"; plain.push(". "); return h; }
+    const x = `<div style="padding-left:${b.ind ? 1.2 : 0}em${b.align ? ";text-align:" + b.align : ""}${b.scale && b.scale !== 1 ? ";font-size:" + b.scale + "em" : ""}">${b.bullet ? "• " : ""}${runsH(b.runs) || "&nbsp;"}</div>`;
+    plain.push(". "); return x;
+  }).join("");
+  return { html, plain: plain.join("").replace(/\s*\.\s*(\.\s*)+/g, ". ").replace(/\s+/g, " ").replace(/^[\s.]+|[\s.]+$/g, "") };
+}
+function attachedPic(it, pics){
+  if(!it.img || !it.img.src) return "";
+  const id = "q_" + it.id; pics[id] = { src: it.img.src, w: it.img.w, h: it.img.h };
+  return `<div class="picwrap" style="text-align:${it.imgAlign || "left"}"><img class="pic" data-pic="${id}" src="${it.img.src}" alt="Picture" style="width:${it.imgSize || 100}%"></div>`;
+}
+function optionList(it){
+  return (it.options || []).map((o, i) => [String(o || ""), i]).filter(([o]) => o.trim()).map(([o, i], k) => ({ o, i, L: LETTERS[k].toUpperCase() }));
+}
+const SPACE_KINDS = /^(lines|blank|grid|box|numberline|axes)$/;
+function areaSpec(space, lines, range, dflt){
+  const kind = SPACE_KINDS.test(space || "") ? space : "lines";
+  return { kind, lines: num(lines) || dflt, range: range || "" };
+}
+function buildPaper(items){
+  const pics = {}, M = (() => { const saved = S.items; S.items = items; try{ return computeMeta(); }finally{ S.items = saved; } })();
+  const out = [];
+  for(const it0 of items){
+    const it = cloneItem(it0); ensureOptions(it);
+    if(it.type === "section"){ const r = studentRich(it.text, it, pics); out.push({ k: "sec", html: r.html, plain: r.plain }); continue; }
+    if(it.type !== "q"){
+      if(it.pagebreak || !((it.text || "").trim() || it.img)) continue;
+      const r = studentRich(it.text, it, pics); out.push({ k: "note", heading: !!it.heading, html: r.html + attachedPic(it, pics), plain: r.plain }); continue;
+    }
+    const subs = Array.isArray(it.subs) ? it.subs : [], subMarks = subs.some(sb => num(sb.marks) > 0);
+    const r = studentRich(it.text, it, pics);
+    const q = { k: "q", id: it.id, no: it.nonum ? "" : String(M.meta[it.id] || ""), marks: S.d.showMarks !== false && !it.hideMarks && qMarks(it) > 0 && !subMarks ? fmt(qMarks(it)) : "",
+      html: r.html + attachedPic(it, pics), plain: r.plain, mcq: it.mcq || "" };
+    if(it.mcq){ q.opts = optionList(it).map(({ o, i, L }) => { const x = studentRich(o, null, pics); return { i, L, html: x.html, plain: x.plain }; }); }
+    const hasSpace = num(it.lines) > 0 || /^(numberline|axes)$/.test(it.space || "");
+    q.ans = it.mcq ? (hasSpace ? areaSpec(it.space, it.lines, it.range, 3) : null) : subs.length ? (hasSpace ? areaSpec(it.space, it.lines, it.range, 3) : null) : areaSpec(it.space, it.lines, it.range, 3);
+    q.subs = subs.map((sb, k) => { const x = studentRich(sb.text || "", null, pics); return { key: sb.id || String(k), L: "(" + LETTERS[k] + ")", marks: S.d.showMarks !== false && num(sb.marks) > 0 ? fmt(num(sb.marks)) : "", html: x.html, plain: x.plain, ans: areaSpec(sb.space, sb.lines, sb.range, 3) }; });
+    out.push(q);
+  }
+  const ins = S.d.instructions ? studentRich(String(S.d.instructions), null, pics).html : "";
+  return { paper: { lang: S.d.lang || "en", cover: { title: S.d.title || "Exam", subtitle: S.d.subtitle || "", subject: S.d.subject || "", teacher: S.d.teacher || "", date: S.d.date || "", durationText: S.d.duration || "", total: M.total ? fmt(M.total) : "", instructionsHTML: ins }, items: out, pics },
+           nq: out.filter(x => x.k === "q").length, total: M.total };
+}
+
+/* ---- make the student file ---- */
+async function playerTemplate(){
+  if(PLAYER) return PLAYER;
+  const r = await fetch("student/player.html"); if(!r.ok) throw new Error("couldn't load the student version (" + r.status + ")");
+  return r.text();
+}
+let lastExport = null;
+$("#stuGo").onclick = async () => {
+  const btn = $("#stuGo");
+  const code = $("#stuCode").value.trim(), tcode = $("#stuTCode").value.trim();
+  if(BC.norm(code).length < 6){ toast("The start code needs at least 6 letters or numbers."); return; }
+  if(BC.norm(tcode).length < 4){ toast("The teacher code needs at least 4 characters."); return; }
+  if(BC.norm(code) === BC.norm(tcode)){ toast("Use two different codes."); return; }
+  btn.disabled = true; const lbl = btn.textContent; btn.textContent = "Making the file…";
+  try{
+    const ver = $("#stuVer").value;
+    const items = ver ? versionItems(S.items, ver, true, true) : S.items.map(cloneItem);
+    await prepareMath({ items, logo: S.logo });
+    const { paper, nq, total } = buildPaper(items);
+    const noTime = $("#stuNoTime").checked, base = noTime ? 0 : Math.max(1, +$("#stuMin").value || 60), extraPct = noTime ? 0 : +$("#stuExtra").value;
+    const key = await currentKey(true);
+    const salt = BC.b64e(BC.rnd(16)), iter = 250000, salt2 = BC.b64e(BC.rnd(16)), iter2 = 150000;
+    const snap = { d: JSON.parse(JSON.stringify(S.d)), logo: S.logo, items: JSON.parse(JSON.stringify(items)), version: ver, exportedAt: Date.now() };
+    const EXAM = {
+      bee: "student-exam", v: 1, examId: BC.b64e(BC.rnd(12)).replace(/[+/=]/g, "x"), title: S.d.title || "Exam", subject: S.d.subject || "", version: ver,
+      nq, total: total ? fmt(total) : "", timeMin: noTime ? 0 : Math.round(base * (1 + extraPct / 100)), baseMin: base, extraPct,
+      readAloud: $("#stuRead").checked, drawing: $("#stuDraw").checked, lang: S.d.lang || "en",
+      kid: key.kid, pub: key.pub, salt, iter, paper: await BC.lock(await BC.codeKey(code, salt, iter), paper),
+      unlock: { salt: salt2, iter: iter2, hash: await BC.codeHash(tcode, salt2, iter2) },
+      teacher: await BC.seal({ snap, startCode: code, teacherCode: tcode }, key.pub)
+    };
+    const tpl = await playerTemplate();
+    const html = tpl.replace("/*__EXAM" + "__*/null", () => JSON.stringify(EXAM).replace(/<\//g, "<\\/").replace(/<!--/g, "<\\!--"));
+    const name = cleanFile((S.d.title || "Exam") + (ver ? " - Version " + ver : "") + " - computer version") + ".html";
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([html], { type: "text/html" })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    lastExport = { name, code, tcode, title: S.d.title || "Exam", subject: S.d.subject || "", ver, base, extraPct, timeMin: EXAM.timeMin, nq, kid: key.kid, readAloud: EXAM.readAloud };
+    $("#stuFile").textContent = name; $("#stuShowCode").textContent = code; $("#stuShowTCode").textContent = tcode;
+    $("#stuForm").classList.add("hidden"); $("#stuDone").classList.remove("hidden");
+    if((await IDB.get("teacherKeyBackup")) !== key.kid) setTimeout(() => openKeyModal(), 600);
+  }catch(e){ console.error(e); toast("Couldn't make the student file: " + e.message); }
+  finally{ btn.disabled = false; btn.textContent = lbl; }
+};
+const cleanFile = s => String(s || "").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 100) || "exam";
+
+/* ---- 🖨 invigilator sheet ---- */
+$("#stuSheet").onclick = () => {
+  const X = lastExport; if(!X) return;
+  const { jsPDF } = window.jspdf, doc = new jsPDF({ unit: "mm", format: S.d.paper === "letter" ? "letter" : "a4" });
+  const PW = doc.internal.pageSize.getWidth(); let y = 20;
+  const T = (s, size, style, col, x, opt) => { doc.setFont("helvetica", style || "normal"); doc.setFontSize(size); doc.setTextColor(...(col || [38, 34, 28])); doc.text(s, x || 20, y, opt); };
+  const para = (s, size) => { doc.setFont("helvetica", "normal"); doc.setFontSize(size || 10.5); doc.setTextColor(38, 34, 28); doc.splitTextToSize(s, PW - 46).forEach(l => { doc.text(l, 26, y); y += 5; }); };
+  T("INVIGILATOR SHEET - COMPUTER VERSION", 9, "bold", [140, 102, 32]); y += 7;
+  T(X.title, 17, "bold"); y += 6;
+  T([X.subject, X.ver ? "Version " + X.ver : "", X.nq + " questions"].filter(Boolean).join("   |   "), 10.5, "normal", [118, 110, 98]); y += 6;
+  T(X.timeMin ? `Time: ${X.timeMin} minutes` + (X.extraPct ? `  (${X.base} min + ${X.extraPct}% extra time)` : "") : "Time: no limit", 10.5, "bold"); y += 9;
+  const box = (x, label, code, note) => {
+    doc.setDrawColor(181, 137, 46); doc.setLineWidth(.6); doc.setLineDashPattern([2, 1.4], 0); doc.roundedRect(x, y, 80, 30, 3, 3, "S"); doc.setLineDashPattern([], 0);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(118, 110, 98); doc.text(label, x + 40, y + 7, { align: "center" });
+    doc.setFont("courier", "bold"); doc.setFontSize(21); doc.setTextColor(38, 34, 28); doc.text(code, x + 40, y + 18, { align: "center" });
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(118, 110, 98); doc.text(note, x + 40, y + 25, { align: "center" });
+  };
+  box(20, "START CODE", X.code, "to start, or carry on after a problem"); box(PW - 100, "TEACHER CODE", X.tcode, "unlocks a locked test - teacher menu");
+  y += 40;
+  const step = (n, title, body) => { T(n + "  " + title, 11.5, "bold"); y += 6; body.forEach(b => para("•  " + b)); y += 3; };
+  step("1", "Before the test", ["Copy “" + X.name + "” to each student's laptop (USB stick or shared folder). The questions stay locked inside it until you type the start code.", "Open it with Chrome or Edge (Firefox and Safari also work). No internet is needed.", "Plug in the chargers. Close other programs and switch off notifications if you can.", "Optional, Chrome/Edge: tick “Also keep a backup copy” and choose a USB stick, so the answers are safe even if the laptop dies."]);
+  step("2", "Starting", ["The student types their name. You type the START CODE and press Start. The test goes full screen and the clock starts."]);
+  step("3", "During the test", ["If the student leaves the test screen (another window, Alt+Tab, Esc), the laptop beeps and the test LOCKS. Type the TEACHER CODE to unlock it. Every time is recorded on the answer PDF.", "Teacher menu (the teacher button at the top, then the TEACHER CODE): add time, or end the test for this student.", "If the laptop crashes or the file closes: open the same file again and type the START CODE. The student carries on where they were; the clock kept running (add time if needed).", "On another laptop: copy the same file there, press “Carry on from a backup”, choose the backup from the USB stick, type the START CODE."]);
+  step("4", "At the end", ["The student presses End the test (or time runs out). A sealed answers file appears in Downloads (and on the backup USB): “<title> - <name>.bee-answers”. Collect these files.", "In BEE: the small arrow next to Download PDF, then Open student answers. BEE makes a PDF of each paper with the answers in blue, ready to mark, plus the record of times and exits.", "Only the BEE with your teacher key (" + X.kid.slice(0, 6) + ") can open these files. Keep a backup of your key."]);
+  doc.setFont("helvetica", "italic"); doc.setFontSize(8.5); doc.setTextColor(118, 110, 98);
+  doc.text("Keep this sheet away from students. Made with BEE - " + new Date().toLocaleDateString(), PW / 2, doc.internal.pageSize.getHeight() - 12, { align: "center" });
+  doc.save(cleanFile(X.title + (X.ver ? " - Version " + X.ver : "") + " - invigilator sheet") + ".pdf");
+};
+
+/* ---- 📥 open student answers ---- */
+const ANS = [];
+function pickAnswers(){
+  const inp = document.createElement("input"); inp.type = "file"; inp.multiple = true; inp.accept = ".bee-answers";
+  inp.onchange = () => loadAnswers([...inp.files]);
+  inp.click();
+}
+$("#ansMore").onclick = pickAnswers;
+async function loadAnswers(files){
+  const ks = await teacherKeys(), first = !ANS.length && files.length === 1;
+  for(const f of files){
+    const row = { file: f.name };
+    try{
+      const o = JSON.parse(await f.text());
+      if(o.bee !== "answers" || !o.sealed) throw new Error("not a BEE answers file");
+      const k = ks.find(k => k.kid === o.kid);
+      if(!k) throw new Error("sealed with another teacher key (" + String(o.kid).slice(0, 6) + "). Use 🔑 “Use a key from a backup”");
+      row.P = await BC.unseal(o.sealed, k.priv); row.T = await BC.unseal(o.teacher, k.priv);
+      row.mcq = markMCQ(row.T.snap, row.P);
+      const dup = ANS.findIndex(r => r.P && r.P.examId === row.P.examId && r.P.name === row.P.name && r.P.startedAt === row.P.startedAt);
+      if(dup >= 0) ANS.splice(dup, 1);
+    }catch(e){ row.err = e.message; }
+    ANS.push(row);
+  }
+  renderAnswers(); openModal("#ansModal");
+  if(first && ANS[0] && ANS[0].P) answerPDF(ANS[0]).then(r => r.doc.save(r.name)).catch(e => toast("Couldn't make the PDF: " + e.message));
+}
+function markMCQ(snap, P){
+  const meta = (() => { const saved = S.items; S.items = snap.items; try{ return computeMeta().meta; }finally{ S.items = saved; } })();
+  const rows = []; let got = 0, max = 0;
+  for(const it0 of snap.items){
+    const it = cloneItem(it0); if(it.type !== "q" || !it.mcq) continue; ensureOptions(it);
+    if(!(it.correct || []).length) continue;
+    const L = optionList(it), letter = i => (L.find(x => x.i === i) || {}).L || "?";
+    const ch = ((P.answers[it.id] || {}).choice || []).slice().sort(), co = it.correct.slice().sort();
+    const ok = ch.length === co.length && ch.every((v, k) => v === co[k]), mk = qMarks(it) || 1;
+    rows.push({ no: meta[it.id] || "–", chosen: ch.map(letter).join(", ") || "—", correct: co.map(letter).join(", "), ok, marks: mk, got: ok ? mk : 0 });
+    max += mk; if(ok) got += mk;
+  }
+  return { rows, got, max };
+}
+const minsOf = ms => Math.round(ms / 60000);
+function renderAnswers(){
+  $("#ansList").innerHTML = ANS.length ? `<table class="ans-table"><tr><th>Student</th><th>Ended</th><th>Time used</th><th>Left the test</th><th>MCQ (auto)</th><th></th></tr>${ANS.map((r, i) => r.err ? `<tr><td colspan="5" class="bad">⚠ ${esc(r.file)}: ${esc(r.err)}</td><td></td></tr>` : `<tr>
+    <td><b>${esc(r.P.name)}</b>${r.P.cls ? `<br><span class="hint">${esc(r.P.cls)}</span>` : ""}<br><span class="hint">${esc(r.T.snap.d.title || "")}${r.T.snap.version ? " · Version " + esc(r.T.snap.version) : ""}</span></td>
+    <td>${new Date(r.P.endedAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}${r.P.endedBy === "time" ? "<br><span class='hint'>time was up</span>" : r.P.endedBy === "teacher" ? "<br><span class='hint'>by the teacher</span>" : ""}</td>
+    <td>${minsOf(r.P.endedAt - r.P.startedAt)} min${r.P.timeMin ? ` <span class="hint">of ${r.P.timeMin + (r.P.extraMin || 0)}</span>` : ""}</td>
+    <td class="${leftCount(r.P) ? "bad" : ""}">${leftCount(r.P) ? leftCount(r.P) + "×" : "never"}</td>
+    <td>${r.mcq.max ? `${fmt(r.mcq.got)} / ${fmt(r.mcq.max)}` : "—"}</td>
+    <td><button class="btn sm primary" data-anspdf="${i}">⬇ PDF</button></td></tr>`).join("")}</table>
+    <p class="hint">Blue in the PDF = what the student typed. Multiple-choice is marked for you (shown on the first page); written answers are for you to mark.</p>` : "<p>No files yet.</p>";
+  const ok = ANS.some(r => r.P); $("#ansZip").disabled = $("#ansCsv").disabled = !ok;
+}
+const leftCount = P => (P.log || []).filter(l => l.kind === "left").length;
+$("#ansList").addEventListener("click", async e => {
+  const b = e.target.closest("[data-anspdf]"); if(!b) return;
+  b.disabled = true;
+  try{ const r = await answerPDF(ANS[+b.dataset.anspdf]); r.doc.save(r.name); }catch(err){ console.error(err); toast("Couldn't make the PDF: " + err.message); }
+  b.disabled = false;
+});
+async function answerPDF(r){
+  const snap = r.T.snap, P = r.P;
+  await prepareMath(snap);
+  // the student's own maths, drawn in blue
+  const jobs = [];
+  Object.values(P.answers || {}).forEach(A => Object.values(A.areas || {}).forEach(bl => bl.forEach(b => { if(b.t === "math" && String(b.v || "").trim()){ const m = texSVG(mathColor(b.v, BLUE_HEX), true); if(m.svg && !m.png && !m.err) jobs.push(mathPNG(m).catch(() => {})); } })));
+  await Promise.all(jobs);
+  const resp = Object.assign({}, P, { mcq: r.mcq, title: snap.d.title, version: snap.version });
+  // the student's exam is in place only while the PDF is drawn — no waiting, so nothing can save it over yours
+  const saved = S; let doc;
+  S = { d: snap.d, logo: snap.logo, items: snap.items };
+  try{ doc = buildPDF({ final: true, resp, version: snap.version || undefined }); }finally{ S = saved; }
+  return { doc, name: cleanFile((snap.d.title || "Exam") + " - " + P.name + " (answers)") + ".pdf" };
+}
+$("#ansZip").onclick = async () => {
+  const btn = $("#ansZip"), lbl = btn.textContent; btn.disabled = true;
+  try{
+    const files = [], used = {};
+    for(const r of ANS.filter(r => r.P)){
+      btn.textContent = "Making PDFs… " + (files.length + 1) + "/" + ANS.filter(r => r.P).length;
+      const x = await answerPDF(r); let n = x.name; if(used[n]){ n = n.replace(/\.pdf$/, " " + (++used[n]) + ".pdf"); } else used[n] = 1;
+      files.push({ name: n, data: new Uint8Array(x.doc.output("arraybuffer")) });
+    }
+    files.push({ name: "Summary.csv", data: new TextEncoder().encode(answersCSV()) });
+    const title = (ANS.find(r => r.P) || {}).T.snap.d.title || "Exam";
+    const a = document.createElement("a"); a.href = URL.createObjectURL(zipStore(files)); a.download = cleanFile(title + " - student answers") + ".zip"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }catch(e){ console.error(e); toast("Couldn't make the ZIP: " + e.message); }
+  btn.disabled = false; btn.textContent = lbl;
+};
+function answersCSV(){
+  const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
+  const rows = [["Name", "Class", "Exam", "Version", "Started", "Ended", "Ended by", "Time used (min)", "Time allowed (min)", "Left the test", "MCQ marks", "MCQ out of"]];
+  ANS.filter(r => r.P).forEach(r => { const P = r.P; rows.push([P.name, P.cls, r.T.snap.d.title, r.T.snap.version || "", new Date(P.startedAt).toLocaleString(), new Date(P.endedAt).toLocaleString(), P.endedBy, minsOf(P.endedAt - P.startedAt), P.timeMin ? P.timeMin + (P.extraMin || 0) : "", leftCount(P), r.mcq.max ? r.mcq.got : "", r.mcq.max || ""]); });
+  return "﻿" + rows.map(r => r.map(q).join(",")).join("\r\n");
+}
+$("#ansCsv").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([answersCSV()], { type: "text/csv" })); a.download = "Student answers - summary.csv"; a.click(); };
+// a ZIP with no compression (PDFs are already compressed): enough for "all papers in one download"
+function zipStore(files){
+  const crcT = zipStore.t || (zipStore.t = Array.from({ length: 256 }, (_, n) => { let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; }));
+  const crc = d => { let c = 0xFFFFFFFF; for(let i = 0; i < d.length; i++) c = crcT[(c ^ d[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  const enc = new TextEncoder(), parts = [], central = []; let off = 0;
+  const d = new Date(), dt = ((d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1)) & 0xFFFF, dd = (((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate()) & 0xFFFF;
+  for(const f of files){
+    const nm = enc.encode(f.name), c = crc(f.data), h = new DataView(new ArrayBuffer(30));
+    [[0, 0x04034b50, 4], [4, 20, 2], [6, 0x0800, 2], [8, 0, 2], [10, dt, 2], [12, dd, 2], [14, c, 4], [18, f.data.length, 4], [22, f.data.length, 4], [26, nm.length, 2], [28, 0, 2]].forEach(([o, v, s]) => s === 4 ? h.setUint32(o, v, true) : h.setUint16(o, v, true));
+    parts.push(new Uint8Array(h.buffer), nm, f.data);
+    const cd = new DataView(new ArrayBuffer(46));
+    [[0, 0x02014b50, 4], [4, 20, 2], [6, 20, 2], [8, 0x0800, 2], [10, 0, 2], [12, dt, 2], [14, dd, 2], [16, c, 4], [20, f.data.length, 4], [24, f.data.length, 4], [28, nm.length, 2], [30, 0, 2], [32, 0, 2], [34, 0, 2], [36, 0, 2], [38, 0, 4], [42, off, 4]].forEach(([o, v, s]) => s === 4 ? cd.setUint32(o, v, true) : cd.setUint16(o, v, true));
+    central.push(new Uint8Array(cd.buffer), nm);
+    off += 30 + nm.length + f.data.length;
+  }
+  const cs = central.reduce((a, x) => a + x.length, 0), end = new DataView(new ArrayBuffer(22));
+  [[0, 0x06054b50, 4], [4, 0, 2], [6, 0, 2], [8, files.length, 2], [10, files.length, 2], [12, cs, 4], [16, off, 4], [20, 0, 2]].forEach(([o, v, s]) => s === 4 ? end.setUint32(o, v, true) : end.setUint16(o, v, true));
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: "application/zip" });
+}
+
+/* ---- inside buildPDF: the chosen MCQ options in blue, and the answer record page ---- */
+function qTextResp(it, chosen){
+  const ch = new Set(chosen || []), L = optionList(it);
+  if(!L.length) return it.text || "";
+  return (it.text || "").replace(/\s+$/, "") + "\n" + L.map(({ o, i, L }) => ch.has(i) ? "{color:" + BLUE_HEX + "}**" + L + ". " + o + "  ◀**{/color}" : L + ". " + o).join("\n");
+}
+function respRecord(doc, R, h){
+  const { font, SANS, INK, MUTED, PW, PH, ML, MR } = h, BLUE = [31, 79, 184];
+  const N0 = doc.getNumberOfPages();
+  // every page: who answered it
+  for(let p = 1; p <= N0; p++){ doc.setPage(p); font(SANS, "normal", 7.5, BLUE); doc.text((R.name || "") + (R.cls ? " · " + R.cls : "") + "  —  answered on a computer", PW - MR, 7, { align: "right" }); }
+  doc.insertPage(1); doc.setPage(1);
+  let y = 22;
+  font(SANS, "bold", 8.5, [140, 102, 32]); doc.text("ANSWER RECORD  ·  COMPUTER VERSION", ML, y); y += 8;
+  font(SANS, "bold", 17, INK); doc.splitTextToSize(R.title || "Exam", PW - ML - MR).slice(0, 2).forEach(l => { doc.text(l, ML, y); y += 7; });
+  if(R.version){ font(SANS, "normal", 10, MUTED); doc.text("Version " + R.version, ML, y); y += 6; }
+  y += 3;
+  doc.setFillColor(234, 240, 252); doc.roundedRect(ML, y, PW - ML - MR, 17, 2, 2, "F");
+  font(SANS, "bold", 15, BLUE); doc.text(R.name || "", ML + 5, y + 7.5);
+  font(SANS, "normal", 9.5, BLUE); doc.text((R.cls ? R.cls + "  ·  " : "") + "Answered on a computer  ·  answers in blue", ML + 5, y + 13);
+  y += 25;
+  const T = t => new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const used = R.endedAt - R.startedAt, allowed = R.timeMin ? R.timeMin + (R.extraMin || 0) : 0;
+  const facts = [
+    ["Date", new Date(R.startedAt).toLocaleDateString([], { weekday: "long", day: "numeric", month: "long", year: "numeric" })],
+    ["Started", T(R.startedAt)], ["Ended", T(R.endedAt) + (R.endedBy === "time" ? "  (time was up)" : R.endedBy === "teacher" ? "  (ended by the teacher)" : "  (the student ended it)")],
+    ["Time used", Math.round(used / 60000) + " minutes"],
+    ["Time allowed", allowed ? allowed + " minutes" + (R.extraPct ? `  (${R.baseMin} + ${R.extraPct}% extra)` : "") + (R.extraMin ? `  + ${R.extraMin} added by the teacher` : "") : "no limit"]
+  ];
+  facts.forEach(([k, v]) => { font(SANS, "normal", 10, MUTED); doc.text(k, ML, y); font(SANS, "bold", 10, INK); doc.text(String(v), ML + 34, y); y += 6; });
+  y += 4;
+  // leaving the test
+  const lefts = (R.log || []).filter(l => l.kind === "left");
+  font(SANS, "bold", 11.5, INK); doc.text(lefts.length ? `Left the test screen: ${lefts.length} time${lefts.length === 1 ? "" : "s"}` : "Left the test screen: never", ML, y); y += 6;
+  const shown = (R.log || []).filter(l => !/^(read aloud)$/.test(l.kind));
+  const say = l => l.kind === "left" ? "left the test — " + (l.how || "") : l.kind === "back" ? "came back after " + Math.max(1, Math.round((l.ms || 0) / 1000)) + " s" : l.kind === "time added by teacher" ? "teacher added " + l.min + " minutes" : l.kind === "ended" ? "ended" : l.kind === "test reopened" || /backup/.test(l.kind) ? l.kind + (l.ms ? " (" + Math.round(l.ms / 60000) + " min after the last save)" : "") : l.kind;
+  if(lefts.length || shown.some(l => /paste|reopened|backup|wrong/.test(l.kind))){
+    const list = shown.slice(0, 40);
+    list.forEach(l => { if(y > PH - 60) return; font(SANS, "normal", 9, /left|paste|wrong/.test(l.kind) ? [180, 69, 47] : INK); doc.text(T(l.t), ML + 2, y); doc.text(say(l), ML + 18, y); y += 4.6; });
+    if(shown.length > list.length){ font(SANS, "italic", 8.5, MUTED); doc.text("… and " + (shown.length - list.length) + " more", ML + 18, y); y += 4.6; }
+  }
+  y += 5;
+  // MCQ marked automatically
+  const M = R.mcq || { rows: [] };
+  if(M.rows.length){
+    font(SANS, "bold", 11.5, INK); doc.text(`Multiple choice, marked automatically: ${fmt(M.got)} / ${fmt(M.max)}`, ML, y); y += 6;
+    const cols = [ML + 2, ML + 22, ML + 52, ML + 82, ML + 100];
+    font(SANS, "bold", 8.5, MUTED); ["Question", "Chose", "Correct", "", "Marks"].forEach((s, k) => doc.text(s, cols[k], y)); y += 4.6;
+    for(const r of M.rows){
+      if(y > PH - 22){ font(SANS, "italic", 8.5, MUTED); doc.text("…", ML + 2, y); break; }
+      font(SANS, "normal", 9.5, INK); doc.text(String(r.no), cols[0], y);
+      font(SANS, "bold", 9.5, BLUE); doc.text(r.chosen, cols[1], y);
+      font(SANS, "normal", 9.5, INK); doc.text(r.correct, cols[2], y);
+      font(SANS, "bold", 10, r.ok ? [42, 125, 79] : [180, 69, 47]); doc.text(r.ok ? "✓" : "✗", cols[3], y);
+      font(SANS, "normal", 9.5, INK); doc.text(fmt(r.got) + " / " + fmt(r.marks), cols[4], y); y += 4.8;
+    }
+    y += 3;
+  }
+  font(SANS, "italic", 8.5, MUTED);
+  doc.text("Written answers are not marked automatically. The student's typing is in blue; empty answer spaces were left blank.", ML, PH - 14);
+}

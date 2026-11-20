@@ -49,6 +49,22 @@ single.update({
     "/*__DEMO__*/null": rd(os.path.join(ROOT, "demo", "demo_all_features.exam.json")).strip().replace("</", "<\\/"),
     "__PDFJS_WORKER__": rd(os.path.join(V, "pdfjs", "pdf.worker.min.js")),
 })
+# ---------------------------------------------------------------- 💻 student computer version (template)
+# app/student/ → one self-contained page; BEE puts the exam inside it when a teacher downloads it
+PS = os.path.join(ROOT, "app", "student")
+PORDER = [l.strip() for l in rd(os.path.join(PS, "ORDER.txt")).splitlines() if l.strip() and not l.startswith("#")]
+def sfonts():
+    F = os.path.join(V, "sfonts"); out = []
+    for fam, stem in [("Atkinson Hyperlegible", "atkinson-hyperlegible"), ("OpenDyslexic", "opendyslexic")]:
+        for w in (400, 700):
+            out.append("@font-face{font-family:'%s';font-weight:%d;font-display:swap;src:url(data:font/woff2;base64,%s) format('woff2')}" % (fam, w, b64(os.path.join(F, "%s-latin-%d-normal.woff2" % (stem, w)))))
+    return "\n".join(out)
+player_html = fill("\n".join(rd(os.path.normpath(os.path.join(PS, n))) for n in PORDER), {
+    "/*__MATHLIVE__*/": rd(os.path.join(V, "mathlive", "mathlive.min.js")),
+    "/*__MLFONTS__*/": mathlive_css(True),
+    "/*__SFONTS__*/": sfonts(),
+})
+single["/*__PLAYER__*/null"] = json.dumps(player_html).replace("</", "<\\/")
 single_html = fill(src, single)
 
 # ---------------------------------------------------------------- web app (PWA)
@@ -187,6 +203,8 @@ open(os.path.join(OUT, "index.html"), "w").write(index_html)
 os.makedirs(os.path.join(OUT, "download"))
 open(os.path.join(OUT, "download", "Exam_Builder_offline.html"), "w").write(single_html)
 open(os.path.join(OUT, ".nojekyll"), "w").write("")
+os.makedirs(os.path.join(OUT, "student"))
+open(os.path.join(OUT, "student", "player.html"), "w").write(player_html)
 
 # service worker: core files cached on install; photo reader + extra fonts cached in the background
 def h(paths):
@@ -196,7 +214,7 @@ def h(paths):
 CORE = ["./", "index.html", "manifest.webmanifest", "vendor/jspdf.umd.min.js", "vendor/mathjax/tex-svg-full.js", "vendor/mathlive/mathlive.min.js",
         "vendor/mathlive/fonts.css", "vendor/sortable.min.js", "vendor/smiles-drawer.min.js", "vendor/pdfjs/pdf.min.js", "vendor/pdfjs/pdf.worker.min.js",
         "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/apple-touch-icon.png", "icons/favicon-32.png"]
-LAZY = ["vendor/fonts.js", "vendor/ocr/tesseract.min.js", "vendor/ocr/worker.min.js", "vendor/ocr/tesseract-core-simd-lstm.wasm.js", "vendor/ocr/lang/eng.traineddata.gz"]
+LAZY = ["student/player.html", "vendor/fonts.js", "vendor/ocr/tesseract.min.js", "vendor/ocr/worker.min.js", "vendor/ocr/tesseract-core-simd-lstm.wasm.js", "vendor/ocr/lang/eng.traineddata.gz"]
 sw = rd(os.path.join(ROOT, "build", "sw.template.js"))
 sw = sw.replace("__CORE_VERSION__", h([p for p in CORE if p != "./"])).replace("__LAZY_VERSION__", h(LAZY))
 sw = sw.replace("__CORE__", json.dumps(CORE)).replace("__LAZY__", json.dumps(LAZY))

@@ -24,6 +24,8 @@
       <button data-dl="key"><b>Answer key</b><span>Teacher copy: correct options ✓ and model answers in red</span></button>
       <button data-dl="versions"><b>Versions A, B, C…</b><span>Shuffled copies for students sitting side by side</span></button>
       <button data-dl="questions"><b>Questions only</b><span>Without the cover page</span></button>
+      <button data-dl="student"><b>💻 Computer version for students</b><span>Students answer on a laptop, offline. Answers come back sealed for you</span></button>
+      <button data-dl="answers"><b>📥 Open student answers</b><span>Turn sealed answer files into PDFs to mark</span></button>
     </div>
   </span>
 </header>
@@ -508,6 +510,59 @@ x = 3
 </div>
 <div class="wm" aria-hidden="true">🐝 BEE · © Jishnu</div>
 <!-- VERSIONS -->
+<!-- 💻 COMPUTER VERSION FOR STUDENTS -->
+<div class="modal" id="stuModal">
+  <div class="box" style="max-width:600px">
+    <div id="stuForm">
+      <h3>💻 Computer version for students</h3>
+      <p class="hint" style="margin:4px 0 10px">One file the student opens on a laptop, with no internet. They answer on screen (typing, maths keyboard, drawing) and press <b>End the test</b>. Their answers come back as a <b>sealed file</b> that only your BEE can open, and BEE turns it into a PDF to mark.</p>
+      <div class="fields">
+        <label class="f">Time (minutes)<input type="number" id="stuMin" min="1" max="600" step="1"></label>
+        <label class="f">Extra time<select id="stuExtra"><option value="0">None</option><option value="10">+10%</option><option value="25">+25%</option><option value="33">+33%</option><option value="50">+50%</option><option value="100">+100% (double time)</option></select></label>
+        <label class="f">Version<select id="stuVer"><option value="">Same order as the paper</option><option>A</option><option>B</option><option>C</option><option>D</option></select></label>
+      </div>
+      <div class="checks" style="flex-direction:column;gap:6px;margin-top:8px">
+        <label><input type="checkbox" id="stuNoTime"> No time limit</label>
+        <label><input type="checkbox" id="stuRead" checked> 🔊 Students may have questions read aloud <span class="hint">(turn off for reading tests)</span></label>
+        <label><input type="checkbox" id="stuDraw" checked> ✏️ Drawing pad (sketches, graphs, labelling pictures)</label>
+      </div>
+      <p class="hint" id="stuTotal" style="margin:8px 0 0"></p>
+      <div class="fields" style="margin-top:10px">
+        <label class="f">Start code <span class="hint">— you type it to start</span><span style="display:flex;gap:6px"><input type="text" id="stuCode" style="font:700 15px ui-monospace,monospace;letter-spacing:.08em"><button class="btn sm" type="button" id="stuCodeNew" title="New code">🔄</button></span></label>
+        <label class="f">Teacher code <span class="hint">— unlocks a locked test</span><span style="display:flex;gap:6px"><input type="text" id="stuTCode" inputmode="numeric" style="font:700 15px ui-monospace,monospace;letter-spacing:.08em"><button class="btn sm" type="button" id="stuTCodeNew" title="New code">🔄</button></span></label>
+      </div>
+      <p class="hint" style="margin:8px 0 0">Keep both codes away from students. The start code also keeps the questions locked inside the file until the test starts.</p>
+      <div class="key-row" id="stuKey"></div>
+      <div class="actions" style="justify-content:flex-end"><button class="btn" data-close>Cancel</button><button class="btn primary" id="stuGo">⬇ Download the student file</button></div>
+    </div>
+    <div id="stuDone" class="hidden">
+      <h3>✓ Student file ready</h3>
+      <p><b id="stuFile"></b> is in your Downloads folder. Copy it to each student's laptop (USB stick or shared folder).</p>
+      <div class="codes"><div><span>Start code</span><b id="stuShowCode"></b></div><div><span>Teacher code</span><b id="stuShowTCode"></b></div></div>
+      <p class="hint">These codes are also on the invigilator sheet. Print it and keep it with you during the test.</p>
+      <div class="actions" style="justify-content:flex-end"><button class="btn" id="stuSheet">🖨 Invigilator sheet (PDF)</button><button class="btn primary" data-close>Done</button></div>
+    </div>
+  </div>
+</div>
+<!-- 📥 STUDENT ANSWERS -->
+<div class="modal" id="ansModal">
+  <div class="box" style="max-width:760px">
+    <h3>📥 Student answers</h3>
+    <div id="ansList"></div>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" id="ansMore">＋ Add more files</button><button class="btn" id="ansCsv">⬇ Summary (CSV)</button><button class="btn primary" id="ansZip">⬇ All PDFs (ZIP)</button><button class="btn" data-close>Close</button></div>
+  </div>
+</div>
+<!-- 🔑 TEACHER KEY -->
+<div class="modal" id="keyModal">
+  <div class="box" style="max-width:540px">
+    <h3>🔑 Your teacher key</h3>
+    <p>Student answers are sealed with your <b>teacher key</b>. It stays in this browser, and only it can open them.</p>
+    <p><b>Please keep a backup copy</b> (on your own USB stick or drive, not the students'). If this browser is reset or you change computer, you need it to open answers.</p>
+    <p class="hint" id="keyInfo"></p>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" id="keyImport">📂 Use a key from a backup</button><button class="btn primary" id="keyBackup">⬇ Save a backup of my key</button><button class="btn" data-close>Close</button></div>
+  </div>
+</div>
+
 <div class="modal" id="verModal">
   <div class="box">
     <h3>Print versions A, B, C…</h3>

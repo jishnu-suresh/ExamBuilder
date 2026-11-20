@@ -14,4 +14,8 @@ get pdfjs-dist@3.11.174 pdfjs;     cp $T/x-pdfjs/package/build/pdf.min.js $T/x-p
 get tesseract.js@7.0.0 tess;          cp $T/x-tess/package/dist/tesseract.min.js $T/x-tess/package/dist/worker.min.js $V/ocr/
 get tesseract.js-core@7.0.0 tcore;    cp $T/x-tcore/package/tesseract-core-simd-lstm.wasm.js $V/ocr/
 get @tesseract.js-data/eng@1.0.0 eng; cp $T/x-eng/package/4.0.0_best_int/eng.traineddata.gz $V/ocr/lang/
+# reading-friendly fonts for the student computer version (latin, regular + bold)
+mkdir -p $V/sfonts
+get @fontsource/opendyslexic@5.3.0 odys; cp $T/x-odys/package/files/opendyslexic-latin-400-normal.woff2 $T/x-odys/package/files/opendyslexic-latin-700-normal.woff2 $V/sfonts/
+get @fontsource/atkinson-hyperlegible@5.3.0 atk; cp $T/x-atk/package/files/atkinson-hyperlegible-latin-400-normal.woff2 $T/x-atk/package/files/atkinson-hyperlegible-latin-700-normal.woff2 $V/sfonts/
 rm -rf "$T"; echo "vendor ready in $V"

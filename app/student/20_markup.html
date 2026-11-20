@@ -1,0 +1,111 @@
+</style>
+</head>
+<body>
+<noscript><div class="screen"><div class="box"><h1>Please turn on JavaScript</h1><p>This exam needs JavaScript to run. Ask your teacher.</p></div></div></noscript>
+
+<!-- 1 · welcome: name, start code -->
+<div class="screen hidden" id="scrStart">
+  <div class="box">
+    <div class="bee">🐝</div>
+    <h1 id="stTitle">Exam</h1>
+    <div class="muted" id="stSub"></div>
+    <dl class="facts" id="stFacts"></dl>
+    <ul class="rules">
+      <li>Your answers save themselves on this computer every few seconds.</li>
+      <li>Stay on this screen. <b>If you leave it, the test locks</b> with a sound and only your teacher can open it again.</li>
+      <li>When you have finished, press <b>End the test</b>. Give the answers file to your teacher.</li>
+    </ul>
+    <div id="stNew">
+      <label for="stName">Your name</label><input type="text" id="stName" autocomplete="off" spellcheck="false">
+      <label for="stClass">Class <span class="muted">(optional)</span></label><input type="text" id="stClass" autocomplete="off" spellcheck="false">
+    </div>
+    <div id="stResume" class="hidden"><p><b>Welcome back, <span id="stResName"></span>.</b> Your answers are safe. Your teacher will type the start code to carry on.</p></div>
+    <label for="stCode">Start code <span class="muted">— your teacher types this</span></label>
+    <input type="password" id="stCode" class="code" autocomplete="off" spellcheck="false" placeholder="••••-••••">
+    <div class="err" id="stErr"></div>
+    <div class="row">
+      <button class="btn primary big" id="stGo">Start the test</button>
+      <span style="flex:1"></span>
+      <button class="btn" id="stBackup" title="Carry on from a backup copy made on another computer">📂 Carry on from a backup</button>
+    </div>
+    <p class="muted" id="stUsbRow" style="margin-top:14px"><label style="display:inline;font-weight:400"><input type="checkbox" id="stUsb"> Also keep a backup copy on a USB stick or folder (teacher's choice)</label></p>
+  </div>
+</div>
+
+<!-- 2 · the exam -->
+<div id="scrExam" class="hidden">
+  <div class="bar">
+    <span class="ttl" id="bTitle"></span><span class="who" id="bWho"></span>
+    <span class="grow"></span>
+    <span class="saved" id="bSaved"></span>
+    <button class="btn" id="bMathKb" title="Show the maths keyboard when you type maths">√x Maths keyboard</button>
+    <button class="btn" id="bAccents" title="French accents: é è ê à ç …">é Accents</button>
+    <button class="btn" id="bView" title="Text size, spacing, colours, easy-read fonts">Aa</button>
+    <button class="btn" id="bTeacher" title="For the teacher">👩‍🏫</button>
+    <span class="timer hidden" id="bTimer" title="Time left"></span>
+    <button class="btn danger" id="bEnd">End the test</button>
+  </div>
+  <div class="wrap">
+    <nav class="nav" aria-label="Questions"><h4>Questions</h4><div class="grid" id="navGrid"></div>
+      <div class="key"><i></i>answered<br>🚩 come back to this</div></nav>
+    <main class="paper" id="paper"></main>
+  </div>
+</div>
+
+<!-- 3 · ended -->
+<div class="screen hidden" id="scrEnded">
+  <div class="box">
+    <div class="bee">✅</div>
+    <h1>This test has ended</h1>
+    <p id="enWho"></p>
+    <p>Your answers are saved in a sealed file: <b id="enFile"></b>. Only your teacher can open it.</p>
+    <p class="muted" id="enWhere">It is in this computer's <b>Downloads</b> folder. Give it to your teacher (USB stick, shared folder or email).</p>
+    <div class="row"><button class="btn primary" id="enAgain">⬇ Download the answers file again</button></div>
+  </div>
+</div>
+
+<!-- view options -->
+<div class="modal hidden" id="mView"><div class="box">
+  <h2>Aa · How the test looks</h2>
+  <label>Text size</label><div class="seg" data-pref="size"><button data-v="15">Small</button><button data-v="17">Normal</button><button data-v="20">Large</button><button data-v="24">Larger</button><button data-v="29">Huge</button></div>
+  <label>Line spacing</label><div class="seg" data-pref="space"><button data-v="">Normal</button><button data-v="wide">Wide</button></div>
+  <label>Font</label><div class="seg" data-pref="font"><button data-v="">Standard</button><button data-v="easy" style="font-family:'Atkinson Hyperlegible'">Easy-read</button><button data-v="dys" style="font-family:'OpenDyslexic'">OpenDyslexic</button></div>
+  <label>Colours</label><div class="seg" data-pref="colour"><button data-v="">White</button><button data-v="cream">Cream</button><button data-v="dark">Dark</button></div>
+  <label id="vVoiceLab">Reading voice speed</label><div class="seg" data-pref="rate" id="vVoice"><button data-v="0.8">Slow</button><button data-v="1">Normal</button><button data-v="1.2">Fast</button></div>
+  <div class="row"><button class="btn primary" data-close>Done</button></div>
+</div></div>
+
+<!-- end the test? -->
+<div class="modal hidden" id="mEnd"><div class="box">
+  <h2>Are you sure you want to end the test?</h2>
+  <div id="endInfo"></div>
+  <p><b>After this you can't change your answers.</b></p>
+  <div class="row"><button class="btn" data-close>← Back to the test</button><span style="flex:1"></span><button class="btn danger" id="endGo">Yes, end the test</button></div>
+</div></div>
+
+<!-- teacher -->
+<div class="modal hidden" id="mTeacher"><div class="box">
+  <h2>👩‍🏫 For the teacher</h2>
+  <div id="tCodeRow"><label for="tCode">Teacher code</label><input type="password" id="tCode" class="code" autocomplete="off" inputmode="numeric"><div class="err" id="tErr"></div>
+    <div class="row"><button class="btn" data-close>Cancel</button><button class="btn primary" id="tOk">OK</button></div></div>
+  <div id="tMenu" class="hidden">
+    <p class="muted" id="tInfo"></p>
+    <label>Add time</label><div class="seg"><button data-add="5">+5 min</button><button data-add="10">+10 min</button><button data-add="15">+15 min</button><button data-add="30">+30 min</button></div>
+    <div class="row"><button class="btn danger" id="tEnd">End the test for this student</button><span style="flex:1"></span><button class="btn primary" data-close>Close</button></div>
+  </div>
+</div></div>
+
+<!-- locked: the student left the test -->
+<div class="lockscr hidden" id="scrLock"><div class="box">
+  <div class="big">🔒</div>
+  <h1>The test is locked</h1>
+  <p>You left the test screen. <b>Put your hand up and call your teacher.</b></p>
+  <p class="muted">Your answers are safe. The clock keeps running.</p>
+  <label for="lkCode">Teacher code</label><input type="password" id="lkCode" class="code" autocomplete="off" inputmode="numeric">
+  <div class="err" id="lkErr"></div>
+  <div class="row"><button class="btn primary" id="lkGo">Unlock</button></div>
+</div></div>
+
+<div class="accents hidden" id="accBar" aria-label="French accents"></div>
+<div class="toast hidden" id="toast"></div>
+<script>

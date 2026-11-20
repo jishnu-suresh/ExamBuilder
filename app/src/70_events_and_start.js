@@ -152,7 +152,7 @@ document.addEventListener("click", e => { if(!e.target.closest(".dl-wrap")) $("#
 $("#dlMenu").addEventListener("click", e => {
   const b = e.target.closest("[data-dl]"); if(!b) return;
   $("#dlMenu").classList.add("hidden");
-  ({ full: () => download(), large: () => download({ large: true }), cover: () => download({ coverOnly: true }), rubric: () => download({ rubricOnly: true }), questions: () => download({ noCover: true }), key: () => download({ key: true }), versions: () => openModal("#verModal") })[b.dataset.dl]();
+  ({ full: () => download(), large: () => download({ large: true }), cover: () => download({ coverOnly: true }), rubric: () => download({ rubricOnly: true }), questions: () => download({ noCover: true }), key: () => download({ key: true }), versions: () => openModal("#verModal"), student: () => openStudentDialog(), answers: () => pickAnswers() })[b.dataset.dl]();
 }); $("#btnDownload2").onclick = () => download();
 $("#btnRefresh").onclick = preview;
 $("#pvKey").addEventListener("change", () => preview());

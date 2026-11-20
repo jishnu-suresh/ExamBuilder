@@ -5,6 +5,7 @@
 30_state_and_saving.js
 31_text_parsing.js
 32_adding_content.js
+35_beecrypt.js
 40_editor_cards.js
 41_rich_text_and_pictures.js
 50_pdf.js
@@ -13,5 +14,6 @@
 62_ai_prompts.js
 63_formatting_and_rubric.js
 64_versions_find_arrange_label.js
+65_student_version.js
 70_events_and_start.js
 99_end.html

@@ -436,9 +436,9 @@ async function getMol(smi){
   return MOLS[smi] = m;
 }
 function molsIn(t){ return String(t || "").split("\n").map(l => l.match(RE_MOL)).filter(Boolean).map(m => m[1].trim()); }
-async function prepareMols(){
+async function prepareMols(items){
   const want = new Set();
-  S.items.forEach(it => { molsIn(qText(it)).forEach(x => want.add(x)); molsIn(it.answer).forEach(x => want.add(x)); (it.subs || []).forEach(sb => { molsIn(sb.text).forEach(x => want.add(x)); molsIn(sb.answer).forEach(x => want.add(x)); }); });
+  (items || S.items).forEach(it => { molsIn(qText(it)).forEach(x => want.add(x)); molsIn(it.answer).forEach(x => want.add(x)); (it.subs || []).forEach(sb => { molsIn(sb.text).forEach(x => want.add(x)); molsIn(sb.answer).forEach(x => want.add(x)); }); });
   await Promise.all([...want].map(getMol));
 }
 const MOL_PRESETS = [
@@ -516,8 +516,9 @@ async function mathPNG(m){
 }
 // faded black-and-white copy of the logo for the question-page header
 const grayLogo = { src: null, png: null };
-async function prepareGrayLogo(){
-  const src = S.logo && S.logo.src;
+async function prepareGrayLogo(logo){
+  logo = logo === undefined ? S.logo : logo;
+  const src = logo && logo.src;
   if(!src || grayLogo.src === src) return;
   try{
     const im = await loadImg(src);
@@ -534,14 +535,16 @@ async function prepareGrayLogo(){
     grayLogo.src = src; grayLogo.png = c.toDataURL("image/png");
   }catch(e){ grayLogo.src = src; grayLogo.png = null; }
 }
-async function prepareMath(){
-  await prepareGrayLogo();
-  try{ await prepareMols(); }catch(e){ console.warn(e); }
+// src: the exam to prepare (default: the open one) — so another exam can be prepared without swapping S
+async function prepareMath(src){
+  src = src || S;
+  await prepareGrayLogo(src.logo);
+  try{ await prepareMols(src.items); }catch(e){ console.warn(e); }
   if(!FONT_R && window.__PWA__){ try{ await ensureFonts(); }catch(e){ console.warn(e); } }
   await mathReady;
   const jobs = [];
   const want = (t, base) => { if(!t || !(hasRich(t) || base)) return; eachMath(parseRich(t, base), (tex, disp) => { const m = texSVG(tex, disp); if(m.svg && !m.png && !m.err) jobs.push(mathPNG(m).catch(e => { m.err = true; m.errMsg = "Couldn't draw this equation"; })); }); };
-  for(const it of S.items){
+  for(const it of src.items){
     want(qText(it), fmtOf(it));
     if(it.options && (it.correct || []).length) want(qText(it, true), fmtOf(it));
     want(it.answer, null);

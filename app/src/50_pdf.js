@@ -47,7 +47,7 @@ function buildPDF(opt){
   // fonts
   const allText = [D.title, D.subtitle, D.year, D.subject, D.duration, D.teacher, D.className, D.date, D.instructions, D.school, ...S.items.map(i => qText(i).replace(/\$\$[\s\S]*?\$\$|\$[^$\n]*\$/g, ""))].join("\n");
   let SANS = "helvetica", SERIF = "times";
-  const uni = needsUnicode(allText);
+  const uni = needsUnicode(allText) || !!opt.resp;     // a student's typing can hold any character
   let HAS_DJV = false;
   if((uni || opt.key) && FONT_R){
     doc.addFileToVFS("DejaVuSans.ttf", FONT_R); doc.addFont("DejaVuSans.ttf", "DejaVu", "normal");
@@ -651,6 +651,38 @@ function buildPDF(opt){
     const pageAvail = BOTTOM - TOP;
     // a question (or text item) as a list of stackable parts
     const KEY = !!opt.key, KEYC = [192, 57, 43], KEYBG = [253, 240, 237];
+    // 💻 a student's typed answers (from the computer version), in blue in the real answer spaces
+    const RESP = opt.resp || null, BLUE = [31, 79, 184];
+    function respParts(A, key, sp, x0, x1){
+      const bl = ((A && A.areas && A.areas[key]) || []).filter(b => b.t === "draw" ? !!b.png : String(b.v || "").trim());
+      if(!bl.length) return sp;
+      const minH = sp.reduce((a, p) => a + p.h, 0), W = x1 - x0, out = [{ h: 2, draw: () => {} }];
+      const rule = (yy, H) => { doc.setDrawColor(...RULE); doc.setLineWidth(.22); doc.line(x0, yy + H, x1, yy + H); };
+      for(const b of bl){
+        if(b.t === "text"){
+          String(b.v).replace(/\s+$/, "").split("\n").forEach(par => {
+            if(!par.trim()){ out.push({ h: ANS, draw: yy => rule(yy, ANS) }); return; }
+            layoutPara({ type: "para", runs: [{ t: "text", s: par, c: "#1F4FB8" }], ind: 0, scale: 1, align: "left" }, W - 2).forEach(l => {
+              const H = Math.max(ANS, l.h);
+              out.push({ h: H, draw: yy => { rule(yy, H); font(SANS, "normal", fs, BLUE); l.draw(x0 + 1, yy + H - 1.7 - (l.asc || TASC)); } });
+            });
+          });
+        }else if(b.t === "math"){
+          const m = texSVG(mathColor(b.v, "#1F4FB8"), true);
+          if(!m.png){ layoutPara({ type: "para", runs: [{ t: "text", s: b.v, c: "#1F4FB8" }], ind: 0, scale: 1, align: "left" }, W - 2).forEach(l => out.push({ h: Math.max(ANS, l.h), draw: yy => l.draw(x0 + 1, yy + 1) })); continue; }
+          let w = m.w * EM * 1.05, h = (m.asc + m.desc) * EM * 1.05; if(w > W - 4){ h *= (W - 4) / w; w = W - 4; }
+          out.push({ h: h + 4, draw: yy => doc.addImage(m.png, "PNG", x0 + 2, yy + 2, w, h, mAlias(m), "FAST") });
+        }else if(b.t === "draw"){
+          const bw = b.w || 1000, bh = b.h || 560;
+          let w = Math.min(W, 160), h = w * bh / bw; if(h > pageAvail - 24){ h = pageAvail - 24; w = h * bw / bh; }
+          out.push({ h: h + 4, draw: yy => { doc.addImage(b.png, "PNG", x0, yy + 2, w, h, "drw_" + strHash(b.png.length + b.png.slice(-400)), "FAST"); doc.setDrawColor(...RULE); doc.setLineWidth(.25); doc.rect(x0, yy + 2, w, h, "S"); } });
+        }
+      }
+      let h = out.reduce((a, p) => a + p.h, 0);
+      while(h + ANS <= minH){ out.push({ h: ANS, draw: yy => rule(yy, ANS) }); h += ANS; }
+      out.push({ h: 1.5, draw: () => {} });
+      return out;
+    }
     // answer space: lines | blank | grid | box, n "line heights" tall, from x0 to x1
     function spaceParts(kind, n, x0, x1, range){
       if(kind === "numberline") return numberLine(range, x0, x1);
@@ -738,7 +770,7 @@ function buildPDF(opt){
       let img = it.img ? imgDims(it, markShown ? twM : tw) : null;
       const WGAP = 5;
       const al = it.imgAlign || "left";
-      const T = qText(it, KEY);
+      const T = RESP && it.mcq && Array.isArray(it.options) ? qTextResp(it, ((RESP.answers[it.id] || {}).choice) || []) : qText(it, KEY);
       const wrap = !!(img && it.imgWrap && al !== "center" && T.trim());
       if(wrap && twM - img.w - WGAP < twM * .3){ const nw = twM * .7 - WGAP; img = { w: nw, h: img.h * nw / img.w }; }   // keep at least 30% for the text
       // beside a wrapped picture: the narrow column; otherwise only the first line steps aside for "[5 marks]"
@@ -771,6 +803,7 @@ function buildPDF(opt){
       if(isQ){
         const sp = SHEET ? [] : spaceParts(it.space, it.lines, tx, X + W, it.range);
         if(KEY && (it.answer || "").trim()) parts.push(...answerParts(it.answer, tx, X + W, sp.reduce((a, p) => a + p.h, 0) - 3));
+        else if(RESP) parts.push(...respParts(RESP.answers[it.id], "main", sp, tx, X + W));
         else parts.push(...sp);
       }
       // sub-questions (a), (b), (c)…
@@ -794,6 +827,7 @@ function buildPDF(opt){
         } }));
         const sp = SHEET ? [] : spaceParts(sb.space, sb.lines, sx, X + W, sb.range);
         if(KEY && (sb.answer || "").trim()) parts.push(...answerParts(sb.answer, sx, X + W, sp.reduce((a, p) => a + p.h, 0) - 3));
+        else if(RESP) parts.push(...respParts(RESP.answers[it.id], "s:" + (sb.id || String(k)), sp, sx, X + W));
         else parts.push(...sp);
       });
       if(!parts.length) parts.push({ h: LH, draw: () => {} });
@@ -954,6 +988,7 @@ function buildPDF(opt){
       if(D.year){ doc.setFontSize(7.5); doc.text(D.year, PW - MR, PH - 12.6, { align: "right" }); }
     }
   }
+  if(opt.resp) respRecord(doc, opt.resp, { font, SANS, INK, MUTED, PW, PH, ML, MR });
   if(rubricPage) pageOf.__rubric = rubricPage;
   if(!opt.rubricOnly && !opt.noCover){ regions.push({ id: "__cover", p: 1, y0: 0, y1: 1e3, x0: 0, x1: 1e3 }); if(rubricPage) regions.push({ id: "__rubric", p: rubricPage, y0: 0, y1: 1e3, x0: 0, x1: 1e3 }); }
   if(opt.rubricOnly && rubricPage){

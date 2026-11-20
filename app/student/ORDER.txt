@@ -1,0 +1,14 @@
+# The student computer version is built from these files, joined in this order (see build/build.py).
+# Paths starting with ../ come from BEE's own sources.
+00_head.html
+10_style.css
+20_markup.html
+../src/35_beecrypt.js
+30_core.js
+40_paper.js
+50_answers.js
+55_drawing.js
+60_guard.js
+70_access.js
+80_flow.js
+99_end.html

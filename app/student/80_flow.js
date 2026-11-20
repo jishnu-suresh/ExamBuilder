@@ -1,0 +1,134 @@
+/* ---- start → test → end ---- */
+let RESUME = null, BACKUP = null, backupDir = null, lastBackup = 0;
+const safeName = s => String(s || "").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 80) || "exam";
+function saveFile(text, name, type){
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: type || "application/json" })); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+}
+
+async function boot(){
+  if(!EXAM){ document.body.innerHTML = '<div class="screen"><div class="box"><h1>🐝 BEE student version</h1><p>This is an empty template. Teachers make the real file in BEE: ⬇ ▾ → 💻 Computer version for students.</p></div></div>'; return; }
+  document.title = EXAM.title + " — computer version";
+  if(!window.crypto || !crypto.subtle){ document.body.innerHTML = '<div class="screen"><div class="box"><h1>This browser can\'t open the test</h1><p>Please open this file with Chrome, Edge, Firefox or Safari.</p></div></div>'; return; }
+  $("#stTitle").textContent = EXAM.title; $("#stSub").textContent = EXAM.subject || "";
+  const facts = [];
+  if(EXAM.timeMin) facts.push(["Time", EXAM.timeMin + " minutes" + (EXAM.extraPct ? ` (includes ${EXAM.extraPct}% extra time)` : "")]); else facts.push(["Time", "no time limit"]);
+  if(EXAM.total) facts.push(["Total", EXAM.total + " marks"]);
+  facts.push(["Questions", EXAM.nq]);
+  $("#stFacts").innerHTML = facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
+  if(!("showDirectoryPicker" in window)) $("#stUsbRow").classList.add("hidden");
+  const done = await DB.get(DONE());
+  if(done) return showEnded(done);
+  const run = await DB.get(RUN());
+  if(run && !run.ended) setResume(run, "this computer");
+  show("#scrStart"); setTimeout(() => (RESUME ? $("#stCode") : $("#stName")).focus(), 60);
+}
+function setResume(run, where){
+  RESUME = run; RESUME.where = where;
+  $("#stNew").classList.add("hidden"); $("#stResume").classList.remove("hidden"); $("#stResName").textContent = run.name || "";
+  $("#stGo").textContent = "Carry on with the test";
+}
+$("#stCode").addEventListener("keydown", e => { if(e.key === "Enter") $("#stGo").click(); });
+$("#stName").addEventListener("keydown", e => { if(e.key === "Enter") $("#stClass").focus(); });
+$("#stClass").addEventListener("keydown", e => { if(e.key === "Enter") $("#stCode").focus(); });
+
+$("#stGo").onclick = async () => {
+  const err = $("#stErr"); err.textContent = "";
+  const name = $("#stName").value.trim();
+  if(!RESUME && name.length < 2){ err.textContent = "Please type your name first."; $("#stName").focus(); return; }
+  const code = $("#stCode").value;
+  if(!code){ err.textContent = "Your teacher needs to type the start code."; $("#stCode").focus(); return; }
+  goFull();                                   // must happen right away, while the click still counts
+  $("#stGo").disabled = true; $("#stGo").textContent = "Opening…";
+  try{
+    const key = await BC.codeKey(code, EXAM.salt, EXAM.iter);
+    try{ PAPER = await BC.unlock(key, EXAM.paper); }
+    catch(_){ throw new Error("code"); }
+    CK = key;
+    if(RESUME){
+      ST = await BC.unlock(CK, RESUME.box);
+      const gap = now() - (ST.savedAt || now());
+      logEv(RESUME.where === "this computer" ? "test reopened" : "carried on from a backup (another computer)", { ms: gap });
+      if(ST.locked){ ST.locked = null; logEv("unlocked by teacher (start code)"); }
+    }else{
+      ST = { v: 1, examId: EXAM.examId, name, cls: $("#stClass").value.trim(), startedAt: now(), extraMin: 0, answers: {}, flags: {}, log: [], prefs: { size: 17, rate: 1, mathKb: true, accents: false }, ua: navigator.userAgent };
+      logEv("started");
+    }
+    startExam();
+  }catch(e){
+    if(e.message !== "code") console.error(e);
+    err.textContent = e.message === "code" ? "That start code isn't right. Check it with your teacher." : "Something went wrong: " + e.message;
+    if(document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  }finally{ $("#stGo").disabled = false; $("#stGo").textContent = RESUME ? "Carry on with the test" : "Start the test"; }
+};
+function startExam(){
+  $("#bTitle").textContent = EXAM.title; $("#bWho").textContent = "· " + ST.name + (ST.cls ? " · " + ST.cls : "");
+  show("#scrExam"); setupMathKeyboard(); renderPaper(); applyPrefs(); if(ST.prefs.accents){ accBar(); $("#accBar").classList.remove("hidden"); }
+  guardStart(); tick(); changed(); saveNow();
+  window.scrollTo(0, 0);
+}
+
+/* ---- backup copy on a USB stick or folder (Chrome / Edge) ---- */
+$("#stUsb").addEventListener("change", async e => {
+  if(!e.target.checked){ backupDir = null; return; }
+  try{
+    backupDir = await showDirectoryPicker({ id: "bee-backup", mode: "readwrite" });
+    e.target.parentElement.lastChild.textContent = " Backup copies go to: " + backupDir.name + " ✓";
+  }catch(_){ e.target.checked = false; backupDir = null; }
+});
+window.backupTick = async box => {
+  if(!backupDir || now() - lastBackup < 60000 && !ST.endedAt) return;
+  lastBackup = now();
+  try{
+    const f = await backupDir.getFileHandle(safeName(EXAM.title + " - " + ST.name) + " (backup).bee-backup", { create: true });
+    const w = await f.createWritable(); await w.write(JSON.stringify({ bee: "backup", v: 1, examId: EXAM.examId, name: ST.name, savedAt: now(), box })); await w.close();
+  }catch(e){ console.warn("backup", e); }
+};
+$("#stBackup").onclick = () => {
+  const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".bee-backup";
+  inp.onchange = async () => {
+    try{
+      const o = JSON.parse(await inp.files[0].text());
+      if(o.bee !== "backup" || !o.box) throw new Error("This isn't a BEE backup file.");
+      if(o.examId !== EXAM.examId) throw new Error("This backup is from a different test.");
+      setResume({ name: o.name, box: o.box }, "backup"); $("#stErr").textContent = "";
+      toast("Backup found for " + o.name + ". Your teacher types the start code to carry on.", 5000);
+    }catch(e){ $("#stErr").textContent = e.message; }
+  };
+  inp.click();
+};
+
+/* ---- end the test ---- */
+$("#bEnd").onclick = () => {
+  const qs = PAPER.items.filter(it => it.k === "q"), miss = qs.filter(it => !isAnswered(it)), fl = qs.filter(it => ST.flags[it.id]);
+  $("#endInfo").innerHTML = (miss.length ? `<p>You haven't answered <b>${miss.length}</b> question${miss.length === 1 ? "" : "s"}:</p><div class="list-miss">${miss.map(it => `<a href="#q-${it.id}" data-close>${esc(it.no || "•")}</a>`).join("")}</div>` : "<p>✓ You have answered every question.</p>") +
+    (fl.length ? `<p>🚩 You wanted to come back to:</p><div class="list-miss">${fl.map(it => `<a class="f" href="#q-${it.id}" data-close>${esc(it.no || "•")}</a>`).join("")}</div>` : "") +
+    (EXAM.timeMin && leftMs() > 0 ? `<p class="muted">You still have ${dur(leftMs())} left.</p>` : "");
+  openM("#mEnd");
+};
+$("#endGo").onclick = () => { closeM("#mEnd"); endTest("student"); };
+async function endTest(by){
+  if(!ST || ST.endedAt) return;
+  ST.endedAt = now(); ST.endedBy = by; logEv("ended", { by });
+  guardStop(); $("#scrLock").classList.add("hidden"); $$(".modal").forEach(m => m.classList.add("hidden"));
+  if(window.mathVirtualKeyboard) try{ mathVirtualKeyboard.hide(); }catch(_){}
+  speechSynthesis && speechSynthesis.cancel();
+  const payload = { examId: EXAM.examId, name: ST.name, cls: ST.cls, startedAt: ST.startedAt, endedAt: ST.endedAt, endedBy: by,
+    timeMin: EXAM.timeMin, baseMin: EXAM.baseMin, extraPct: EXAM.extraPct, extraMin: ST.extraMin || 0, log: ST.log, answers: ST.answers, flags: ST.flags, prefs: ST.prefs, ua: ST.ua };
+  const file = { bee: "answers", v: 1, kid: EXAM.kid, examId: EXAM.examId, title: EXAM.title, created: now(), sealed: await BC.seal(payload, EXAM.pub), teacher: EXAM.teacher };
+  const name = safeName(EXAM.title + " - " + ST.name) + ".bee-answers", text = JSON.stringify(file);
+  const done = { name, text, who: ST.name, at: ST.endedAt, by, usb: backupDir ? backupDir.name : "" };
+  await DB.set(DONE(), done);
+  await saveNow();
+  saveFile(text, name);
+  if(backupDir){ try{ const f = await backupDir.getFileHandle(name, { create: true }); const w = await f.createWritable(); await w.write(text); await w.close(); }catch(e){ console.warn(e); done.usb = ""; } }
+  showEnded(done);
+}
+function showEnded(done){
+  show("#scrEnded");
+  $("#enWho").textContent = (done.who ? done.who + " · " : "") + "ended at " + hm(done.at) + (done.by === "time" ? " (time was up)" : done.by === "teacher" ? " (by the teacher)" : "");
+  $("#enFile").textContent = done.name;
+  if(done.usb) $("#enWhere").innerHTML = `It is in this computer's <b>Downloads</b> folder, and a copy is on <b>${esc(done.usb)}</b>.`;
+  $("#enAgain").onclick = () => saveFile(done.text, done.name);
+}
+boot();

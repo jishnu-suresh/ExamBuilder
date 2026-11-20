@@ -37,12 +37,15 @@ $("#verGo").onclick = async () => {
     const base = fileName().replace(/\.pdf$/, "") + (large ? " (large print)" : "");
     for(let v = 0; v < n; v++){
       const L = "ABCD"[v];
-      const saved = S.items;
+      // the shuffled copy is in place only while the PDFs are drawn (no waiting), so an autosave can never store it
+      const saved = S.items; let paper, key;
       S.items = versionItems(saved, L, shufQ, shufO);
       try{
-        buildPDF({ version: L, large, final: true }).save(base + " - Version " + L + ".pdf");
-        if(keys){ await new Promise(r => setTimeout(r, 350)); buildPDF({ version: L, key: true, large, final: true }).save(base + " - Version " + L + " (answer key).pdf"); }
+        paper = buildPDF({ version: L, large, final: true });
+        if(keys) key = buildPDF({ version: L, key: true, large, final: true });
       }finally{ S.items = saved; }
+      paper.save(base + " - Version " + L + ".pdf");
+      if(key){ await new Promise(r => setTimeout(r, 350)); key.save(base + " - Version " + L + " (answer key).pdf"); }
       await new Promise(r => setTimeout(r, 450));
     }
     toast("Downloaded " + n + " versions" + (keys ? " with answer keys" : ""));

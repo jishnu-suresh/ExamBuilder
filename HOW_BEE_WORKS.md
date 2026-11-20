@@ -29,6 +29,7 @@ exams, student names and photos stay on the teacher's computer.
 |---|---|
 | `app/src/` | **The application.** Edit these files, never the files in `docs/`. |
 | `app/src/ORDER.txt` | The order in which the build joins the files. A new file must be listed here. |
+| `app/student/` | **💻 The computer version for students** (the page a student opens). Its own `ORDER.txt`; it also uses `app/src/35_beecrypt.js`. |
 | `build/build.py` | Builds `docs/` and the offline file, makes the icons and copies the demo files. |
 | `build/fetch_vendor.sh` | Downloads the pinned libraries into `.vendor/` (run once, needs npm). |
 | `build/sw.template.js` | The service worker template (offline cache and update logic). |
@@ -113,6 +114,7 @@ Questions are plain text with small tags. The same format is used when typing, p
 | `30_state_and_saving.js` | `S`, browser storage, project files, autosave, 🕘 version history |
 | `31_text_parsing.js` | Turning pasted text into items |
 | `32_adding_content.js` | Adding questions, photos and pictures (incl. picture compression) |
+| `35_beecrypt.js` | 🔐 Sealing and codes (`BC`), shared with the student version |
 | `40_editor_cards.js` | The question cards |
 | `41_rich_text_and_pictures.js` | Pictures inside text, ✂ Cut from PDF |
 | `50_pdf.js` | `buildPDF()` and the preview |
@@ -121,6 +123,7 @@ Questions are plain text with small tags. The same format is used when typing, p
 | `62_ai_prompts.js` | The ready-made AI prompts |
 | `63_formatting_and_rubric.js` | Format bar, ＋ Insert and ⋯ More menus, rubric page |
 | `64_versions_find_arrange_label.js` | Versions A/B/C, find & replace, arrange view, labelled diagrams |
+| `65_student_version.js` | 💻 Making the student file, teacher key, invigilator sheet, 📥 opening student answers, answer record page, ZIP |
 | `70_events_and_start.js` | Buttons, settings tabs, start screen, demo exam, welcome tour, PWA, start-up |
 | `99_end.html` | Closing tags |
 
@@ -149,6 +152,7 @@ Every change calls `changed()`, which updates totals and undo history and schedu
 * Safari and Firefox download the file instead (`downloadProject()`).
 * The last state is also kept in browser storage (`saveLocal()` / `loadLocal()`).
 * **🕘 Version history:** `keepVersion(reason)` stores a copy in IndexedDB (`versions` list plus `v:<id>`), at most 30 copies or 60 MB, skipping exact duplicates. It runs every 5 minutes while the exam changes, and before anything that replaces it (opening a file, new exam, paste, clear all, replace all, restore, demo).
+* **Never swap `S` across a wait.** If you must draw another exam (versions, student answers), swap `S` only around the synchronous `buildPDF()` call. Prepare with `prepareMath(otherExam)` beforehand. A save that runs while `S` is swapped would store the wrong exam in the teacher's file.
 * **Pictures are kept small:** `fitCanvas()` limits the size (photos 1600 px, PDF cuts 2000 px) and `encodeBest()` keeps PNG unless JPEG is far smaller.
 
 **Start screen, demo and tour:** `openStart()`; `loadDemo()` opens `demo/demo_all_features.exam.json` (fetched by the website; built into the offline file through the `/*__DEMO__*/` placeholder) and never writes it into the teacher's project file. `startTour()` shows 4 steps (`TOUR`); it runs once, the first time the start screen closes (`localStorage` key `bee.toured`), and is skipped in automated browsers so tests aren't interrupted.
@@ -157,6 +161,47 @@ Every change calls `changed()`, which updates totals and undo history and schedu
 
 **Offline / PWA:** `build/sw.template.js` caches the app (`CORE`) and the photo reader and fonts (`LAZY`).
 A new version shows the "Fresh honey in the hive!" bar. The page only reloads after the teacher clicks *Update*.
+
+## 6b. 💻 The computer version for students
+
+**What happens:**
+
+1. The teacher chooses ⬇ ▾ → *Computer version for students* in BEE.
+2. BEE writes the paper as HTML, using the same text reader as the PDF: `studentRich()`, with maths as self-contained SVG.
+3. BEE puts it into the student template (`app/student/`, built to `docs/student/player.html`, and carried inside the offline BEE through `/*__PLAYER__*/`).
+4. The student opens that one file offline.
+
+**What is locked, and how** (`35_beecrypt.js`, Web Crypto, offline):
+
+| Part | How it's protected |
+|---|---|
+| The paper | AES-GCM, with a key made from the **start code** by PBKDF2 (250,000 rounds). Without the code, the questions can't be read from the file. |
+| The full exam, with the answer key and both codes | **Sealed** with the teacher's public key (RSA-OAEP 2048 + AES-GCM). The student file only carries it along. |
+| The teacher code | Only a PBKDF2 hash is stored. |
+| The teacher key | Kept in BEE's IndexedDB (`teacherKeys`; the first one is the current key). Its backup is a `.beekey` file. Older keys stay, so older answers still open. |
+
+**The student file** (`app/student/`):
+
+| File | What it does |
+|---|---|
+| `30_core.js` | State `ST`, saving every 3 s to IndexedDB, locked with the start-code key |
+| `40_paper.js` | Paper and question list |
+| `50_answers.js` | Answer areas made of blocks (text, maths via MathLive, drawing), and the maths keyboard tabs |
+| `55_drawing.js` | The drawing pad |
+| `60_guard.js` | Full screen, beep and lock when the student leaves, the teacher code, no paste, wake lock, the clock, the teacher menu |
+| `70_access.js` | Text size, spacing, fonts (Atkinson Hyperlegible, OpenDyslexic), colours, French accents, read aloud |
+| `80_flow.js` | Start or carry on, USB backup and carrying on from it, End the test → a sealed `.bee-answers` file → "This test has ended" |
+
+**Back in BEE:** 📥 *Open student answers* unseals the answers and the exam, then builds the PDF with `buildPDF({ resp })`:
+- Answers go in the real answer spaces, in blue (`respParts()`).
+- Chosen MCQ options are blue (`qTextResp()`).
+- `respRecord()` adds the first page: times, exits, and automatic MCQ marking (`markMCQ()`).
+- The student's exam replaces `S` only while the PDF is drawn, with no waiting in between, so an autosave can never store it.
+- Several files can be downloaded together as a ZIP with a CSV summary (`zipStore()`).
+
+**Limits to know:**
+- A web page can't truly lock a computer. The soft lock is full screen, a beep, a lock that needs the teacher code, and a record of every exit. A lockdown browser needs IT.
+- Passage line numbers are not shown in the student version.
 
 ## 7. Building, testing and releasing
 
