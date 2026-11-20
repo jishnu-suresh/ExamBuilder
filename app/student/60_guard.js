@@ -1,13 +1,22 @@
 /* ---- staying on the test: full screen, a warning sound and a lock only the teacher can open ---- */
-let running = false, audio = null, wake = null, awaySince = 0, beepT = null;
-function beep(){
+let running = false, audio = null, wake = null, awaySince = 0, beepT = null, beeps = 0;
+// sound must be switched on during a click (browsers mute pages that never asked): called by Start and Unlock
+function soundOn(){
   try{
     audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-    if(audio.state === "suspended") audio.resume();
+    if(audio.state !== "running") audio.resume();
+    const b = audio.createBuffer(1, 1, 22050), s = audio.createBufferSource(); s.buffer = b; s.connect(audio.destination); s.start(0);   // a silent sound unlocks Safari
+  }catch(e){ console.warn(e); }
+}
+function beep(){
+  beeps++;
+  try{
+    if(!audio) soundOn();
+    if(audio.state !== "running") audio.resume();
     [0, .28, .56].forEach((t, i) => {
       const o = audio.createOscillator(), g = audio.createGain();
       o.type = "square"; o.frequency.value = i === 1 ? 660 : 880;
-      g.gain.setValueAtTime(.0001, audio.currentTime + t); g.gain.exponentialRampToValueAtTime(.35, audio.currentTime + t + .02); g.gain.exponentialRampToValueAtTime(.0001, audio.currentTime + t + .24);
+      g.gain.setValueAtTime(.0001, audio.currentTime + t); g.gain.exponentialRampToValueAtTime(.4, audio.currentTime + t + .02); g.gain.exponentialRampToValueAtTime(.0001, audio.currentTime + t + .24);
       o.connect(g).connect(audio.destination); o.start(audio.currentTime + t); o.stop(audio.currentTime + t + .26);
     });
   }catch(e){ console.warn(e); }
@@ -16,39 +25,54 @@ async function keepAwake(){
   try{ if("wakeLock" in navigator && document.visibilityState === "visible" && !wake){ wake = await navigator.wakeLock.request("screen"); wake.addEventListener("release", () => { wake = null; }); } }
   catch(e){ if(!keepAwake.told){ keepAwake.told = 1; toast("Keep the charger plugged in so the screen doesn't go to sleep.", 6000); } }
 }
-async function goFull(){ try{ if(!document.fullscreenElement && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen({ navigationUI: "hide" }); }catch(_){} }
-function guardStart(){
-  running = true;
-  try{ audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); }catch(_){}
-  goFull(); keepAwake();
+// full screen, and in Chrome/Edge the keyboard too: Esc, Alt+Tab, the Windows key… stay inside the test
+// (the browser always keeps one way out: holding Esc for 2 seconds — that still locks the test and beeps)
+async function goFull(){
+  try{ if(!document.fullscreenElement && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen({ navigationUI: "hide" }); }catch(_){}
+  try{ if(document.fullscreenElement && navigator.keyboard && navigator.keyboard.lock) await navigator.keyboard.lock(); }catch(_){}
 }
-function guardStop(){ running = false; clearInterval(beepT); try{ wake && wake.release(); }catch(_){} if(document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
+function guardStart(){ running = true; soundOn(); goFull(); keepAwake(); }
+function guardStop(){ running = false; clearInterval(beepT); beepT = null; try{ navigator.keyboard && navigator.keyboard.unlock && navigator.keyboard.unlock(); }catch(_){} try{ wake && wake.release(); }catch(_){} if(document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
+const away = () => document.visibilityState === "hidden" || !document.hasFocus();
+// every time the student leaves: beep, lock, record — and keep beeping until they come back
 function left(how){
-  if(!running || !ST || ST.endedAt) return;
+  if(!running || !ST || ST.endedAt || (typeof picking !== "undefined" && picking)) return;
   if(!awaySince) awaySince = now();
-  if(ST.locked) return;
-  ST.locked = { at: now(), how };
   logEv("left", { how });
-  beep(); clearInterval(beepT);
-  let n = 0; beepT = setInterval(() => { if(++n > 6 || document.visibilityState === "visible" && document.hasFocus()) return clearInterval(beepT); beep(); }, 4000);
-  showLock(); saveNow();
+  if(!ST.locked){ ST.locked = { at: now(), how }; showLock(); }
+  beep();
+  if(!beepT) beepT = setInterval(() => { if(!running || !away()){ clearInterval(beepT); beepT = null; return; } beep(); }, 2000);
+  saveNow();
 }
 function back(){
   if(!running || !awaySince) return;
   const ms = now() - awaySince; awaySince = 0;
   logEv("back", { ms });
-  if(ST.locked) beep();
 }
-document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden") left("switched to another window or app"); else { back(); keepAwake(); } });
+document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden") left("switched to another window or app, or minimised"); else { back(); keepAwake(); } });
 window.addEventListener("blur", () => setTimeout(() => { if(!document.hasFocus()) left("clicked outside the test"); }, 150));
 window.addEventListener("focus", back);
-document.addEventListener("fullscreenchange", () => { if(!document.fullscreenElement && running && !ST.locked && !ST.endedAt) left("left full screen"); });
-function showLock(){ $("#scrLock").classList.remove("hidden"); $("#lkCode").value = ""; $("#lkErr").textContent = ""; setTimeout(() => $("#lkCode").focus(), 50); }
+document.addEventListener("fullscreenchange", () => { if(!document.fullscreenElement && running && !ST.endedAt) left("left full screen"); });
+// keys that try to leave, while the keyboard is captured
+document.addEventListener("keydown", e => {
+  if(!running || !ST || ST.endedAt) return;
+  if((e.altKey && (e.key === "Tab" || e.key === "F4")) || e.key === "Meta" || e.key === "OS" || (e.metaKey && /^(tab|h|m|q|w)$/i.test(e.key))){
+    e.preventDefault(); logEv("tried to leave with the keyboard", { key: (e.altKey ? "Alt+" : e.metaKey ? "Cmd+" : "") + e.key }); beep(); toast("Stay on the test, please.");
+  }
+}, true);
+// the lock covers everything: the paper, the maths keyboard, the reading bar, a drawing in progress
+function showLock(){
+  try{ stopReading(); }catch(_){}
+  try{ window.mathVirtualKeyboard && mathVirtualKeyboard.hide(); }catch(_){}
+  $$(".modal").forEach(m => m.classList.add("hidden")); $("#accBar").classList.add("hidden");
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  $("#scrLock").classList.remove("hidden"); $("#lkCode").value = ""; $("#lkErr").textContent = ""; setTimeout(() => $("#lkCode").focus(), 50); }
 async function teacherOK(code){ return (await BC.codeHash(code, EXAM.unlock.salt, EXAM.unlock.iter)) === EXAM.unlock.hash; }
 $("#lkGo").onclick = async () => {
+  soundOn(); goFull();                       // while the click still counts
   const c = $("#lkCode").value;
   if(!c || !(await teacherOK(c))){ $("#lkErr").textContent = "That's not the teacher code."; logEv("wrong teacher code"); return; }
-  ST.locked = null; logEv("unlocked by teacher"); $("#scrLock").classList.add("hidden"); changed(); saveNow(); goFull(); keepAwake();
+  ST.locked = null; logEv("unlocked by teacher"); $("#scrLock").classList.add("hidden"); if(ST.prefs.accents && !READ_ONLY()) $("#accBar").classList.remove("hidden"); clearInterval(beepT); beepT = null; changed(); saveNow(); soundOn(); goFull(); keepAwake();
 };
 $("#lkCode").addEventListener("keydown", e => { if(e.key === "Enter") $("#lkGo").click(); });
 
@@ -83,9 +107,13 @@ $("#tOk").onclick = async () => {
 };
 function teacherInfo(){
   const lefts = ST.log.filter(l => l.kind === "left").length;
+  $("#tSaveInfo").innerHTML = "💾 Answers and backups are saved in: <b>" + esc(saveWhere()) + "</b>";
+  $("#tSave").classList.toggle("hidden", !("showDirectoryPicker" in window) || READ_ONLY());
   $("#tInfo").innerHTML = `${esc(ST.name)} · started ${hm(ST.startedAt)}${EXAM.timeMin ? ` · time allowed ${EXAM.timeMin + (ST.extraMin || 0)} min` : ""} · left the test ${lefts} time${lefts === 1 ? "" : "s"}`;
 }
 document.querySelectorAll("#tMenu [data-add]").forEach(b => b.onclick = () => {
   const m = +b.dataset.add; ST.extraMin = (ST.extraMin || 0) + m; ST.warned = {}; logEv("time added by teacher", { min: m }); changed(); saveNow(); tick(); teacherInfo(); toast(`${m} minutes added.`);
 });
+$("#tSave").onclick = async () => { if(await chooseFolder()){ logEv("teacher chose where to save", { folder: saveDir.name }); teacherInfo(); saveNow(); toast("Answers and backups now go to " + saveDir.name + "."); } goFull(); };
+$("#mTeacher").addEventListener("click", e => { if(e.target.closest("[data-close]") && running && ST && !ST.endedAt) goFull(); });
 $("#tEnd").onclick = () => { closeM("#mTeacher"); endTest("teacher"); };

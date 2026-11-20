@@ -3386,6 +3386,8 @@ body.tts-up .wrap{padding-bottom:90px}
 .box .code{font:700 1.3em ui-monospace,Menlo,Consolas,monospace;letter-spacing:.12em;text-align:center;text-transform:uppercase}
 .box .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px;align-items:center}
 .box .err{color:var(--red);font-weight:600;min-height:1.3em;font-size:.9em}
+.saveto{margin-top:16px;padding:10px 12px;border:1px dashed var(--line);border-radius:10px;font-size:.88em;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.saveto .btn{font-size:.95em}
 .facts{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:.92em;margin:12px 0}
 .facts dt{color:var(--muted)}.facts dd{margin:0;font-weight:600}
 .rules{font-size:.88em;background:var(--gold-l);border-radius:10px;padding:10px 14px 10px 30px;margin:12px 0}
@@ -3393,7 +3395,7 @@ body.tts-up .wrap{padding-bottom:90px}
 .bee{font-size:2.2em;line-height:1}
 .modal{position:fixed;inset:0;z-index:60;background:rgba(20,16,8,.5);display:flex;align-items:center;justify-content:center;padding:16px}
 .modal .box{max-height:92vh;overflow:auto}
-.lockscr{position:fixed;inset:0;z-index:80;background:#2A1A12;color:#fff;display:flex;align-items:center;justify-content:center;padding:20px}
+.lockscr{position:fixed;inset:0;z-index:2147483000;background:#2A1A12;color:#fff;display:flex;align-items:center;justify-content:center;padding:20px}
 .lockscr .box{background:#fff;color:#24211C}
 .lockscr .big{font-size:3em;line-height:1}
 .toast{position:fixed;left:50%;top:70px;transform:translateX(-50%);z-index:90;background:#24211C;color:#fff;padding:10px 18px;border-radius:10px;font-size:.92em;box-shadow:0 6px 24px rgba(0,0,0,.25);max-width:90vw}
@@ -3448,7 +3450,10 @@ body.tts-up .wrap{padding-bottom:90px}
       <span style="flex:1"></span>
       <button class="btn" id="stBackup" title="Carry on from a backup copy made on another computer">📂 Carry on from a backup</button>
     </div>
-    <p class="muted" id="stUsbRow" style="margin-top:14px"><label style="display:inline;font-weight:400"><input type="checkbox" id="stUsb"> Also keep a backup copy on a USB stick or folder (teacher's choice)</label></p>
+    <div class="saveto" id="stSaveRow">
+      <div>💾 The answers file and backup copies are saved in: <b id="stSaveName">this computer's Downloads folder</b></div>
+      <button class="btn" type="button" id="stSaveBtn">📁 Choose a folder or USB stick <span class="muted">(teacher)</span></button>
+    </div>
   </div>
 </div>
 
@@ -3518,7 +3523,9 @@ body.tts-up .wrap{padding-bottom:90px}
     <div class="row"><button class="btn" data-close>Cancel</button><button class="btn primary" id="tOk">OK</button></div></div>
   <div id="tMenu" class="hidden">
     <p class="muted" id="tInfo"></p>
+    <p class="muted" id="tSaveInfo"></p>
     <label>Add time</label><div class="seg"><button data-add="5">+5 min</button><button data-add="10">+10 min</button><button data-add="15">+15 min</button><button data-add="30">+30 min</button></div>
+    <div class="row" style="margin-top:6px"><button class="btn" id="tSave">📁 Change where answers are saved</button></div>
     <div class="row"><button class="btn danger" id="tEnd">End the test for this student</button><span style="flex:1"></span><button class="btn primary" data-close>Close</button></div>
   </div>
 </div></div>
@@ -4050,15 +4057,24 @@ function askLabel(x, y, done){
 }
 
 /* ---- staying on the test: full screen, a warning sound and a lock only the teacher can open ---- */
-let running = false, audio = null, wake = null, awaySince = 0, beepT = null;
-function beep(){
+let running = false, audio = null, wake = null, awaySince = 0, beepT = null, beeps = 0;
+// sound must be switched on during a click (browsers mute pages that never asked): called by Start and Unlock
+function soundOn(){
   try{
     audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-    if(audio.state === "suspended") audio.resume();
+    if(audio.state !== "running") audio.resume();
+    const b = audio.createBuffer(1, 1, 22050), s = audio.createBufferSource(); s.buffer = b; s.connect(audio.destination); s.start(0);   // a silent sound unlocks Safari
+  }catch(e){ console.warn(e); }
+}
+function beep(){
+  beeps++;
+  try{
+    if(!audio) soundOn();
+    if(audio.state !== "running") audio.resume();
     [0, .28, .56].forEach((t, i) => {
       const o = audio.createOscillator(), g = audio.createGain();
       o.type = "square"; o.frequency.value = i === 1 ? 660 : 880;
-      g.gain.setValueAtTime(.0001, audio.currentTime + t); g.gain.exponentialRampToValueAtTime(.35, audio.currentTime + t + .02); g.gain.exponentialRampToValueAtTime(.0001, audio.currentTime + t + .24);
+      g.gain.setValueAtTime(.0001, audio.currentTime + t); g.gain.exponentialRampToValueAtTime(.4, audio.currentTime + t + .02); g.gain.exponentialRampToValueAtTime(.0001, audio.currentTime + t + .24);
       o.connect(g).connect(audio.destination); o.start(audio.currentTime + t); o.stop(audio.currentTime + t + .26);
     });
   }catch(e){ console.warn(e); }
@@ -4067,39 +4083,54 @@ async function keepAwake(){
   try{ if("wakeLock" in navigator && document.visibilityState === "visible" && !wake){ wake = await navigator.wakeLock.request("screen"); wake.addEventListener("release", () => { wake = null; }); } }
   catch(e){ if(!keepAwake.told){ keepAwake.told = 1; toast("Keep the charger plugged in so the screen doesn't go to sleep.", 6000); } }
 }
-async function goFull(){ try{ if(!document.fullscreenElement && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen({ navigationUI: "hide" }); }catch(_){} }
-function guardStart(){
-  running = true;
-  try{ audio = audio || new (window.AudioContext || window.webkitAudioContext)(); audio.resume(); }catch(_){}
-  goFull(); keepAwake();
+// full screen, and in Chrome/Edge the keyboard too: Esc, Alt+Tab, the Windows key… stay inside the test
+// (the browser always keeps one way out: holding Esc for 2 seconds — that still locks the test and beeps)
+async function goFull(){
+  try{ if(!document.fullscreenElement && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen({ navigationUI: "hide" }); }catch(_){}
+  try{ if(document.fullscreenElement && navigator.keyboard && navigator.keyboard.lock) await navigator.keyboard.lock(); }catch(_){}
 }
-function guardStop(){ running = false; clearInterval(beepT); try{ wake && wake.release(); }catch(_){} if(document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
+function guardStart(){ running = true; soundOn(); goFull(); keepAwake(); }
+function guardStop(){ running = false; clearInterval(beepT); beepT = null; try{ navigator.keyboard && navigator.keyboard.unlock && navigator.keyboard.unlock(); }catch(_){} try{ wake && wake.release(); }catch(_){} if(document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
+const away = () => document.visibilityState === "hidden" || !document.hasFocus();
+// every time the student leaves: beep, lock, record — and keep beeping until they come back
 function left(how){
-  if(!running || !ST || ST.endedAt) return;
+  if(!running || !ST || ST.endedAt || (typeof picking !== "undefined" && picking)) return;
   if(!awaySince) awaySince = now();
-  if(ST.locked) return;
-  ST.locked = { at: now(), how };
   logEv("left", { how });
-  beep(); clearInterval(beepT);
-  let n = 0; beepT = setInterval(() => { if(++n > 6 || document.visibilityState === "visible" && document.hasFocus()) return clearInterval(beepT); beep(); }, 4000);
-  showLock(); saveNow();
+  if(!ST.locked){ ST.locked = { at: now(), how }; showLock(); }
+  beep();
+  if(!beepT) beepT = setInterval(() => { if(!running || !away()){ clearInterval(beepT); beepT = null; return; } beep(); }, 2000);
+  saveNow();
 }
 function back(){
   if(!running || !awaySince) return;
   const ms = now() - awaySince; awaySince = 0;
   logEv("back", { ms });
-  if(ST.locked) beep();
 }
-document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden") left("switched to another window or app"); else { back(); keepAwake(); } });
+document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden") left("switched to another window or app, or minimised"); else { back(); keepAwake(); } });
 window.addEventListener("blur", () => setTimeout(() => { if(!document.hasFocus()) left("clicked outside the test"); }, 150));
 window.addEventListener("focus", back);
-document.addEventListener("fullscreenchange", () => { if(!document.fullscreenElement && running && !ST.locked && !ST.endedAt) left("left full screen"); });
-function showLock(){ $("#scrLock").classList.remove("hidden"); $("#lkCode").value = ""; $("#lkErr").textContent = ""; setTimeout(() => $("#lkCode").focus(), 50); }
+document.addEventListener("fullscreenchange", () => { if(!document.fullscreenElement && running && !ST.endedAt) left("left full screen"); });
+// keys that try to leave, while the keyboard is captured
+document.addEventListener("keydown", e => {
+  if(!running || !ST || ST.endedAt) return;
+  if((e.altKey && (e.key === "Tab" || e.key === "F4")) || e.key === "Meta" || e.key === "OS" || (e.metaKey && /^(tab|h|m|q|w)$/i.test(e.key))){
+    e.preventDefault(); logEv("tried to leave with the keyboard", { key: (e.altKey ? "Alt+" : e.metaKey ? "Cmd+" : "") + e.key }); beep(); toast("Stay on the test, please.");
+  }
+}, true);
+// the lock covers everything: the paper, the maths keyboard, the reading bar, a drawing in progress
+function showLock(){
+  try{ stopReading(); }catch(_){}
+  try{ window.mathVirtualKeyboard && mathVirtualKeyboard.hide(); }catch(_){}
+  $$(".modal").forEach(m => m.classList.add("hidden")); $("#accBar").classList.add("hidden");
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  $("#scrLock").classList.remove("hidden"); $("#lkCode").value = ""; $("#lkErr").textContent = ""; setTimeout(() => $("#lkCode").focus(), 50); }
 async function teacherOK(code){ return (await BC.codeHash(code, EXAM.unlock.salt, EXAM.unlock.iter)) === EXAM.unlock.hash; }
 $("#lkGo").onclick = async () => {
+  soundOn(); goFull();                       // while the click still counts
   const c = $("#lkCode").value;
   if(!c || !(await teacherOK(c))){ $("#lkErr").textContent = "That's not the teacher code."; logEv("wrong teacher code"); return; }
-  ST.locked = null; logEv("unlocked by teacher"); $("#scrLock").classList.add("hidden"); changed(); saveNow(); goFull(); keepAwake();
+  ST.locked = null; logEv("unlocked by teacher"); $("#scrLock").classList.add("hidden"); if(ST.prefs.accents && !READ_ONLY()) $("#accBar").classList.remove("hidden"); clearInterval(beepT); beepT = null; changed(); saveNow(); soundOn(); goFull(); keepAwake();
 };
 $("#lkCode").addEventListener("keydown", e => { if(e.key === "Enter") $("#lkGo").click(); });
 
@@ -4134,11 +4165,15 @@ $("#tOk").onclick = async () => {
 };
 function teacherInfo(){
   const lefts = ST.log.filter(l => l.kind === "left").length;
+  $("#tSaveInfo").innerHTML = "💾 Answers and backups are saved in: <b>" + esc(saveWhere()) + "</b>";
+  $("#tSave").classList.toggle("hidden", !("showDirectoryPicker" in window) || READ_ONLY());
   $("#tInfo").innerHTML = `${esc(ST.name)} · started ${hm(ST.startedAt)}${EXAM.timeMin ? ` · time allowed ${EXAM.timeMin + (ST.extraMin || 0)} min` : ""} · left the test ${lefts} time${lefts === 1 ? "" : "s"}`;
 }
 document.querySelectorAll("#tMenu [data-add]").forEach(b => b.onclick = () => {
   const m = +b.dataset.add; ST.extraMin = (ST.extraMin || 0) + m; ST.warned = {}; logEv("time added by teacher", { min: m }); changed(); saveNow(); tick(); teacherInfo(); toast(`${m} minutes added.`);
 });
+$("#tSave").onclick = async () => { if(await chooseFolder()){ logEv("teacher chose where to save", { folder: saveDir.name }); teacherInfo(); saveNow(); toast("Answers and backups now go to " + saveDir.name + "."); } goFull(); };
+$("#mTeacher").addEventListener("click", e => { if(e.target.closest("[data-close]") && running && ST && !ST.endedAt) goFull(); });
 $("#tEnd").onclick = () => { closeM("#mTeacher"); endTest("teacher"); };
 
 /* ---- the student's own choices: how it looks, keyboards, reading aloud ---- */
@@ -4272,7 +4307,7 @@ document.addEventListener("click", e => {
 $("#bReadAll").onclick = () => readUnit(0);
 
 /* ---- start → test → end ---- */
-let RESUME = null, BACKUP = null, backupDir = null, lastBackup = 0;
+let RESUME = null, saveDir = null, lastBackup = 0, picking = false;
 const safeName = s => String(s || "").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 80) || "exam";
 function saveFile(text, name, type){
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: type || "application/json" })); a.download = name;
@@ -4289,11 +4324,12 @@ async function boot(){
   if(EXAM.total) facts.push(["Total", EXAM.total + " marks"]);
   facts.push(["Questions", EXAM.nq]);
   $("#stFacts").innerHTML = facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
-  if(!("showDirectoryPicker" in window)) $("#stUsbRow").classList.add("hidden");
+  if(!("showDirectoryPicker" in window)){ $("#stSaveBtn").classList.add("hidden"); $("#stSaveName").textContent = "this computer's Downloads folder (this browser can't choose another one)"; }
+  else { const h = await DB.get("dir:" + EXAM.examId); if(h && h.name) $("#stSaveName").textContent = h.name + " — click Choose to connect it again"; }
   if(READ_ONLY()){
     $("#stSub").textContent = (EXAM.subject ? EXAM.subject + " · " : "") + "Read-aloud version";
     $("#stRules").innerHTML = "<li>Click 🔊 next to a question to hear it. You can pause, slow down, change the voice, or let it keep reading.</li><li><b>Write your answers on your printed paper.</b></li><li>Stay on this screen. <b>If you leave it, it locks</b> with a sound and only your teacher can open it again.</li>";
-    ["#stNew", "#stUsbRow", "#stBackup"].forEach(s => $(s).classList.add("hidden"));
+    ["#stNew", "#stSaveRow", "#stBackup"].forEach(s => $(s).classList.add("hidden"));
     $("#stGo").textContent = "Open the paper";
   }
   const done = await DB.get(DONE());
@@ -4318,7 +4354,7 @@ $("#stGo").onclick = async () => {
   if(!RESUME && !READ_ONLY() && name.length < 2){ err.textContent = "Please type your name first."; $("#stName").focus(); return; }
   const code = $("#stCode").value;
   if(!code){ err.textContent = "Your teacher needs to type the start code."; $("#stCode").focus(); return; }
-  goFull();                                   // must happen right away, while the click still counts
+  goFull(); soundOn();                       // must happen right away, while the click still counts
   $("#stGo").disabled = true; $("#stGo").textContent = "Opening…";
   try{
     const key = await BC.codeKey(code, EXAM.salt, EXAM.iter);
@@ -4353,18 +4389,25 @@ function startExam(){
 }
 
 /* ---- backup copy on a USB stick or folder (Chrome / Edge) ---- */
-$("#stUsb").addEventListener("change", async e => {
-  if(!e.target.checked){ backupDir = null; return; }
+/* ---- where files are saved: one folder (a USB stick, a shared drive…) for backups and the answers file; Chrome / Edge ---- */
+async function chooseFolder(){
+  picking = true;                         // the folder window takes the focus: that is not leaving the test
   try{
-    backupDir = await showDirectoryPicker({ id: "bee-backup", mode: "readwrite" });
-    e.target.parentElement.lastChild.textContent = " Backup copies go to: " + backupDir.name + " ✓";
-  }catch(_){ e.target.checked = false; backupDir = null; }
-});
+    const old = await DB.get("dir:" + EXAM.examId);
+    saveDir = await showDirectoryPicker(Object.assign({ id: "bee-answers", mode: "readwrite" }, old ? { startIn: old } : {}));
+    await DB.set("dir:" + EXAM.examId, saveDir);
+    lastBackup = 0;
+    return true;
+  }catch(_){ return false; }
+  finally{ setTimeout(() => { picking = false; }, 600); }
+}
+const saveWhere = () => saveDir ? saveDir.name : "this computer's Downloads folder";
+$("#stSaveBtn").onclick = async () => { if(await chooseFolder()) $("#stSaveName").textContent = saveDir.name + " ✓"; };
 window.backupTick = async box => {
-  if(!backupDir || now() - lastBackup < 60000 && !ST.endedAt) return;
+  if(!saveDir || now() - lastBackup < 60000 && !ST.endedAt) return;
   lastBackup = now();
   try{
-    const f = await backupDir.getFileHandle(safeName(EXAM.title + " - " + ST.name) + " (backup).bee-backup", { create: true });
+    const f = await saveDir.getFileHandle(safeName(EXAM.title + " - " + ST.name) + " (backup).bee-backup", { create: true });
     const w = await f.createWritable(); await w.write(JSON.stringify({ bee: "backup", v: 1, examId: EXAM.examId, name: ST.name, savedAt: now(), box })); await w.close();
   }catch(e){ console.warn("backup", e); }
 };
@@ -4414,18 +4457,19 @@ async function endTest(by){
     timeMin: EXAM.timeMin, baseMin: EXAM.baseMin, extraPct: EXAM.extraPct, extraMin: ST.extraMin || 0, log: ST.log, answers: ST.answers, flags: ST.flags, prefs: ST.prefs, ua: ST.ua };
   const file = { bee: "answers", v: 1, kid: EXAM.kid, examId: EXAM.examId, title: EXAM.title, created: now(), sealed: await BC.seal(payload, EXAM.pub), teacher: EXAM.teacher };
   const name = safeName(EXAM.title + " - " + ST.name) + ".bee-answers", text = JSON.stringify(file);
-  const done = { name, text, who: ST.name, at: ST.endedAt, by, usb: backupDir ? backupDir.name : "" };
+  const done = { name, text, who: ST.name, at: ST.endedAt, by, folder: "" };
+  // into the chosen folder; if there is none (or it was unplugged), into Downloads
+  if(saveDir){ try{ const f = await saveDir.getFileHandle(name, { create: true }); const w = await f.createWritable(); await w.write(text); await w.close(); done.folder = saveDir.name; }catch(e){ console.warn(e); } }
+  if(!done.folder) saveFile(text, name);
   await DB.set(DONE(), done);
   await saveNow();
-  saveFile(text, name);
-  if(backupDir){ try{ const f = await backupDir.getFileHandle(name, { create: true }); const w = await f.createWritable(); await w.write(text); await w.close(); }catch(e){ console.warn(e); done.usb = ""; } }
   showEnded(done);
 }
 function showEnded(done){
   show("#scrEnded");
   $("#enWho").textContent = (done.who ? done.who + " · " : "") + "ended at " + hm(done.at) + (done.by === "time" ? " (time was up)" : done.by === "teacher" ? " (by the teacher)" : "");
   $("#enFile").textContent = done.name;
-  if(done.usb) $("#enWhere").innerHTML = `It is in this computer's <b>Downloads</b> folder, and a copy is on <b>${esc(done.usb)}</b>.`;
+  if(done.folder) $("#enWhere").innerHTML = `It is in the folder <b>${esc(done.folder)}</b> that your teacher chose. (The button below puts another copy in Downloads.)`;
   $("#enAgain").onclick = () => saveFile(done.text, done.name);
 }
 boot();

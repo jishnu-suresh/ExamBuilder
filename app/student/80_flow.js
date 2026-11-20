@@ -1,5 +1,5 @@
 /* ---- start → test → end ---- */
-let RESUME = null, BACKUP = null, backupDir = null, lastBackup = 0;
+let RESUME = null, saveDir = null, lastBackup = 0, picking = false;
 const safeName = s => String(s || "").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 80) || "exam";
 function saveFile(text, name, type){
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: type || "application/json" })); a.download = name;
@@ -16,11 +16,12 @@ async function boot(){
   if(EXAM.total) facts.push(["Total", EXAM.total + " marks"]);
   facts.push(["Questions", EXAM.nq]);
   $("#stFacts").innerHTML = facts.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("");
-  if(!("showDirectoryPicker" in window)) $("#stUsbRow").classList.add("hidden");
+  if(!("showDirectoryPicker" in window)){ $("#stSaveBtn").classList.add("hidden"); $("#stSaveName").textContent = "this computer's Downloads folder (this browser can't choose another one)"; }
+  else { const h = await DB.get("dir:" + EXAM.examId); if(h && h.name) $("#stSaveName").textContent = h.name + " — click Choose to connect it again"; }
   if(READ_ONLY()){
     $("#stSub").textContent = (EXAM.subject ? EXAM.subject + " · " : "") + "Read-aloud version";
     $("#stRules").innerHTML = "<li>Click 🔊 next to a question to hear it. You can pause, slow down, change the voice, or let it keep reading.</li><li><b>Write your answers on your printed paper.</b></li><li>Stay on this screen. <b>If you leave it, it locks</b> with a sound and only your teacher can open it again.</li>";
-    ["#stNew", "#stUsbRow", "#stBackup"].forEach(s => $(s).classList.add("hidden"));
+    ["#stNew", "#stSaveRow", "#stBackup"].forEach(s => $(s).classList.add("hidden"));
     $("#stGo").textContent = "Open the paper";
   }
   const done = await DB.get(DONE());
@@ -45,7 +46,7 @@ $("#stGo").onclick = async () => {
   if(!RESUME && !READ_ONLY() && name.length < 2){ err.textContent = "Please type your name first."; $("#stName").focus(); return; }
   const code = $("#stCode").value;
   if(!code){ err.textContent = "Your teacher needs to type the start code."; $("#stCode").focus(); return; }
-  goFull();                                   // must happen right away, while the click still counts
+  goFull(); soundOn();                       // must happen right away, while the click still counts
   $("#stGo").disabled = true; $("#stGo").textContent = "Opening…";
   try{
     const key = await BC.codeKey(code, EXAM.salt, EXAM.iter);
@@ -80,18 +81,25 @@ function startExam(){
 }
 
 /* ---- backup copy on a USB stick or folder (Chrome / Edge) ---- */
-$("#stUsb").addEventListener("change", async e => {
-  if(!e.target.checked){ backupDir = null; return; }
+/* ---- where files are saved: one folder (a USB stick, a shared drive…) for backups and the answers file; Chrome / Edge ---- */
+async function chooseFolder(){
+  picking = true;                         // the folder window takes the focus: that is not leaving the test
   try{
-    backupDir = await showDirectoryPicker({ id: "bee-backup", mode: "readwrite" });
-    e.target.parentElement.lastChild.textContent = " Backup copies go to: " + backupDir.name + " ✓";
-  }catch(_){ e.target.checked = false; backupDir = null; }
-});
+    const old = await DB.get("dir:" + EXAM.examId);
+    saveDir = await showDirectoryPicker(Object.assign({ id: "bee-answers", mode: "readwrite" }, old ? { startIn: old } : {}));
+    await DB.set("dir:" + EXAM.examId, saveDir);
+    lastBackup = 0;
+    return true;
+  }catch(_){ return false; }
+  finally{ setTimeout(() => { picking = false; }, 600); }
+}
+const saveWhere = () => saveDir ? saveDir.name : "this computer's Downloads folder";
+$("#stSaveBtn").onclick = async () => { if(await chooseFolder()) $("#stSaveName").textContent = saveDir.name + " ✓"; };
 window.backupTick = async box => {
-  if(!backupDir || now() - lastBackup < 60000 && !ST.endedAt) return;
+  if(!saveDir || now() - lastBackup < 60000 && !ST.endedAt) return;
   lastBackup = now();
   try{
-    const f = await backupDir.getFileHandle(safeName(EXAM.title + " - " + ST.name) + " (backup).bee-backup", { create: true });
+    const f = await saveDir.getFileHandle(safeName(EXAM.title + " - " + ST.name) + " (backup).bee-backup", { create: true });
     const w = await f.createWritable(); await w.write(JSON.stringify({ bee: "backup", v: 1, examId: EXAM.examId, name: ST.name, savedAt: now(), box })); await w.close();
   }catch(e){ console.warn("backup", e); }
 };
@@ -141,18 +149,19 @@ async function endTest(by){
     timeMin: EXAM.timeMin, baseMin: EXAM.baseMin, extraPct: EXAM.extraPct, extraMin: ST.extraMin || 0, log: ST.log, answers: ST.answers, flags: ST.flags, prefs: ST.prefs, ua: ST.ua };
   const file = { bee: "answers", v: 1, kid: EXAM.kid, examId: EXAM.examId, title: EXAM.title, created: now(), sealed: await BC.seal(payload, EXAM.pub), teacher: EXAM.teacher };
   const name = safeName(EXAM.title + " - " + ST.name) + ".bee-answers", text = JSON.stringify(file);
-  const done = { name, text, who: ST.name, at: ST.endedAt, by, usb: backupDir ? backupDir.name : "" };
+  const done = { name, text, who: ST.name, at: ST.endedAt, by, folder: "" };
+  // into the chosen folder; if there is none (or it was unplugged), into Downloads
+  if(saveDir){ try{ const f = await saveDir.getFileHandle(name, { create: true }); const w = await f.createWritable(); await w.write(text); await w.close(); done.folder = saveDir.name; }catch(e){ console.warn(e); } }
+  if(!done.folder) saveFile(text, name);
   await DB.set(DONE(), done);
   await saveNow();
-  saveFile(text, name);
-  if(backupDir){ try{ const f = await backupDir.getFileHandle(name, { create: true }); const w = await f.createWritable(); await w.write(text); await w.close(); }catch(e){ console.warn(e); done.usb = ""; } }
   showEnded(done);
 }
 function showEnded(done){
   show("#scrEnded");
   $("#enWho").textContent = (done.who ? done.who + " · " : "") + "ended at " + hm(done.at) + (done.by === "time" ? " (time was up)" : done.by === "teacher" ? " (by the teacher)" : "");
   $("#enFile").textContent = done.name;
-  if(done.usb) $("#enWhere").innerHTML = `It is in this computer's <b>Downloads</b> folder, and a copy is on <b>${esc(done.usb)}</b>.`;
+  if(done.folder) $("#enWhere").innerHTML = `It is in the folder <b>${esc(done.folder)}</b> that your teacher chose. (The button below puts another copy in Downloads.)`;
   $("#enAgain").onclick = () => saveFile(done.text, done.name);
 }
 boot();

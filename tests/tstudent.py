@@ -35,6 +35,8 @@ async def student(b, path, viewport=(1280, 860)):
 async def main():
     async with async_playwright() as p:
         b = await p.chromium.launch(**chrome())
+        strict = chrome(); strict["args"] = (strict.get("args") or []) + ["--autoplay-policy=document-user-activation-required"]
+        b2 = await p.chromium.launch(**strict)            # Chrome's real sound rules: sound only if switched on during a click
         # ---------- teacher makes the file
         ctx, pg, berrs, d = await make_student_file(b)
         await d.save_as(P("exam.html")); html = open(P("exam.html"), encoding="utf-8").read()
@@ -141,7 +143,7 @@ async def main():
         await sp.click("#tMenu [data-add='10']"); await sp.evaluate("closeM('#mTeacher')")
         ok("teacher adds 10 minutes", await sp.evaluate("ST.extraMin") == 10)
         # USB backup (a folder stands in for the stick)
-        await sp.evaluate("""() => { window.__usb = {}; backupDir = { name: 'USB', getFileHandle: async n => ({ createWritable: async () => ({ write: async d => { window.__usb[n] = d; }, close: async () => {} }) }) }; lastBackup = 0; changed(); }""")
+        await sp.evaluate("""() => { window.__usb = {}; saveDir = { name: 'USB', getFileHandle: async n => ({ createWritable: async () => ({ write: async d => { window.__usb[n] = d; }, close: async () => {} }) }) }; lastBackup = 0; changed(); }""")
         await sp.wait_for_timeout(3800)
         usb = await sp.evaluate("window.__usb")
         bk = [k for k in usb if k.endswith(".bee-backup")]
@@ -169,6 +171,24 @@ async def main():
         await sp.reload(); await sp.wait_for_timeout(1200)
         ok("“This test has ended” after reopening", await sp.is_visible("#scrEnded") and not await sp.is_visible("#scrExam"))
         ok("no errors in the student file", not serrs, serrs)
+        # the teacher chooses where files are saved: backups and the answers file both go there
+        sc6, sp6, e6 = await student(b, P("exam.html"))
+        await sp6.evaluate("indexedDB.deleteDatabase('bee-student')"); await sp6.reload(); await sp6.wait_for_timeout(1200)
+        await sp6.evaluate("""() => { window.__usb = {}; window.showDirectoryPicker = async () => ({ name: 'USB STICK', getFileHandle: async n => ({ createWritable: async () => ({ write: async d => { window.__usb[n] = d; }, close: async () => {} }) }) }); }""")
+        await sp6.click("#stSaveBtn"); await sp6.wait_for_timeout(300)
+        ok("start screen: the teacher chooses the save folder", "USB STICK" in await sp6.text_content("#stSaveName"))
+        await sp6.fill("#stName", "Zoé Petit"); await sp6.fill("#stCode", "ABCD-2345"); await sp6.click("#stGo"); await sp6.wait_for_timeout(2500)
+        await sp6.fill(f"[data-area='{qs[0]}|main'] textarea", "12"); await sp6.wait_for_timeout(3800)
+        await sp6.click("#bTeacher"); await sp6.fill("#tCode", "135790"); await sp6.click("#tOk"); await sp6.wait_for_timeout(1500)
+        ok("teacher menu shows where answers are saved", "USB STICK" in await sp6.text_content("#tSaveInfo"))
+        await sp6.evaluate("closeM('#mTeacher')")
+        got_download = []
+        sp6.on("download", lambda d: got_download.append(d.suggested_filename))
+        await sp6.click("#bEnd"); await sp6.click("#endGo"); await sp6.wait_for_timeout(1500)
+        usb6 = await sp6.evaluate("Object.keys(window.__usb)")
+        ok("backup and answers file both in the chosen folder (not Downloads)", any(k.endswith(".bee-backup") for k in usb6) and "End-of-Term Examination - Zoé Petit.bee-answers" in usb6 and not got_download, [usb6, got_download])
+        ok("“This test has ended” says which folder", "USB STICK" in await sp6.text_content("#enWhere"))
+        await sc6.close()
         # a second student, ended by the teacher without answering
         sc3, sp3, _ = await student(b, P("exam.html"))
         await sp3.evaluate("indexedDB.deleteDatabase('bee-student')"); await sp3.reload(); await sp3.wait_for_timeout(1200)
@@ -248,6 +268,36 @@ async def main():
         ok("read-aloud: Finish closes it (nothing to hand in from the laptop)", await sp5.is_visible("#scrEnded") and await sp5.text_content("#scrEnded h1") == "Finished" and not await sp5.is_visible("#enAgain"))
         ok("read-aloud: no errors", not e5, e5)
         await sc5.close()
+        # leaving the test, in both files: sound really on, keyboard captured, beep on every exit, alarm while away
+        for path, code, name in [(P("exam.html"), "ABCD-2345", "Mia Leroy"), (P("read.html"), "READ-2345", None)]:
+            kind = "read-aloud" if "read" in path else "computer"
+            cx = await b2.new_context(viewport={"width": 1280, "height": 860}); px = await cx.new_page()
+            await px.add_init_script("window.__kb = 0; if(navigator.keyboard){ navigator.keyboard.lock = async () => { window.__kb++; }; }")
+            await px.goto("file://" + path); await px.wait_for_timeout(1000)
+            await px.evaluate("indexedDB.deleteDatabase('bee-student')"); await px.reload(); await px.wait_for_timeout(1000)
+            if name: await px.fill("#stName", name)
+            await px.fill("#stCode", code); await px.click("#stGo"); await px.wait_for_timeout(2500)
+            st = await px.evaluate("({ sound: audio && audio.state, full: !!document.fullscreenElement, kb: window.__kb })")
+            ok(f"{kind}: sound is on and full screen with the keyboard captured", st["sound"] == "running" and st["full"] and st["kb"] >= 1, st)
+            hide = "Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' }); document.dispatchEvent(new Event('visibilitychange'))"
+            show = "delete document.visibilityState; document.dispatchEvent(new Event('visibilitychange')); window.dispatchEvent(new Event('focus'))"
+            await px.evaluate(FAKE_TTS); await px.click("#paper [data-say] >> nth=1"); await px.wait_for_timeout(200)
+            if name:
+                await px.click("#paper [data-add=math] >> nth=0"); await px.wait_for_timeout(600)
+            await px.evaluate(hide); await px.wait_for_timeout(4600)
+            cover = await px.evaluate("""() => { const pts = [[640, 430], [100, 100], [1200, 800], [640, 840]]; return {
+              all: pts.every(([x, y]) => !!document.elementFromPoint(x, y).closest('#scrLock')),
+              kb: !!(window.mathVirtualKeyboard && mathVirtualKeyboard.visible), reading: !$('#tts').classList.contains('hidden') }; }""")
+            ok(f"{kind}: the lock screen covers everything (keyboard and reading stop)", cover["all"] and not cover["kb"] and not cover["reading"], cover)
+            a = await px.evaluate("[beeps, !$('#scrLock').classList.contains('hidden')]")
+            ok(f"{kind}: minimising locks it and the alarm keeps beeping while away", a[1] and a[0] >= 3, a)
+            await px.evaluate(show); await px.wait_for_timeout(300); n1 = await px.evaluate("beeps"); await px.wait_for_timeout(2600); n2 = await px.evaluate("beeps")
+            ok(f"{kind}: the alarm stops when the student is back (still locked)", n1 == n2 and await px.is_visible("#scrLock"), [n1, n2])
+            await px.evaluate(hide); await px.wait_for_timeout(200); n3 = await px.evaluate("beeps"); await px.evaluate(show)
+            ok(f"{kind}: leaving again while locked beeps again", n3 > n2, [n2, n3])
+            await px.keyboard.down("Alt"); await px.keyboard.press("Tab"); await px.keyboard.up("Alt"); await px.wait_for_timeout(200)
+            ok(f"{kind}: Alt+Tab is caught and recorded", await px.evaluate("ST.log.some(l => l.kind === 'tried to leave with the keyboard') && beeps > " + str(n3)))
+            await cx.close()
         # phone-sized laptop window
         sc4, sp4, _ = await student(b, P("offline_exam.html"), (390, 844))
         await sp4.fill("#stName", "Sam"); await sp4.fill("#stCode", "QWER-TYUP"); await sp4.click("#stGo"); await sp4.wait_for_timeout(2500)

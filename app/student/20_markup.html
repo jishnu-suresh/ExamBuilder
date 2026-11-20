@@ -28,7 +28,10 @@
       <span style="flex:1"></span>
       <button class="btn" id="stBackup" title="Carry on from a backup copy made on another computer">📂 Carry on from a backup</button>
     </div>
-    <p class="muted" id="stUsbRow" style="margin-top:14px"><label style="display:inline;font-weight:400"><input type="checkbox" id="stUsb"> Also keep a backup copy on a USB stick or folder (teacher's choice)</label></p>
+    <div class="saveto" id="stSaveRow">
+      <div>💾 The answers file and backup copies are saved in: <b id="stSaveName">this computer's Downloads folder</b></div>
+      <button class="btn" type="button" id="stSaveBtn">📁 Choose a folder or USB stick <span class="muted">(teacher)</span></button>
+    </div>
   </div>
 </div>
 
@@ -98,7 +101,9 @@
     <div class="row"><button class="btn" data-close>Cancel</button><button class="btn primary" id="tOk">OK</button></div></div>
   <div id="tMenu" class="hidden">
     <p class="muted" id="tInfo"></p>
+    <p class="muted" id="tSaveInfo"></p>
     <label>Add time</label><div class="seg"><button data-add="5">+5 min</button><button data-add="10">+10 min</button><button data-add="15">+15 min</button><button data-add="30">+30 min</button></div>
+    <div class="row" style="margin-top:6px"><button class="btn" id="tSave">📁 Change where answers are saved</button></div>
     <div class="row"><button class="btn danger" id="tEnd">End the test for this student</button><span style="flex:1"></span><button class="btn primary" data-close>Close</button></div>
   </div>
 </div></div>
