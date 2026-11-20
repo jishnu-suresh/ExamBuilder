@@ -180,6 +180,7 @@ Commit both `app/src/` **and** the rebuilt `docs/`.
 ## 8. Lessons learned (please keep these in mind)
 
 * **Edit `app/src/`, then rebuild.** Changes made directly in `docs/` are overwritten by the next build.
+* **Switching exams:** always call `leaveCurrentFile()` before showing a different exam. It saves the current exam into its own file and then lets go of it. Otherwise a save that runs mid-switch (the minute autosave, leaving the window, Ctrl+S, or while the "Allow editing?" question is open) writes the new exam into the old file. `writeProject()` takes the file and the exam together when it starts, for the same reason.
 * **Page layout:** `html, body` use `overflow-x: clip`, not `hidden`. `hidden` breaks the sticky preview on desktop.
 * **Top-level code runs before `$` exists** in some sections. Use `document.getElementById` in code that runs while the page loads.
 * **Inside `buildPDF`, the translator is `PT()`**, because `T` is already used as a variable in `qBlock`.

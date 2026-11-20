@@ -238,9 +238,9 @@ async function loadDemo(){
   let o = DEMO;
   if(!o){ try{ o = await (await fetch("demo/demo_all_features.exam.json")).json(); }catch(_){ toast("The demo exam needs an internet connection the first time"); return false; } }
   await keepVersion("Before opening the demo exam");
+  // the teacher's own exam is saved into its file first; the demo is never written into it
+  await leaveCurrentFile(); storedHandle = null;
   applyState(JSON.parse(JSON.stringify(o)));
-  // the demo is never written into the teacher's own project file
-  proj.handle = null; proj.name = ""; proj.dirty = false; storedHandle = null;
   try{ await IDB.del("handle"); }catch(_){}
   saveLocal(); updateChip();
   toast("🐝 Demo exam opened — change anything you like. Your earlier work is in 🕘 History.");

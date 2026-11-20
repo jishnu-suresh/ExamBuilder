@@ -125,16 +125,26 @@ function updateChip(){
 async function writeProject(force){
   if(!proj.handle || proj.writing) return false;
   if(!force && !proj.dirty) return true;
+  // take the file and the exam together, right now: if the teacher switches to another exam while this
+  // save is still running, the old file still gets the old exam (never the new one)
+  const h = proj.handle, name = proj.name, data = JSON.stringify(snapshot()), was = S.savedAt;
   try{
-    if(proj.handle.queryPermission){ proj.perm = await proj.handle.queryPermission({ mode: "readwrite" }); if(proj.perm !== "granted"){ updateChip(); return false; } }
     proj.writing = true; updateChip();
-    const w = await proj.handle.createWritable();
-    await w.write(JSON.stringify(snapshot()));
+    if(h.queryPermission){ const p = await h.queryPermission({ mode: "readwrite" }); if(proj.handle === h) proj.perm = p; if(p !== "granted") return false; }
+    const w = await h.createWritable();
+    await w.write(data);
     await w.close();
-    proj.dirty = false; proj.lastWrite = Date.now(); proj.perm = "granted";
+    if(proj.handle === h){ if(S.savedAt === was) proj.dirty = false; proj.lastWrite = Date.now(); proj.perm = "granted"; }
     return true;
-  }catch(e){ console.error(e); toast("Couldn't save to " + proj.name + ": " + (e.message || e)); return false; }
+  }catch(e){ console.error(e); toast("Couldn't save to " + name + ": " + (e.message || e)); return false; }
   finally{ proj.writing = false; updateChip(); }
+}
+// before BEE shows a different exam: save the current one into its own file, then let go of that file,
+// so nothing (the minute autosave, switching windows, Ctrl+S) can write the next exam into it
+async function leaveCurrentFile(){
+  for(let i = 0; i < 40 && proj.writing; i++) await new Promise(r => setTimeout(r, 50));
+  if(proj.handle && proj.dirty) await writeProject(true);
+  proj.handle = null; proj.name = ""; proj.dirty = false; proj.perm = "none";
 }
 async function setHandle(h){
   proj.handle = h; proj.name = h ? h.name : ""; proj.perm = h ? "granted" : "none";
@@ -199,7 +209,7 @@ document.getElementById("svGo").onclick = async () => {
   else{
     try{
       const h = await showSaveFilePicker({ suggestedName: name + ".exam.json", types: PTYPES });
-      if(svOpts.state) S = svOpts.state;      // a new exam replaces the old one only once its file is chosen
+      if(svOpts.state){ await leaveCurrentFile(); S = svOpts.state; }      // a new exam replaces the old one only once its file is chosen
       await setHandle(h); await writeProject(true); toast("Saving to " + h.name + " — automatically every minute"); ok = true;
     }catch(e){ if(!(e && e.name === "AbortError")) toast("Couldn't save: " + (e.message || e)); }
   }
@@ -224,6 +234,7 @@ async function openFromHandle(h){
     const o = JSON.parse(await file.text());
     if(!o || !Array.isArray(o.items)) throw new Error("not an exam project");
     await keepVersion("Before opening " + file.name);
+    await leaveCurrentFile();
     applyState(o);
     try{ proj.perm = h.requestPermission ? await h.requestPermission({ mode: "readwrite" }) : "granted"; }catch(_){ proj.perm = "prompt"; }
     proj.handle = h; proj.name = h.name; proj.dirty = false; proj.lastWrite = Date.now();
@@ -245,7 +256,7 @@ async function newProject(){
     const ok = await saveAs({ isNew: true, state: fresh });
     if(!ok) return false;
     S = fresh;
-  }else{ await setHandle(null); S = fresh; }
+  }else{ await leaveCurrentFile(); await setHandle(null); S = fresh; }
   applyState(S); saveLocal(true);
   return true;
 }

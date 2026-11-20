@@ -243,9 +243,38 @@ async def tour_and_demo(b):
     n = await pg.evaluate("S.items.filter(i => i.type === 'q').length")
     ok("demo exam (offline file): works without internet", n >= 20, n); await c.close()
 
+async def switch_files(b):
+    # teacher feedback: switching to another file in the installed app. The old file must keep its own exam,
+    # even when a save runs while the "Allow editing?" question is open, or while a save is still running.
+    c, pg, errs = await fresh(b)
+    # real files need a web address (run_all.py serves docs/ on port 8765); the offline file:// copy can't have them
+    await pg.goto("http://127.0.0.1:8765/"); await pg.wait_for_timeout(1500); await pg.evaluate("$('#startModal').classList.remove('open')")
+    await pg.evaluate("""async () => { const root = await navigator.storage.getDirectory();
+      for(const n of 'ABC'){ const h = await root.getFileHandle(n + '.exam.json', {create:true}), w = await h.createWritable();
+        await w.write(JSON.stringify({app:'exam-builder', version:2, savedAt:1, d:{title:'T' + n}, items:[{id:'q' + n, type:'q', text:'Q ' + n}]})); await w.close(); }
+      window.showOpenFilePicker = async () => [await root.getFileHandle(window.__pick)];
+      FileSystemFileHandle.prototype.queryPermission = async () => 'granted';
+      window.__disk = async n => JSON.parse(await (await (await root.getFileHandle(n + '.exam.json')).getFile()).text()).d.title; }""")
+    async def op(n, delay=0):
+        await pg.evaluate(f"() => {{ window.__pick = '{n}.exam.json'; FileSystemFileHandle.prototype.requestPermission = () => new Promise(r => setTimeout(() => r('granted'), {delay})); }}")
+        await pg.click("#btnOpen")
+    seq = []
+    for n in "ABCACB":
+        await op(n); await pg.wait_for_timeout(500); seq.append(await pg.evaluate("S.d.title") == "T" + n)
+    ok("switching files: each file opens, back to back", all(seq), seq)
+    await op("A"); await pg.wait_for_timeout(500); await pg.fill("[data-k=title]", "A edited"); await pg.wait_for_timeout(500)
+    await op("B", 2000); await pg.wait_for_timeout(600); await pg.evaluate("writeProject(true)"); await pg.wait_for_timeout(2000)
+    d = await pg.evaluate("Promise.all([S.d.title, __disk('A'), __disk('B'), proj.name])")
+    ok("switching files: the old file keeps its own edits, never the next exam", d == ["TB", "A edited", "TB", "B.exam.json"], d)
+    await pg.fill("[data-k=title]", "B edited"); await pg.wait_for_timeout(500)
+    await pg.evaluate("""() => { const o = FileSystemFileHandle.prototype.createWritable; FileSystemFileHandle.prototype.createWritable = async function(){ await new Promise(r => setTimeout(r, 1000)); return o.call(this); }; writeProject(); }""")
+    await pg.wait_for_timeout(100); await op("C"); await pg.wait_for_timeout(2500)
+    d = await pg.evaluate("Promise.all([S.d.title, __disk('B'), __disk('C')])")
+    ok("switching files: a save still running doesn't cross files", d == ["TC", "B edited", "TC"], d); await c.close()
+
 CHECKS = [phones, sticky_preview, paste_details_rubric, formatting, pdf_guard, cut_from_pdf, drawings, mcq_ends_after_options,
           sub_question_split, mcq_split, page_breaks, click_to_jump, insert_menu, save_dialog, prompts, looks,
-          lead_in, settings_tabs, more_menu, tour_and_demo]
+          lead_in, settings_tabs, more_menu, tour_and_demo, switch_files]
 
 async def main():
     os.chdir(OUT)
