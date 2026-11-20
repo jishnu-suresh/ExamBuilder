@@ -33,6 +33,8 @@ No internet / no install? Download the single-file version: [`docs/download/Exam
 - Auto-saves to a project file every minute (Chrome/Edge); double-click `.exam.json` files to open them in the app
 
 ## For developers
+**Start with [HOW_BEE_WORKS.md](HOW_BEE_WORKS.md)** — how BEE is built, where everything lives, and how to release safely.
+
 ```
 build/fetch_vendor.sh      # once: downloads pinned libraries into .vendor/ (needs Node/npm)
 python3 build/build.py     # builds docs/ (the web app) and docs/download/Exam_Builder_offline.html

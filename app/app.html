@@ -3001,7 +3001,7 @@ function buildPDF(opt){
         const colW = curW() / cols;
         const cells = group.slice(r, r + cols).map(b => layoutPara(Object.assign({}, b, { ind }), colW - (cols > 1 ? 3 : 0)));
         const h = Math.max(...cells.map(c => c.reduce((a, l) => a + l.h, 0))) + (mark ? .8 : 0);
-        add([{ h, asc: cells[0][0] ? cells[0][0].asc : TASC, draw(x, y){ cells.forEach((c, ci) => { let ly = y; c.forEach(l => { l.draw(x + ci * colW, ly); ly += l.h; }); }); } }]);
+        add([{ h, opt: r, asc: cells[0][0] ? cells[0][0].asc : TASC, draw(x, y){ cells.forEach((c, ci) => { let ly = y; c.forEach(l => { l.draw(x + ci * colW, ly); ly += l.h; }); }); } }]);   // opt: index of the first option on this row
       }
       group = [];
     };
@@ -3170,7 +3170,7 @@ function buildPDF(opt){
       lines.forEach(l => {
         const showNo = it.lineNums && l.txt && (++lineNo % 5 === 0);
         const no = lineNo;
-        parts.push({ h: l.h, draw: yy => {
+        parts.push({ h: l.h, opt: l.opt, draw: yy => {
           if(l.draw){ font(SANS, "normal", fs, INK); l.draw(tx + (l.dx || 0), yy); }
           if(showNo){ font(SANS, "normal", Math.max(7, fs - 3.5), MUTED); doc.text(String(no), X - 2.4, yy + (l.asc || TASC), { align: "right" }); }
         } });
@@ -3240,8 +3240,10 @@ function buildPDF(opt){
       }
       const h = parts.reduce((a, p) => a + p.h, 0);
       // pieces a question may be split between: the question itself, then each sub-question
-      parts.forEach((p, i) => { p.g = subStart.filter(st => st <= i).length; });
-      const groupH = [0].concat(subStart.map((_, k) => k + 1)).map(g => parts.filter(p => p.g === g).reduce((a, p) => a + p.h, 0));
+      // …or, for a multiple-choice question without sub-questions, before option C, D, E… (A and B stay with the question)
+      const breaks = subStart.length ? subStart : parts.map((p, i) => p.opt != null && p.opt >= 2 ? i : -1).filter(i => i >= 0);
+      parts.forEach((p, i) => { p.g = breaks.filter(st => st <= i).length; });
+      const groupH = [0].concat(breaks.map((_, k) => k + 1)).map(g => parts.filter(p => p.g === g).reduce((a, p) => a + p.h, 0));
       return { parts, h, groupH, first: parts.slice(0, 3).reduce((a, p) => a + p.h, 0), drawAll(yy){ parts.forEach(p => { p.draw(yy); yy += p.h; }); } };
     }
     for(let idx = 0; idx < items.length; idx++){
