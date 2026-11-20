@@ -44,7 +44,9 @@ jobs:
       - name: Download the pinned libraries
         run: bash build/fetch_vendor.sh
       - name: Rebuild
-        run: python3 build/build.py
+        run: |
+          pip install pillow==12.3.0
+          python3 build/build.py
       - name: The committed docs/ must equal a fresh build
         run: |
           if ! git diff --quiet -- docs; then

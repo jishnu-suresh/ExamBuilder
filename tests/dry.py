@@ -26,6 +26,9 @@ async def main():
         await pg.clock.install()
         await pg.goto('file://' + __import__('os').path.abspath(__import__('os').path.join(__import__('os').path.dirname(__file__), '..', 'docs', 'download', 'Exam_Builder_offline.html')) + ''); await pg.clock.run_for(1500)
         # A: start modal + new project file
+        for _ in range(100):   # start-up reads browser storage in real time, which the fake clock doesn't speed up
+            if await pg.is_visible('#startModal'): break
+            await asyncio.sleep(.1)
         ok("A1 start screen shown on launch", await pg.is_visible('#startModal'))
         await pg.screenshot(path='dry_start.png')
         await pg.click('#stNew'); await pg.clock.run_for(300)
