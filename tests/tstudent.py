@@ -16,20 +16,35 @@ FAKE_TTS = """() => { const f = { speaking: false, paused: false, q: [], speak(u
 def ok(name, cond, info=""):
     res.append(bool(cond)); print(("PASS " if cond else "FAIL ") + name + ("" if cond else f"   → {info}"))
 
-async def make_student_file(b, url=WEB, code="ABCD-2345", tcode="135790", extra="25"):
+async def export_student(pg, key_mode="make", keyfile=None):
+    """Press ⬇ Download; the first time on a computer, make the school key (once) or load its file."""
+    downs = []; pg.on("download", lambda d: downs.append(d))
+    await pg.click("#stuGo")
+    try: await pg.wait_for_selector("#needKeyModal.open", timeout=5000)
+    except Exception: pass
+    else:
+        if key_mode == "make":
+            await pg.click("#needKeyModal summary"); await pg.click("[data-needkey=make]")
+            await pg.wait_for_selector("#pwModal.open"); await pg.fill("#pw1", TEACHER_PW); await pg.fill("#pw2", TEACHER_PW); await pg.click("#pwGo")
+        else:
+            async with pg.expect_file_chooser() as fc: await pg.click("[data-needkey=load]")
+            await (await fc.value).set_files(keyfile)
+            await pg.wait_for_selector("#pwModal.open"); await pg.fill("#pw1", TEACHER_PW); await pg.click("#pwGo")
+    for _ in range(400):
+        h = [d for d in downs if d.suggested_filename.endswith(".html")]
+        if h: return h[0], [d for d in downs if d.suggested_filename.endswith(".beekey")]
+        await pg.wait_for_timeout(500)
+    raise Exception("no student file was downloaded")
+
+async def make_student_file(b, url=WEB, code="ABCD-2345", tcode="135790", extra="25", key_mode="make", keyfile=None):
     ctx = await b.new_context(accept_downloads=True, viewport={"width": 1300, "height": 900}); pg = await ctx.new_page()
     errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
     await pg.goto(url); await pg.wait_for_timeout(1800)
     await pg.evaluate("loadDemo()"); await pg.wait_for_timeout(2500); await pg.evaluate("tourAt >= 0 && endTour()")
     await pg.evaluate("openStudentDialog()"); await pg.wait_for_timeout(400)
     await pg.fill("#stuCode", code); await pg.fill("#stuTCode", tcode); await pg.select_option("#stuExtra", extra)
-    async with pg.expect_download(timeout=180000) as dl:
-        await pg.click("#stuGo")
-        try:                                        # the first time: choose the teacher password for the new key
-            await pg.wait_for_selector("#pwModal.open", timeout=5000)
-            await pg.fill("#pw1", TEACHER_PW); await pg.fill("#pw2", TEACHER_PW); await pg.click("#pwGo")
-        except Exception: pass
-    d = await dl.value
+    d, keys = await export_student(pg, key_mode, keyfile)
+    pg.__keys = keys
     return ctx, pg, errs, d
 
 async def student(b, path, viewport=(1280, 860)):
@@ -52,9 +67,9 @@ async def main():
         keys = [l.strip() for it in demo["items"] for t in [it.get("answer") or ""] + [sb.get("answer") or "" for sb in it.get("subs") or []] for l in t.split("\n") if len(l.strip()) > 14]
         ok("answer key is not readable inside the file", keys and not any(k in html for k in keys), [k for k in keys if k in html][:2] or "no model answers in the demo")
         await pg.wait_for_timeout(800)
-        ok("first time: BEE asks to back up the teacher key", await pg.evaluate("$('#keyModal').classList.contains('open')"))
-        async with pg.expect_download() as dl: await pg.click("#keyBackup")
-        await (await dl.value).save_as(P("teacher.beekey"))
+        ok("first time: the school key is made once, and its file is saved to share", len(pg.__keys) == 1 and pg.__keys[0].suggested_filename.endswith("BEE school key.beekey"), [k.suggested_filename for k in pg.__keys])
+        await pg.__keys[0].save_as(P("teacher.beekey"))
+        ok("the dialog says the answers are sealed with the school key", "school key" in await pg.text_content("#stuKey"))
         bk = json.load(open(P("teacher.beekey")))
         stored = await pg.evaluate("teacherKeys().then(ks => ks.map(k => Object.keys(k)))")
         ok("teacher key: locked with the password in this browser and in the backup", "privBox" in bk and "priv" not in bk and '"d":' not in json.dumps(bk) and all("priv" not in k and "privBox" in k for k in stored), [list(bk), stored])
@@ -264,7 +279,8 @@ async def main():
         ok("the key backup opens them on another computer", (await dl.value).suggested_filename.endswith("(answers).pdf"))
         await c2.close()
         # the offline BEE (one file, no internet) makes student files too
-        c3, p3, e3, d3 = await make_student_file(b, "file://" + OFFLINE, code="QWER-TYUP", tcode="2468")
+        c3, p3, e3, d3 = await make_student_file(b, "file://" + OFFLINE, code="QWER-TYUP", tcode="2468", key_mode="load", keyfile=P("teacher.beekey"))
+        ok("another teacher: loads the school key file once (no key of their own)", await p3.evaluate("teacherKeys().then(ks => ks.length === 1)") and not p3.__keys)
         await d3.save_as(P("offline_exam.html"))
         ok("offline BEE makes the student file without internet", os.path.getsize(P("offline_exam.html")) > 1_000_000 and not e3, e3)
         await c3.close()
@@ -275,10 +291,7 @@ async def main():
         await p5.check("input[name=stuMode][value=read]"); await p5.select_option("#stuVoice", "en-US")
         ok("read-aloud option in the dialog", await p5.text_content("#stuGo") == "⬇ Download the read-aloud file" and not await p5.is_visible("#stuDrawRow"))
         await p5.fill("#stuCode", "READ-2345"); await p5.fill("#stuTCode", "9753")
-        async with p5.expect_download(timeout=180000) as dl:
-            await p5.click("#stuGo"); await p5.wait_for_selector("#pwModal.open", timeout=8000)
-            await p5.fill("#pw1", TEACHER_PW); await p5.fill("#pw2", TEACHER_PW); await p5.click("#pwGo")
-        rd = await dl.value; await rd.save_as(P("read.html"))
+        rd, _ = await export_student(p5, "load", P("teacher.beekey")); await rd.save_as(P("read.html"))
         ok("read-aloud file is made", rd.suggested_filename.endswith("read-aloud version.html"), rd.suggested_filename)
         await p5.evaluate("document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')); $('#stuModal').classList.add('open')")
         async with p5.expect_download() as dl: await p5.click("#stuSheet")

@@ -515,7 +515,7 @@ x = 3
   <div class="box" style="max-width:600px">
     <div id="stuForm">
       <h3>💻 Computer version for students</h3>
-      <p class="hint" style="margin:4px 0 10px">One file the student opens on a laptop, with no internet. They answer on screen (typing, maths keyboard, drawing) and press <b>End the test</b>. Their answers come back as a <b>sealed file</b> that only your BEE can open, and BEE turns it into a PDF to mark.</p>
+      <p class="hint" style="margin:4px 0 10px">One file the student opens on a laptop, with no internet. They answer on screen (typing, maths keyboard, drawing) and press <b>End the test</b>. Their answers come back as a <b>sealed file</b> that only teachers with the school key can open, and BEE turns it into a PDF to mark.</p>
       <div class="seg-pick" id="stuMode">
         <label><input type="radio" name="stuMode" value="answer" checked><b>💻 Students answer on the computer</b><span>Typing, maths keyboard, drawing. Answers come back sealed for you.</span></label>
         <label><input type="radio" name="stuMode" value="read"><b>🔊 Read-aloud only</b><span>The paper on screen with its questions read aloud. Students write their answers on the printed paper.</span></label>
@@ -560,12 +560,27 @@ x = 3
 </div>
 <!-- 🔑 TEACHER KEY -->
 <div class="modal" id="keyModal">
-  <div class="box" style="max-width:540px">
-    <h3>🔑 Your teacher key</h3>
-    <p>Student answers are sealed with your <b>teacher key</b>. It stays in this browser, and only it can open them.</p>
-    <p><b>Please keep a backup copy</b> (on your own USB stick or drive, not the students'). If this browser is reset or you change computer, you need it to open answers.</p>
+  <div class="box" style="max-width:560px">
+    <h3>🐝 The school key</h3>
+    <p>Every computer version is sealed with <b>the school key</b>. Any teacher whose BEE has the school key, and who knows its password, can open any student's answers, for every exam.</p>
     <p class="hint" id="keyInfo"></p>
-    <div class="actions" style="justify-content:flex-end;flex-wrap:wrap"><button class="btn" id="keyLock">🔒 Lock now</button><button class="btn" id="keyPw">🔐 Change the password</button><button class="btn" id="keyImport">📂 Use a key from a backup</button><button class="btn primary" id="keyBackup">⬇ Save a backup of my key</button><button class="btn" data-close>Close</button></div>
+    <div class="actions" style="justify-content:flex-end;flex-wrap:wrap"><button class="btn" id="keyLock">🔒 Lock now</button><button class="btn" id="keyImport">📂 Load the school key file</button><button class="btn primary" id="keyBackup">⬇ Save the school key file (to share)</button></div>
+    <details class="hint" style="margin-top:12px"><summary style="cursor:pointer">For the person in charge of the school key</summary>
+      <div class="actions" style="justify-content:flex-start;flex-wrap:wrap;margin-top:8px"><button class="btn sm" id="keyPw">🔐 Change the password</button><button class="btn sm" id="keyMake">✨ Make a new school key</button></div>
+      <p style="margin:6px 0 0">After either one, share the new school key file with every teacher. Answers sealed earlier still open with the old key, which BEE keeps.</p>
+    </details>
+  </div>
+</div>
+<!-- 🐝 NO SCHOOL KEY YET -->
+<div class="modal" id="needKeyModal" style="z-index:65">
+  <div class="box" style="max-width:520px">
+    <h3>🐝 Load the school key first</h3>
+    <p>Students' answers are sealed with <b>the school key</b>, so that only teachers can open them.</p>
+    <p>Load the <b>school key file</b> (it's on the staff drive, or ask the person in charge of BEE). You will need the school key password. You only do this once on this computer.</p>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" data-needkey="cancel">Cancel</button><button class="btn primary" data-needkey="load">📂 Load the school key file</button></div>
+    <details class="hint" style="margin-top:12px"><summary style="cursor:pointer">There is no school key yet</summary>
+      <p style="margin:6px 0">Only <b>one person</b> makes the school key, <b>once</b>. Everyone else loads the file that person shares.</p>
+      <button class="btn sm" data-needkey="make">✨ Make the school key</button></details>
   </div>
 </div>
 
