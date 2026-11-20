@@ -333,9 +333,32 @@ async def save_light(b):
     ok("start screen: “Continue” says it is only in this browser", "Only in this browser" in await p2.text_content("#stLocalInfo"))
     await c2.close(); await c.close()
 
+async def dyslexia_pdf(b):
+    # 3a–3c: the grouped download menu, the dyslexia-friendly PDF (easy-read font, cream, spacing), also for versions
+    c, pg, errs = await fresh(b)
+    await pg.evaluate("loadDemo()"); await pg.wait_for_timeout(2500); await pg.evaluate("tourAt >= 0 && endTour(); $('#startModal').classList.remove('open')")
+    await pg.click("#dlMenuBtn"); await pg.wait_for_timeout(200)
+    m = await pg.evaluate("({ cols: [...document.querySelectorAll('#dlMenu .dl-col')].filter(x => x.offsetParent).length, h: $('#dlMenu').getBoundingClientRect().height, dys: !!document.querySelector('#dlMenu [data-dl=dys]').offsetParent })")
+    ok("download menu: three groups, compact", m["cols"] == 3 and m["h"] < 330 and m["dys"], m)
+    await pg.click("#dlMenu [data-dl=dys]")
+    async with pg.expect_download(timeout=60000) as dl: await pg.click("#dysGo")
+    d = await dl.value
+    ok("dyslexia-friendly PDF downloads", d.suggested_filename.endswith("(dyslexia-friendly).pdf"), d.suggested_filename)
+    r = await pg.evaluate("""(async () => { await ensureEasyFonts(); const a = buildPDF({ final: true, dys: 'atk', cream: true }), o = buildPDF({ final: true, dys: 'ody' }), n = buildPDF({ final: true });
+      return { atk: Object.keys(a.getFontList()).includes('EasyRead'), ody: Object.keys(o.getFontList()).includes('EasyRead'), pa: a.getNumberOfPages(), pn: n.getNumberOfPages(), cream: a.output().includes('1. 0.973 0.894 rg') || /1(\.0*)? 0\.97\d* 0\.89\d* rg/.test(a.output()) }; })()""")
+    ok("dyslexia-friendly PDF: easy-read font (both choices), cream paper, more room", r["atk"] and r["ody"] and r["cream"] and r["pa"] >= r["pn"], r)
+    g = await pg.evaluate("""(async () => { const saved = S.items; S.items = saved.concat([{ id: 'gk', type: 'q', text: 'Find the angle θ when α = 30°.', marks: '1' }]);
+      try{ const d = buildPDF({ final: true, dys: 'atk' }); return Object.keys(d.getFontList()).includes('DejaVu'); } finally { S.items = saved; } })()""")
+    ok("dyslexia-friendly PDF: Greek letters fall back to the Unicode font (no missing letters)", g)
+    await pg.click("#dlMenuBtn"); await pg.click("#dlMenu [data-dl=versions]"); await pg.select_option("#verN", "2"); await pg.uncheck("#verK"); await pg.check("#verD")
+    names = []; pg.on("download", lambda x: names.append(x.suggested_filename))
+    await pg.click("#verGo"); await pg.wait_for_timeout(5000)
+    ok("versions A, B can be dyslexia-friendly too", len(names) == 2 and all("(dyslexia-friendly) - Version" in n for n in names), names)
+    await c.close()
+
 CHECKS = [phones, sticky_preview, paste_details_rubric, formatting, pdf_guard, cut_from_pdf, drawings, mcq_ends_after_options,
           sub_question_split, mcq_split, page_breaks, click_to_jump, insert_menu, save_dialog, prompts, looks,
-          lead_in, settings_tabs, more_menu, tour_and_demo, switch_files, maths_keyboard_close, beta_switch, save_light]
+          lead_in, settings_tabs, more_menu, tour_and_demo, switch_files, maths_keyboard_close, beta_switch, save_light, dyslexia_pdf]
 
 async def main():
     os.chdir(OUT)

@@ -17,15 +17,19 @@
   <span class="dl-wrap">
     <button class="btn primary" id="btnDownload">⬇ <span class="lbl-m">PDF</span><span class="lbl">Download PDF</span></button><button class="btn primary dl-caret" id="dlMenuBtn" title="More download options">▾</button>
     <div class="dl-menu hidden" id="dlMenu">
-      <button data-dl="full"><b>Full exam</b><span>Cover page + all questions</span></button>
-      <button data-dl="large"><b>Large-print exam</b><span>16 pt, double spacing (accommodations)</span></button>
-      <button data-dl="cover"><b>Cover page only</b><span>Just the front page</span></button>
-      <button data-dl="rubric" id="dlRubric" class="hidden"><b>Rubric page only</b><span>The teacher's scoring page</span></button>
-      <button data-dl="key"><b>Answer key</b><span>Teacher copy: correct options ✓ and model answers in red</span></button>
-      <button data-dl="versions"><b>Versions A, B, C…</b><span>Shuffled copies for students sitting side by side</span></button>
-      <button data-dl="questions"><b>Questions only</b><span>Without the cover page</span></button>
-      <button data-dl="student" class="beta-only"><b>💻 Computer version for students</b><span>Students answer on a laptop, offline. Answers come back sealed for you</span></button>
-      <button data-dl="answers" class="beta-only"><b>📥 Open student answers</b><span>Turn sealed answer files into PDFs to mark</span></button>
+      <div class="dl-col"><div class="dl-h">📄 Paper</div>
+        <button data-dl="full"><b>Full exam</b><span>Cover page + all questions</span></button>
+        <button data-dl="questions"><b>Questions only</b><span>Without the cover page</span></button>
+        <button data-dl="cover"><b>Cover page only</b><span>Just the front page</span></button>
+        <button data-dl="rubric" id="dlRubric" class="hidden"><b>Rubric page only</b><span>The teacher's scoring page</span></button></div>
+      <div class="dl-col"><div class="dl-h">♿ Accessibility</div>
+        <button data-dl="large"><b>Large print</b><span>16 pt, double spacing</span></button>
+        <button data-dl="dys"><b>Dyslexia-friendly</b><span>Easy-read font, 1.5 spacing, cream paper</span></button>
+        <button data-dl="student" class="beta-only"><b>💻 Computer version</b><span>Answer on a laptop, offline; or read aloud</span></button></div>
+      <div class="dl-col"><div class="dl-h">👩‍🏫 Teacher</div>
+        <button data-dl="key"><b>Answer key</b><span>Correct options ✓ and model answers in red</span></button>
+        <button data-dl="versions"><b>Versions A, B, C…</b><span>Shuffled copies, each with its key</span></button>
+        <button data-dl="answers" class="beta-only"><b>📥 Student answers</b><span>Sealed answer files → PDFs to mark</span></button></div>
     </div>
   </span>
 </header>
@@ -599,6 +603,23 @@ x = 3
   </div>
 </div>
 
+<!-- DYSLEXIA-FRIENDLY PDF -->
+<div class="modal" id="dysModal">
+  <div class="box" style="max-width:520px">
+    <h3>Dyslexia-friendly exam</h3>
+    <p class="hint" style="margin:4px 0 10px">The same paper, easier to read: a clear font, at least 12 pt, 1.5 line spacing, text not stretched to both edges, and more space between questions.</p>
+    <div class="seg-pick" style="grid-template-columns:1fr 1fr">
+      <label><input type="radio" name="dysFont" value="atk" checked><b style="font-family:'Atkinson Hyperlegible',sans-serif">Easy-read</b><span>Atkinson Hyperlegible: very clear letters (b d p q, I l 1 look different)</span></label>
+      <label><input type="radio" name="dysFont" value="ody"><b style="font-family:'OpenDyslexic',sans-serif">OpenDyslexic</b><span>Heavier letter bottoms; some students prefer it</span></label>
+    </div>
+    <div class="checks" style="flex-direction:column;gap:6px">
+      <label><input type="checkbox" id="dysCream" checked> Cream paper (a light tint printed on every page; reduces glare)</label>
+      <label><input type="checkbox" id="dysKey"> Also download its answer key</label>
+    </div>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" data-close>Cancel</button><button class="btn primary" id="dysGo">⬇ Download</button></div>
+  </div>
+</div>
+
 <div class="modal" id="verModal">
   <div class="box">
     <h3>Print versions A, B, C…</h3>
@@ -609,6 +630,7 @@ x = 3
       <label><input type="checkbox" id="verO" checked> Shuffle the MCQ options (“All / None of the above” stay last)</label>
       <label><input type="checkbox" id="verK" checked> Also download an answer key for each version</label>
       <label><input type="checkbox" id="verL"> Large print (16 pt, double spacing)</label>
+      <label><input type="checkbox" id="verD"> Dyslexia-friendly (easy-read font, 1.5 spacing, cream paper)</label>
     </div>
     <p class="hint" style="margin:10px 0 0">Questions never move past a part heading or a text/passage, so they stay with the reading, table or picture they belong to. Your browser may ask once to allow several downloads.</p>
     <div class="actions" style="justify-content:flex-end"><button class="btn" data-close>Cancel</button><button class="btn primary" id="verGo">Download versions</button></div>
@@ -675,6 +697,13 @@ let FONT_R = "__FONT_R__";
 let FONT_B = "__FONT_B__";
 let FONT_I = "__FONT_I__";
 function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Couldn't load " + src)); document.head.appendChild(s); }); }
+// easy-read fonts for the dyslexia-friendly PDF: Atkinson Hyperlegible ("atk") and OpenDyslexic ("ody")
+let EASY = /*__EASYFONTS__*/null;
+async function ensureEasyFonts(){
+  if(EASY) return EASY;
+  if(!window.__EASY__) await loadScript("vendor/easyfonts.js");
+  return (EASY = window.__EASY__);
+}
 async function ensureFonts(){
   if(FONT_R) return;
   if(!window.__FONTS__) await loadScript("vendor/fonts.js");

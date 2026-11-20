@@ -18,6 +18,9 @@ src = "\n".join(rd(os.path.join(SRC, n)) for n in ORDER)
 logo = os.path.join(A, "logo.png"); LW, LH = Image.open(logo).size
 common = {"__LOGO__": "data:image/png;base64," + b64(logo), "__LOGO_W__": str(LW), "__LOGO_H__": str(LH)}
 
+def easyfonts():
+    f = lambda fam: {"r": b64(os.path.join(A, fam + "-Regular.ttf")), "b": b64(os.path.join(A, fam + "-Bold.ttf")), "i": b64(os.path.join(A, fam + "-Italic.ttf"))}
+    return {"atk": f("AtkinsonHyperlegible"), "ody": f("OpenDyslexic")}
 def mathlive_css(inline):
     css = rd(os.path.join(V, "mathlive", "mathlive-fonts.css"))
     if inline:
@@ -46,6 +49,7 @@ single.update({
     "/*__SORTABLE__*/": rd(os.path.join(V, "sortable", "Sortable.min.js")),
     "/*__SMILES__*/": rd(os.path.join(V, "smiles", "smiles-drawer.min.js")).replace("</script", "<\\/script"),
     "/*__PDFJS__*/": rd(os.path.join(V, "pdfjs", "pdf.min.js")),
+    "/*__EASYFONTS__*/null": json.dumps(easyfonts()),
     "/*__DEMO__*/null": rd(os.path.join(ROOT, "demo", "demo_all_features.exam.json")).strip().replace("</", "<\\/"),
     "__PDFJS_WORKER__": rd(os.path.join(V, "pdfjs", "pdf.worker.min.js")),
 })
@@ -98,6 +102,7 @@ cp("smiles/smiles-drawer.min.js", "vendor/smiles-drawer.min.js")
 cp("pdfjs/pdf.min.js", "vendor/pdfjs/pdf.min.js"); cp("pdfjs/pdf.worker.min.js", "vendor/pdfjs/pdf.worker.min.js")
 for f in ["tesseract.min.js", "worker.min.js", "tesseract-core-simd-lstm.wasm.js"]: cp("ocr/" + f, "vendor/ocr/" + f)
 cp("ocr/lang/eng.traineddata.gz", "vendor/ocr/lang/eng.traineddata.gz")
+open(os.path.join(OUT, "vendor/easyfonts.js"), "w").write("window.__EASY__=" + json.dumps(easyfonts()) + ";")
 open(os.path.join(OUT, "vendor/fonts.js"), "w").write("window.__FONTS__=" + json.dumps({"r": b64(os.path.join(A, "DejaVuSans.ttf")), "b": b64(os.path.join(A, "DejaVuSans-Bold.ttf")), "i": b64(os.path.join(A, "DejaVuSans-Oblique.ttf"))}) + ";")
 
 # icons from the hexagon mark
@@ -223,7 +228,7 @@ def h(paths):
 CORE = ["./", "index.html", "manifest.webmanifest", "vendor/jspdf.umd.min.js", "vendor/mathjax/tex-svg-full.js", "vendor/mathlive/mathlive.min.js",
         "vendor/mathlive/fonts.css", "vendor/sortable.min.js", "vendor/smiles-drawer.min.js", "vendor/pdfjs/pdf.min.js", "vendor/pdfjs/pdf.worker.min.js",
         "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/apple-touch-icon.png", "icons/favicon-32.png"]
-LAZY = ["student/player.html", "vendor/fonts.js", "vendor/ocr/tesseract.min.js", "vendor/ocr/worker.min.js", "vendor/ocr/tesseract-core-simd-lstm.wasm.js", "vendor/ocr/lang/eng.traineddata.gz"]
+LAZY = ["student/player.html", "vendor/fonts.js", "vendor/easyfonts.js", "vendor/ocr/tesseract.min.js", "vendor/ocr/worker.min.js", "vendor/ocr/tesseract-core-simd-lstm.wasm.js", "vendor/ocr/lang/eng.traineddata.gz"]
 sw = rd(os.path.join(ROOT, "build", "sw.template.js"))
 sw = sw.replace("__CORE_VERSION__", h([p for p in CORE if p != "./"])).replace("__LAZY_VERSION__", h(LAZY))
 sw = sw.replace("__CORE__", json.dumps(CORE)).replace("__LAZY__", json.dumps(LAZY))

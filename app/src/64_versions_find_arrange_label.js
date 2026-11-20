@@ -31,18 +31,19 @@ function versionItems(items, label, shufQ, shufO){
 }
 $("#verGo").onclick = async () => {
   const n = +$("#verN").value, shufQ = $("#verQ").checked, shufO = $("#verO").checked, keys = $("#verK").checked, large = $("#verL").checked;
+  const dy = $("#verD").checked && !large ? dysOpts() : {};
   $("#verModal").classList.remove("open");
   try{
-    await prepareMath();
-    const base = fileName().replace(/\.pdf$/, "") + (large ? " (large print)" : "");
+    await prepareMath(); if(dy.dys) await ensureEasyFonts();
+    const base = fileName().replace(/\.pdf$/, "") + (large ? " (large print)" : dy.dys ? " (dyslexia-friendly)" : "");
     for(let v = 0; v < n; v++){
       const L = "ABCD"[v];
       // the shuffled copy is in place only while the PDFs are drawn (no waiting), so an autosave can never store it
       const saved = S.items; let paper, key;
       S.items = versionItems(saved, L, shufQ, shufO);
       try{
-        paper = buildPDF({ version: L, large, final: true });
-        if(keys) key = buildPDF({ version: L, key: true, large, final: true });
+        paper = buildPDF(Object.assign({ version: L, large, final: true }, dy));
+        if(keys) key = buildPDF(Object.assign({ version: L, key: true, large, final: true }, dy));
       }finally{ S.items = saved; }
       paper.save(base + " - Version " + L + ".pdf");
       if(key){ await new Promise(r => setTimeout(r, 350)); key.save(base + " - Version " + L + " (answer key).pdf"); }

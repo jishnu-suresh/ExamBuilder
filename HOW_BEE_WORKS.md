@@ -159,6 +159,11 @@ Every change calls `changed()`, which updates totals and undo history and schedu
   * 🔴 saving stopped (permission lost, or a save failed), or the work has been only in the browser for more than 10 minutes. The red state also shows a banner (`#saveBanner`).
   * While not 🟢, the tab title starts with "•", and closing the tab asks "Leave site?" (`unsavedWork()`; skipped in automated browsers).
   * BEE also asks the browser to keep its storage (`navigator.storage.persist()`).
+* **Dyslexia-friendly PDF (`buildPDF({ dys: "atk" | "ody", cream })`):**
+  * One easy-read font everywhere: Atkinson Hyperlegible or OpenDyslexic. Their TrueType files are in `assets/`, made by `build/make_easyread_fonts.py` (OpenDyslexic is converted from CFF).
+  * Font size at least 12 pt, 1.5 spacing, no justification, bigger gaps between questions, and an optional cream tint on every page.
+  * Text with characters outside the easy-read font keeps DejaVu.
+  * The fonts are built into the offline file, and loaded on demand on the website (`vendor/easyfonts.js`, via `ensureEasyFonts()`).
 * **Never swap `S` across a wait.** If you must draw another exam (versions, student answers), swap `S` only around the synchronous `buildPDF()` call. Prepare with `prepareMath(otherExam)` beforehand. A save that runs while `S` is swapped would store the wrong exam in the teacher's file.
 * **Pictures are kept small:** `fitCanvas()` limits the size (photos 1600 px, PDF cuts 2000 px) and `encodeBest()` keeps PNG unless JPEG is far smaller.
 

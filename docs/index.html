@@ -257,7 +257,7 @@ label.f .sv-name input,.sv-name input{flex:1;border:0!important;outline:0;box-sh
   .graph-prev canvas{max-height:45vh}
   .ocr-right textarea{min-height:30vh}
   .start-brand .bee,.start-brand .bee-name{font-size:32px}
-  .dl-menu{right:0;min-width:min(300px,92vw)}
+  .dl-menu{right:0}
   .updbar{top:auto!important;bottom:84px!important;width:92vw;flex-wrap:nowrap}
   .wm{font-size:10px;bottom:2px;right:8px;opacity:.55}
   .toast{bottom:76px;width:90vw;text-align:center}
@@ -312,7 +312,12 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .dl-wrap{position:relative;display:inline-flex}
 .dl-wrap #btnDownload{border-top-right-radius:0;border-bottom-right-radius:0}
 .dl-caret{border-top-left-radius:0!important;border-bottom-left-radius:0!important;border-left:1px solid rgba(255,255,255,.35)!important;padding:7px 9px!important}
-.dl-menu{position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(60,45,10,.16);padding:6px;min-width:270px;z-index:30;display:flex;flex-direction:column}
+.dl-menu{position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(60,45,10,.16);padding:8px;z-index:30;display:grid;grid-template-columns:repeat(3,minmax(190px,1fr));gap:4px 6px;width:min(680px,94vw)}
+.dl-menu.hidden{display:none}
+.dl-col{display:flex;flex-direction:column;min-width:0}
+.dl-h{font:700 10.5px system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-d);padding:6px 10px 4px}
+.dl-col + .dl-col{border-left:1px solid var(--line);padding-left:6px}
+@media (max-width:700px){.dl-menu{grid-template-columns:1fr;width:min(330px,94vw);max-height:75vh;overflow:auto}.dl-col + .dl-col{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:4px}}
 .dl-menu button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:0;background:none;text-align:left;padding:8px 10px;border-radius:7px;cursor:pointer}
 .dl-menu button span{font-size:12px;color:var(--muted)}
 .dl-menu button:hover{background:var(--gold-xl)}
@@ -441,15 +446,19 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
   <span class="dl-wrap">
     <button class="btn primary" id="btnDownload">⬇ <span class="lbl-m">PDF</span><span class="lbl">Download PDF</span></button><button class="btn primary dl-caret" id="dlMenuBtn" title="More download options">▾</button>
     <div class="dl-menu hidden" id="dlMenu">
-      <button data-dl="full"><b>Full exam</b><span>Cover page + all questions</span></button>
-      <button data-dl="large"><b>Large-print exam</b><span>16 pt, double spacing (accommodations)</span></button>
-      <button data-dl="cover"><b>Cover page only</b><span>Just the front page</span></button>
-      <button data-dl="rubric" id="dlRubric" class="hidden"><b>Rubric page only</b><span>The teacher's scoring page</span></button>
-      <button data-dl="key"><b>Answer key</b><span>Teacher copy: correct options ✓ and model answers in red</span></button>
-      <button data-dl="versions"><b>Versions A, B, C…</b><span>Shuffled copies for students sitting side by side</span></button>
-      <button data-dl="questions"><b>Questions only</b><span>Without the cover page</span></button>
-      <button data-dl="student" class="beta-only"><b>💻 Computer version for students</b><span>Students answer on a laptop, offline. Answers come back sealed for you</span></button>
-      <button data-dl="answers" class="beta-only"><b>📥 Open student answers</b><span>Turn sealed answer files into PDFs to mark</span></button>
+      <div class="dl-col"><div class="dl-h">📄 Paper</div>
+        <button data-dl="full"><b>Full exam</b><span>Cover page + all questions</span></button>
+        <button data-dl="questions"><b>Questions only</b><span>Without the cover page</span></button>
+        <button data-dl="cover"><b>Cover page only</b><span>Just the front page</span></button>
+        <button data-dl="rubric" id="dlRubric" class="hidden"><b>Rubric page only</b><span>The teacher's scoring page</span></button></div>
+      <div class="dl-col"><div class="dl-h">♿ Accessibility</div>
+        <button data-dl="large"><b>Large print</b><span>16 pt, double spacing</span></button>
+        <button data-dl="dys"><b>Dyslexia-friendly</b><span>Easy-read font, 1.5 spacing, cream paper</span></button>
+        <button data-dl="student" class="beta-only"><b>💻 Computer version</b><span>Answer on a laptop, offline; or read aloud</span></button></div>
+      <div class="dl-col"><div class="dl-h">👩‍🏫 Teacher</div>
+        <button data-dl="key"><b>Answer key</b><span>Correct options ✓ and model answers in red</span></button>
+        <button data-dl="versions"><b>Versions A, B, C…</b><span>Shuffled copies, each with its key</span></button>
+        <button data-dl="answers" class="beta-only"><b>📥 Student answers</b><span>Sealed answer files → PDFs to mark</span></button></div>
     </div>
   </span>
 </header>
@@ -1023,6 +1032,23 @@ x = 3
   </div>
 </div>
 
+<!-- DYSLEXIA-FRIENDLY PDF -->
+<div class="modal" id="dysModal">
+  <div class="box" style="max-width:520px">
+    <h3>Dyslexia-friendly exam</h3>
+    <p class="hint" style="margin:4px 0 10px">The same paper, easier to read: a clear font, at least 12 pt, 1.5 line spacing, text not stretched to both edges, and more space between questions.</p>
+    <div class="seg-pick" style="grid-template-columns:1fr 1fr">
+      <label><input type="radio" name="dysFont" value="atk" checked><b style="font-family:'Atkinson Hyperlegible',sans-serif">Easy-read</b><span>Atkinson Hyperlegible: very clear letters (b d p q, I l 1 look different)</span></label>
+      <label><input type="radio" name="dysFont" value="ody"><b style="font-family:'OpenDyslexic',sans-serif">OpenDyslexic</b><span>Heavier letter bottoms; some students prefer it</span></label>
+    </div>
+    <div class="checks" style="flex-direction:column;gap:6px">
+      <label><input type="checkbox" id="dysCream" checked> Cream paper (a light tint printed on every page; reduces glare)</label>
+      <label><input type="checkbox" id="dysKey"> Also download its answer key</label>
+    </div>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" data-close>Cancel</button><button class="btn primary" id="dysGo">⬇ Download</button></div>
+  </div>
+</div>
+
 <div class="modal" id="verModal">
   <div class="box">
     <h3>Print versions A, B, C…</h3>
@@ -1033,6 +1059,7 @@ x = 3
       <label><input type="checkbox" id="verO" checked> Shuffle the MCQ options (“All / None of the above” stay last)</label>
       <label><input type="checkbox" id="verK" checked> Also download an answer key for each version</label>
       <label><input type="checkbox" id="verL"> Large print (16 pt, double spacing)</label>
+      <label><input type="checkbox" id="verD"> Dyslexia-friendly (easy-read font, 1.5 spacing, cream paper)</label>
     </div>
     <p class="hint" style="margin:10px 0 0">Questions never move past a part heading or a text/passage, so they stay with the reading, table or picture they belong to. Your browser may ask once to allow several downloads.</p>
     <div class="actions" style="justify-content:flex-end"><button class="btn" data-close>Cancel</button><button class="btn primary" id="verGo">Download versions</button></div>
@@ -1099,6 +1126,13 @@ let FONT_R = "";
 let FONT_B = "";
 let FONT_I = "";
 function loadScript(src){ return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("Couldn't load " + src)); document.head.appendChild(s); }); }
+// easy-read fonts for the dyslexia-friendly PDF: Atkinson Hyperlegible ("atk") and OpenDyslexic ("ody")
+let EASY = /*__EASYFONTS__*/null;
+async function ensureEasyFonts(){
+  if(EASY) return EASY;
+  if(!window.__EASY__) await loadScript("vendor/easyfonts.js");
+  return (EASY = window.__EASY__);
+}
 async function ensureFonts(){
   if(FONT_R) return;
   if(!window.__FONTS__) await loadScript("vendor/fonts.js");
@@ -2798,6 +2832,7 @@ function buildPDF(opt){
   const D = S.d;
   const M = computeMeta();
   const LARGE = opt.large != null ? !!opt.large : !!D.largePrint;
+  const DYS = opt.dys || "";                 // dyslexia-friendly: "atk" (Atkinson Hyperlegible) or "ody" (OpenDyslexic)
   const doc = new jsPDF({ unit: "mm", format: D.paper === "letter" ? "letter" : "a4", compress: true });
   // PDF fonts can't draw emoji (🐝, 😀…): drop them instead of printing garbage
   const noEmoji = t => typeof t === "string" ? t.replace(/[\u{1F000}-\u{1FAFF}\u{FE0F}\u{200D}]/gu, "").replace(/\s{2,}(?=\S)/g, m => m.length > 2 ? m : " ") : Array.isArray(t) ? t.map(noEmoji) : t;
@@ -2826,6 +2861,18 @@ function buildPDF(opt){
   if(uni && HAS_DJV){
     SANS = "DejaVu";
     if(needsUnicode((D.title || "") + (D.school || ""))) SERIF = "DejaVu";
+  }
+  // dyslexia-friendly: one clear font everywhere (titles too). Text with letters outside it keeps DejaVu.
+  if(DYS && EASY && EASY[DYS] && !uni){
+    const F = EASY[DYS];
+    doc.addFileToVFS("Easy-R.ttf", F.r); doc.addFont("Easy-R.ttf", "EasyRead", "normal");
+    doc.addFileToVFS("Easy-B.ttf", F.b); doc.addFont("Easy-B.ttf", "EasyRead", "bold");
+    doc.addFileToVFS("Easy-I.ttf", F.i); doc.addFont("Easy-I.ttf", "EasyRead", "italic");
+    SANS = SERIF = "EasyRead";
+  }
+  if(opt.cream){             // cream paper: a light tint under everything, on every page
+    const tintPage = () => { doc.setFillColor(255, 248, 228); doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), "F"); };
+    tintPage(); doc.internal.events.subscribe("addPage", tintPage);
   }
   const font = (fam, style, size, color) => { doc.setFont(fam, style); doc.setFontSize(size); doc.setTextColor(...(color || INK)); };
   const mmPt = .3528;
@@ -2879,6 +2926,7 @@ function buildPDF(opt){
   if(D.duration) pills.push([PT("DURATION"), D.duration]);
   if(M.total > 0) pills.push([PT("TOTAL"), fmt(M.total) + " points"]);
   if(LARGE) pills.push([PT("FORMAT"), PT("Large print")]);
+  else if(DYS) pills.push([PT("FORMAT"), PT("Dyslexia-friendly")]);
   if(D.answerMode === "sheet") pills.push([PT("ANSWERS"), PT("Separate sheet")]);
   if(opt.version) pills.unshift([PT("VERSION"), opt.version]);
   if(opt.key) pills.unshift([PT("ANSWER KEY"), PT("Teacher copy")]);
@@ -3191,13 +3239,13 @@ function buildPDF(opt){
   }
   function newPage(){ doc.addPage(); frame(); header(); y = TOP; if(firstQPage === null) firstQPage = doc.getNumberOfPages(); }
 
-  let fs = LARGE ? Math.max(16, num(D.fontSize) || 11) : (num(D.fontSize) || 11);
-  const JUST = D.justify !== false;
-  const SPC = LARGE ? 2 : (num(D.lineSpacing) || 1);
+  let fs = LARGE ? Math.max(16, num(D.fontSize) || 11) : DYS ? Math.max(12, num(D.fontSize) || 11) : (num(D.fontSize) || 11);
+  const JUST = D.justify !== false && !DYS;     // dyslexia-friendly: never stretch text to both edges
+  const SPC = LARGE ? 2 : DYS ? Math.max(1.5, num(D.lineSpacing) || 1) : (num(D.lineSpacing) || 1);
   const SHEET = D.answerMode === "sheet";
   const COMPACT = SHEET && !LARGE && SPC < 1.5;      // separate answer sheet → tighter paper (not for accommodations)
   let LH = fs * mmPt * (SPC >= 2 ? 2.34 : SPC >= 1.5 ? 1.78 : COMPACT ? 1.3 : 1.42);
-  const QGAP = COMPACT ? 4.5 : 7, NGAP = COMPACT ? 3.5 : 5;
+  const QGAP = COMPACT ? 4.5 : DYS ? 10 : 7, NGAP = COMPACT ? 3.5 : DYS ? 7 : 5;
   let TASC = fs * mmPt * .8 + (LH - fs * mmPt * 1.05) / 2;   // baseline position inside a line
   const NUMW = Math.max(9, fs * .78), MARKW = D.showMarks ? Math.max(21, fs * 1.75) : 0;
   let EM = fs * mmPt;               // mm per em for maths
@@ -3912,10 +3960,10 @@ function changed(){
   histSchedule(); saveLocal(); clearTimeout(pvT); $("#status").textContent = "updating…"; pvT = setTimeout(preview, 400); }
 async function download(opt){
   opt = opt || {};
-  const name = (opt.name || fileName().replace(/\.pdf$/, "")) + (opt.version ? " - Version " + opt.version : "") + (opt.key ? " (answer key)" : "") + (opt.coverOnly ? " (cover page)" : opt.rubricOnly ? " (rubric)" : opt.noCover ? " (questions)" : "") + ((opt.large || S.d.largePrint) ? " (large print)" : "") + ".pdf";
+  const name = (opt.name || fileName().replace(/\.pdf$/, "")) + (opt.version ? " - Version " + opt.version : "") + (opt.dys ? " (dyslexia-friendly)" : "") + (opt.key ? " (answer key)" : "") + (opt.coverOnly ? " (cover page)" : opt.rubricOnly ? " (rubric)" : opt.noCover ? " (questions)" : "") + ((opt.large || S.d.largePrint) ? " (large print)" : "") + ".pdf";
   const miss = missingPics();
   if(miss && !confirm(`${miss === 1 ? "1 picture is" : miss + " pictures are"} still missing (the red boxes in the preview).\n\nDownload anyway? They will print as an empty frame with the description.`)) return;
-  try{ await prepareMath(); buildPDF(Object.assign({ final: true }, opt)).save(name); toast("Saved " + name); }
+  try{ await prepareMath(); if(opt.dys) await ensureEasyFonts(); buildPDF(Object.assign({ final: true }, opt)).save(name); toast("Saved " + name); }
   catch(e){ console.error(e); toast("Couldn't create the PDF: " + e.message); }
 }
 
@@ -4794,18 +4842,19 @@ function versionItems(items, label, shufQ, shufO){
 }
 $("#verGo").onclick = async () => {
   const n = +$("#verN").value, shufQ = $("#verQ").checked, shufO = $("#verO").checked, keys = $("#verK").checked, large = $("#verL").checked;
+  const dy = $("#verD").checked && !large ? dysOpts() : {};
   $("#verModal").classList.remove("open");
   try{
-    await prepareMath();
-    const base = fileName().replace(/\.pdf$/, "") + (large ? " (large print)" : "");
+    await prepareMath(); if(dy.dys) await ensureEasyFonts();
+    const base = fileName().replace(/\.pdf$/, "") + (large ? " (large print)" : dy.dys ? " (dyslexia-friendly)" : "");
     for(let v = 0; v < n; v++){
       const L = "ABCD"[v];
       // the shuffled copy is in place only while the PDFs are drawn (no waiting), so an autosave can never store it
       const saved = S.items; let paper, key;
       S.items = versionItems(saved, L, shufQ, shufO);
       try{
-        paper = buildPDF({ version: L, large, final: true });
-        if(keys) key = buildPDF({ version: L, key: true, large, final: true });
+        paper = buildPDF(Object.assign({ version: L, large, final: true }, dy));
+        if(keys) key = buildPDF(Object.assign({ version: L, key: true, large, final: true }, dy));
       }finally{ S.items = saved; }
       paper.save(base + " - Version " + L + ".pdf");
       if(key){ await new Promise(r => setTimeout(r, 350)); key.save(base + " - Version " + L + " (answer key).pdf"); }
@@ -5960,9 +6009,18 @@ document.addEventListener("click", e => { if(!e.target.closest(".dl-wrap")) $("#
 $("#dlMenu").addEventListener("click", e => {
   const b = e.target.closest("[data-dl]"); if(!b) return;
   $("#dlMenu").classList.add("hidden");
-  ({ full: () => download(), large: () => download({ large: true }), cover: () => download({ coverOnly: true }), rubric: () => download({ rubricOnly: true }), questions: () => download({ noCover: true }), key: () => download({ key: true }), versions: () => openModal("#verModal"), student: () => openStudentDialog(), answers: () => pickAnswers() })[b.dataset.dl]();
+  ({ full: () => download(), large: () => download({ large: true }), cover: () => download({ coverOnly: true }), rubric: () => download({ rubricOnly: true }), questions: () => download({ noCover: true }), key: () => download({ key: true }), versions: () => openModal("#verModal"), dys: () => openModal("#dysModal"), student: () => openStudentDialog(), answers: () => pickAnswers() })[b.dataset.dl]();
 }); $("#btnDownload2").onclick = () => download();
 $("#btnRefresh").onclick = preview;
+// dyslexia-friendly download (choices remembered)
+try{ const p = JSON.parse(localStorage.getItem("bee.dys") || "{}"); if(p.font) document.querySelector(`input[name=dysFont][value=${p.font}]`).checked = true; if(p.cream != null) $("#dysCream").checked = p.cream; }catch(_){}
+const dysOpts = () => ({ dys: (document.querySelector("input[name=dysFont]:checked") || {}).value || "atk", cream: $("#dysCream").checked });
+$("#dysGo").onclick = async () => {
+  const o = dysOpts(); try{ localStorage.setItem("bee.dys", JSON.stringify({ font: o.dys, cream: o.cream })); }catch(_){}
+  $("#dysModal").classList.remove("open");
+  await download(o);
+  if($("#dysKey").checked){ await new Promise(r => setTimeout(r, 450)); await download(Object.assign({ key: true }, o)); }
+};
 $("#pvKey").addEventListener("change", () => preview());
 
 $("#btnLogo").onclick = () => $("#logoIn").click();

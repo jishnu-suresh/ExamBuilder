@@ -242,7 +242,7 @@ label.f .sv-name input,.sv-name input{flex:1;border:0!important;outline:0;box-sh
   .graph-prev canvas{max-height:45vh}
   .ocr-right textarea{min-height:30vh}
   .start-brand .bee,.start-brand .bee-name{font-size:32px}
-  .dl-menu{right:0;min-width:min(300px,92vw)}
+  .dl-menu{right:0}
   .updbar{top:auto!important;bottom:84px!important;width:92vw;flex-wrap:nowrap}
   .wm{font-size:10px;bottom:2px;right:8px;opacity:.55}
   .toast{bottom:76px;width:90vw;text-align:center}
@@ -297,7 +297,12 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .dl-wrap{position:relative;display:inline-flex}
 .dl-wrap #btnDownload{border-top-right-radius:0;border-bottom-right-radius:0}
 .dl-caret{border-top-left-radius:0!important;border-bottom-left-radius:0!important;border-left:1px solid rgba(255,255,255,.35)!important;padding:7px 9px!important}
-.dl-menu{position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(60,45,10,.16);padding:6px;min-width:270px;z-index:30;display:flex;flex-direction:column}
+.dl-menu{position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(60,45,10,.16);padding:8px;z-index:30;display:grid;grid-template-columns:repeat(3,minmax(190px,1fr));gap:4px 6px;width:min(680px,94vw)}
+.dl-menu.hidden{display:none}
+.dl-col{display:flex;flex-direction:column;min-width:0}
+.dl-h{font:700 10.5px system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-d);padding:6px 10px 4px}
+.dl-col + .dl-col{border-left:1px solid var(--line);padding-left:6px}
+@media (max-width:700px){.dl-menu{grid-template-columns:1fr;width:min(330px,94vw);max-height:75vh;overflow:auto}.dl-col + .dl-col{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:4px}}
 .dl-menu button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;border:0;background:none;text-align:left;padding:8px 10px;border-radius:7px;cursor:pointer}
 .dl-menu button span{font-size:12px;color:var(--muted)}
 .dl-menu button:hover{background:var(--gold-xl)}

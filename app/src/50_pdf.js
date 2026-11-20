@@ -30,6 +30,7 @@ function buildPDF(opt){
   const D = S.d;
   const M = computeMeta();
   const LARGE = opt.large != null ? !!opt.large : !!D.largePrint;
+  const DYS = opt.dys || "";                 // dyslexia-friendly: "atk" (Atkinson Hyperlegible) or "ody" (OpenDyslexic)
   const doc = new jsPDF({ unit: "mm", format: D.paper === "letter" ? "letter" : "a4", compress: true });
   // PDF fonts can't draw emoji (🐝, 😀…): drop them instead of printing garbage
   const noEmoji = t => typeof t === "string" ? t.replace(/[\u{1F000}-\u{1FAFF}\u{FE0F}\u{200D}]/gu, "").replace(/\s{2,}(?=\S)/g, m => m.length > 2 ? m : " ") : Array.isArray(t) ? t.map(noEmoji) : t;
@@ -58,6 +59,18 @@ function buildPDF(opt){
   if(uni && HAS_DJV){
     SANS = "DejaVu";
     if(needsUnicode((D.title || "") + (D.school || ""))) SERIF = "DejaVu";
+  }
+  // dyslexia-friendly: one clear font everywhere (titles too). Text with letters outside it keeps DejaVu.
+  if(DYS && EASY && EASY[DYS] && !uni){
+    const F = EASY[DYS];
+    doc.addFileToVFS("Easy-R.ttf", F.r); doc.addFont("Easy-R.ttf", "EasyRead", "normal");
+    doc.addFileToVFS("Easy-B.ttf", F.b); doc.addFont("Easy-B.ttf", "EasyRead", "bold");
+    doc.addFileToVFS("Easy-I.ttf", F.i); doc.addFont("Easy-I.ttf", "EasyRead", "italic");
+    SANS = SERIF = "EasyRead";
+  }
+  if(opt.cream){             // cream paper: a light tint under everything, on every page
+    const tintPage = () => { doc.setFillColor(255, 248, 228); doc.rect(0, 0, doc.internal.pageSize.getWidth(), doc.internal.pageSize.getHeight(), "F"); };
+    tintPage(); doc.internal.events.subscribe("addPage", tintPage);
   }
   const font = (fam, style, size, color) => { doc.setFont(fam, style); doc.setFontSize(size); doc.setTextColor(...(color || INK)); };
   const mmPt = .3528;
@@ -111,6 +124,7 @@ function buildPDF(opt){
   if(D.duration) pills.push([PT("DURATION"), D.duration]);
   if(M.total > 0) pills.push([PT("TOTAL"), fmt(M.total) + " points"]);
   if(LARGE) pills.push([PT("FORMAT"), PT("Large print")]);
+  else if(DYS) pills.push([PT("FORMAT"), PT("Dyslexia-friendly")]);
   if(D.answerMode === "sheet") pills.push([PT("ANSWERS"), PT("Separate sheet")]);
   if(opt.version) pills.unshift([PT("VERSION"), opt.version]);
   if(opt.key) pills.unshift([PT("ANSWER KEY"), PT("Teacher copy")]);
@@ -423,13 +437,13 @@ function buildPDF(opt){
   }
   function newPage(){ doc.addPage(); frame(); header(); y = TOP; if(firstQPage === null) firstQPage = doc.getNumberOfPages(); }
 
-  let fs = LARGE ? Math.max(16, num(D.fontSize) || 11) : (num(D.fontSize) || 11);
-  const JUST = D.justify !== false;
-  const SPC = LARGE ? 2 : (num(D.lineSpacing) || 1);
+  let fs = LARGE ? Math.max(16, num(D.fontSize) || 11) : DYS ? Math.max(12, num(D.fontSize) || 11) : (num(D.fontSize) || 11);
+  const JUST = D.justify !== false && !DYS;     // dyslexia-friendly: never stretch text to both edges
+  const SPC = LARGE ? 2 : DYS ? Math.max(1.5, num(D.lineSpacing) || 1) : (num(D.lineSpacing) || 1);
   const SHEET = D.answerMode === "sheet";
   const COMPACT = SHEET && !LARGE && SPC < 1.5;      // separate answer sheet → tighter paper (not for accommodations)
   let LH = fs * mmPt * (SPC >= 2 ? 2.34 : SPC >= 1.5 ? 1.78 : COMPACT ? 1.3 : 1.42);
-  const QGAP = COMPACT ? 4.5 : 7, NGAP = COMPACT ? 3.5 : 5;
+  const QGAP = COMPACT ? 4.5 : DYS ? 10 : 7, NGAP = COMPACT ? 3.5 : DYS ? 7 : 5;
   let TASC = fs * mmPt * .8 + (LH - fs * mmPt * 1.05) / 2;   // baseline position inside a line
   const NUMW = Math.max(9, fs * .78), MARKW = D.showMarks ? Math.max(21, fs * 1.75) : 0;
   let EM = fs * mmPt;               // mm per em for maths
@@ -1144,9 +1158,9 @@ function changed(){
   histSchedule(); saveLocal(); clearTimeout(pvT); $("#status").textContent = "updating…"; pvT = setTimeout(preview, 400); }
 async function download(opt){
   opt = opt || {};
-  const name = (opt.name || fileName().replace(/\.pdf$/, "")) + (opt.version ? " - Version " + opt.version : "") + (opt.key ? " (answer key)" : "") + (opt.coverOnly ? " (cover page)" : opt.rubricOnly ? " (rubric)" : opt.noCover ? " (questions)" : "") + ((opt.large || S.d.largePrint) ? " (large print)" : "") + ".pdf";
+  const name = (opt.name || fileName().replace(/\.pdf$/, "")) + (opt.version ? " - Version " + opt.version : "") + (opt.dys ? " (dyslexia-friendly)" : "") + (opt.key ? " (answer key)" : "") + (opt.coverOnly ? " (cover page)" : opt.rubricOnly ? " (rubric)" : opt.noCover ? " (questions)" : "") + ((opt.large || S.d.largePrint) ? " (large print)" : "") + ".pdf";
   const miss = missingPics();
   if(miss && !confirm(`${miss === 1 ? "1 picture is" : miss + " pictures are"} still missing (the red boxes in the preview).\n\nDownload anyway? They will print as an empty frame with the description.`)) return;
-  try{ await prepareMath(); buildPDF(Object.assign({ final: true }, opt)).save(name); toast("Saved " + name); }
+  try{ await prepareMath(); if(opt.dys) await ensureEasyFonts(); buildPDF(Object.assign({ final: true }, opt)).save(name); toast("Saved " + name); }
   catch(e){ console.error(e); toast("Couldn't create the PDF: " + e.message); }
 }
