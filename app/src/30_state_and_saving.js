@@ -25,6 +25,53 @@ const IDB = {
   async set(k, v){ const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); },
   async del(k){ const db = await this.open(); return new Promise(res => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").delete(k); t.oncomplete = () => res(); t.onerror = () => res(); }); }
 };
+/* ---------- 🕘 version history: copies of the exam kept in this browser ---------- */
+const VERS_MAX = 30, VERS_BYTES = 60e6;
+let versLastAt = 0, versLastSig = "";
+async function keepVersion(reason){
+  try{
+    if(!S.items.length && !S.d.title) return;
+    const snap = snapshot(), json = JSON.stringify(snap), sig = json.length + ":" + strHash(json);
+    const meta = { title: S.d.title || "Untitled exam", file: proj.name || "", nq: S.items.filter(i => i.type === "q").length };   // read now, before anything changes
+    if(sig === versLastSig) return;                         // nothing changed since the last copy
+    const list = (await IDB.get("versions")) || [];
+    if(list.length && list[0].sig === sig){ versLastSig = sig; return; }
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    await IDB.set("v:" + id, json);
+    list.unshift(Object.assign({ id, at: Date.now(), reason, sig, bytes: json.length }, meta));
+    let total = 0; const keep = [];
+    for(const v of list){ total += v.bytes || 0; if(keep.length < VERS_MAX && (total <= VERS_BYTES || !keep.length)) keep.push(v); else await IDB.del("v:" + v.id); }
+    await IDB.set("versions", keep);
+    versLastAt = Date.now(); versLastSig = sig;
+  }catch(e){ console.warn("version not kept", e); }
+}
+async function openHistory(){
+  const list = (await IDB.get("versions").catch(() => null)) || [];
+  const day = t => { const d = new Date(t), n = new Date(); const y = new Date(n); y.setDate(n.getDate() - 1);
+    return d.toDateString() === n.toDateString() ? "Today" : d.toDateString() === y.toDateString() ? "Yesterday" : d.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" }); };
+  $("#histList").innerHTML = list.length ? list.map(v => `<div class="hist-row" data-v="${v.id}" data-at="${v.at}">
+      <div class="hist-when"><b>${day(v.at)}</b> ${hhmm(v.at)}</div>
+      <div class="hist-what"><b>${esc(v.title)}</b> · ${v.nq} question${v.nq === 1 ? "" : "s"}${v.file ? ` · <span class="hint">${esc(v.file)}</span>` : ""}<div class="hint">${esc(v.reason)}</div></div>
+      <div class="hist-act"><button class="btn sm" data-hdl>⬇</button><button class="btn sm primary" data-hrestore>Restore</button></div></div>`).join("")
+    : `<p class="hint">No earlier versions yet. BEE keeps a copy every few minutes while you work, and before pasting, opening another file or clearing.</p>`;
+  openModal("#histModal");
+}
+document.getElementById("histList").addEventListener("click", async e => {
+  const row = e.target.closest("[data-v]"); if(!row) return;
+  const json = await IDB.get("v:" + row.dataset.v).catch(() => null); if(!json){ toast("That version is no longer available"); return; }
+  const o = JSON.parse(json);
+  if(e.target.closest("[data-hdl]")){
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    const t = new Date(+row.dataset.at); a.download = cleanName(o.d && o.d.title || "exam") + " - " + t.toISOString().slice(0, 10) + " " + String(t.getHours()).padStart(2, "0") + "h" + String(t.getMinutes()).padStart(2, "0") + ".exam.json"; a.click(); return;
+  }
+  if(e.target.closest("[data-hrestore]")){
+    await keepVersion("Before restoring an earlier version");
+    applyState(o); saveLocal(); $("#histModal").classList.remove("open");
+    toast("Earlier version restored — your work just before is kept in 🕘 History too");
+  }
+});
+document.getElementById("btnHistory").onclick = () => openHistory();
+setInterval(() => { if(S.items.length && (S.savedAt || 0) > versLastAt && Date.now() - versLastAt > 5 * 60000) keepVersion("Saved while you worked"); }, 60000);
 function snapshot(){
   const used = new Set(); S.items.forEach(it => [it.text, it.answer].concat((it.subs || []).flatMap(sb => [sb.text, sb.answer])).forEach(t => String(t || "").split("\n").forEach(l => { const m = l.match(RE_IMG); if(m) used.add(m[1]); })));
   const items = S.items.map(it => it.pics && Object.keys(it.pics).some(k => !used.has(k)) ? Object.assign({}, it, { pics: Object.fromEntries(Object.entries(it.pics).filter(([k]) => used.has(k))) }) : it);
@@ -176,6 +223,7 @@ async function openFromHandle(h){
     if(/\.(txt|md|markdown|text)$/i.test(file.name)){ await handleFiles([file]); return true; }
     const o = JSON.parse(await file.text());
     if(!o || !Array.isArray(o.items)) throw new Error("not an exam project");
+    await keepVersion("Before opening " + file.name);
     applyState(o);
     try{ proj.perm = h.requestPermission ? await h.requestPermission({ mode: "readwrite" }) : "granted"; }catch(_){ proj.perm = "prompt"; }
     proj.handle = h; proj.name = h.name; proj.dirty = false; proj.lastWrite = Date.now();
@@ -191,6 +239,7 @@ function freshState(){
   return n;
 }
 async function newProject(){
+  await keepVersion("Before starting a new exam");
   const fresh = freshState();
   if(FS_OK){
     const ok = await saveAs({ isNew: true, state: fresh });

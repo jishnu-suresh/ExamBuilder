@@ -90,6 +90,10 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+.hist-list{max-height:60vh;overflow:auto;border:1px solid var(--line);border-radius:10px}
+.hist-row{display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);font-size:13.5px}
+.hist-row:last-child{border-bottom:0}.hist-row:hover{background:#FBF7EE}.hist-act{display:flex;gap:6px}
+@media (max-width:600px){.hist-row{grid-template-columns:1fr auto}.hist-when{grid-column:1/-1}}
 .cut-stage{position:relative;max-height:68vh;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#eee;touch-action:none;user-select:none}
 .cut-stage canvas{display:block;margin:0 auto;background:#fff;cursor:crosshair}
 .cut-sel{position:absolute;border:2px solid #D4A017;background:rgba(212,160,23,.13);cursor:move;touch-action:none;box-shadow:0 0 0 9999px rgba(0,0,0,.18)}

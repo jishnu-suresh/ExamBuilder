@@ -123,6 +123,7 @@ function focusLast(){ const L = S.items[S.items.length - 1]; if(L) lastEdited = 
 function focusLast0(){ const c = $("#list").lastElementChild; if(c){ c.scrollIntoView({ behavior: "smooth", block: "center" }); const f = c.querySelector("textarea,input[type=text]"); if(f) setTimeout(() => f.focus(), 250); } }
 $("#pasteText").onclick = () => { $("#pasteArea").value = ""; $("#pasteCount").textContent = ""; openModal("#pasteModal"); setTimeout(() => $("#pasteArea").focus(), 50); };
 $("#pasteGo").onclick = async () => {
+  await keepVersion("Before pasting AI text");
   const DR = await takeDrawings($("#pasteArea").value);
   const raw = DR.text, items = parseText(raw), X = extractExtras(raw);
   if(!items.length && !X.rubric && !Object.keys(X.details).length){ toast("Nothing to add"); return; }
@@ -135,7 +136,7 @@ $("#pasteGo").onclick = async () => {
   if(firstMiss) setTimeout(() => { const c = $("#list").querySelector(`.card[data-id="${firstMiss.id}"]`); if(c) c.scrollIntoView({ behavior: "smooth", block: "center" }); }, 400);
 };
 $("#formatHelp").onclick = () => openModal("#helpModal");
-$("#clearAll").onclick = () => { if(!S.items.length) return; if(confirm("Remove all questions? (Exam details are kept.)")){ S.items = []; render(); changed(); } };
+$("#clearAll").onclick = () => { if(!S.items.length) return; keepVersion("Before Clear all"); if(confirm("Remove all questions? (Exam details are kept.)")){ S.items = []; render(); changed(); } };
 $("#btnDownload").onclick = () => download();
 $("#dlMenuBtn").onclick = e => { e.stopPropagation(); $("#dlMenu").classList.toggle("hidden"); };
 document.addEventListener("click", e => { if(!e.target.closest(".dl-wrap")) $("#dlMenu").classList.add("hidden"); });
@@ -183,7 +184,7 @@ $("#projIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if(!f) return;
   if(fileKind(f)){ showBlocked(fileKind(f), [f.name]); return; }
   if(/\.(txt|md|markdown|text)$/i.test(f.name)){ handleFiles([f]); $("#startModal").classList.remove("open"); return; }
-  try{ const o = JSON.parse(await f.text()); if(!o || !Array.isArray(o.items)) throw 0; applyState(o); saveLocal(); $("#startModal").classList.remove("open"); toast("Opened " + f.name); }
+  try{ const o = JSON.parse(await f.text()); if(!o || !Array.isArray(o.items)) throw 0; await keepVersion("Before opening " + f.name); applyState(o); saveLocal(); $("#startModal").classList.remove("open"); toast("Opened " + f.name); }
   catch(err){ toast("That file isn't a valid exam project"); }
 });
 

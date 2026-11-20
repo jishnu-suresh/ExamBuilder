@@ -10,6 +10,7 @@
   <button class="btn sm hidden" id="btnInstall" title="Install BEE as an app on this computer">⤓ <span class="lbl">Install app</span></button>
   <button class="btn sm icon" id="btnUndo" title="Undo (Ctrl/⌘ + Z)" disabled>↶</button>
   <button class="btn sm icon" id="btnRedo" title="Redo (Ctrl/⌘ + Shift + Z, or Ctrl + Y)" disabled>↷</button>
+  <button class="btn sm icon" id="btnHistory" title="🕘 Earlier versions of your exam (kept in this browser)">🕘</button>
   <button class="btn sm" id="btnNew" title="Start a new exam">＋ <span class="lbl">New</span></button>
   <button class="btn sm" id="btnOpen" title="Open a saved .exam.json project">📂 <span class="lbl">Open</span></button>
   <button class="btn sm" id="btnSave" title="Save the project to a (new) file">💾 <span class="lbl">Save as…</span></button>
@@ -256,6 +257,14 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
 </div>
 
 <!-- EQUATION EDITOR -->
+<div class="modal" id="histModal">
+  <div class="box" style="max-width:640px">
+    <h3 style="margin:0 0 4px">🕘 Earlier versions</h3>
+    <p class="hint" style="margin:0 0 10px">Copies BEE kept in this browser while you worked. <b>Restore</b> brings one back (your current work is kept as a version first); <b>⬇</b> saves it as a separate file.</p>
+    <div id="histList" class="hist-list"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" data-close>Close</button></div>
+  </div>
+</div>
 <div class="modal" id="cutModal">
   <div class="box wide" style="max-width:980px">
     <div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">

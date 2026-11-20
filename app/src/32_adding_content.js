@@ -7,6 +7,16 @@ async function fileToBitmap(file){
   }
   return await loadImg(await readAsDataURL(file));
 }
+// smaller files: pictures are stored no bigger than print needs, as PNG for drawings and JPEG when that is much smaller (photos, scans)
+function fitCanvas(c, maxSide){
+  const k = Math.min(1, maxSide / Math.max(c.width, c.height)); if(k >= 1) return c;
+  const o = document.createElement("canvas"); o.width = Math.round(c.width * k); o.height = Math.round(c.height * k);
+  const g = o.getContext("2d"); g.imageSmoothingQuality = "high"; g.drawImage(c, 0, 0, o.width, o.height); return o;
+}
+function encodeBest(c){
+  const png = c.toDataURL("image/png"); if(png.length < 400e3) return png;
+  const jpg = c.toDataURL("image/jpeg", .9); return jpg.length < png.length * .5 ? jpg : png;
+}
 function drawToJpeg(src, w, h, maxSide, rotate){
   const sc = Math.min(1, maxSide / Math.max(w, h));
   const tw = Math.round(w * sc), th = Math.round(h * sc);
@@ -17,17 +27,17 @@ function drawToJpeg(src, w, h, maxSide, rotate){
   g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
   g.translate(c.width / 2, c.height / 2); g.rotate(rot * Math.PI / 180);
   g.drawImage(src, -tw / 2, -th / 2, tw, th);
-  return { src: c.toDataURL("image/jpeg", 0.88), w: c.width, h: c.height };
+  return { src: c.toDataURL("image/jpeg", 0.85), w: c.width, h: c.height };
 }
 async function imageFileToData(file){
   let bmp;
   try{ bmp = await fileToBitmap(file); }
   catch(e){ throw new Error("This browser can't open " + file.name + (/\.hei[cf]$/i.test(file.name) ? " (HEIC photo — export it as JPG first)" : "")); }
-  return drawToJpeg(bmp, bmp.width, bmp.height, 1800, 0);
+  return drawToJpeg(bmp, bmp.width, bmp.height, 1600, 0);   // ≈240 dpi across an A4 page: plenty for print
 }
 async function rotateImg(img){
   const i = await loadImg(img.src);
-  return drawToJpeg(i, i.naturalWidth, i.naturalHeight, 1800, 90);
+  return drawToJpeg(i, i.naturalWidth, i.naturalHeight, 1600, 90);
 }
 
 /* ---------------- adding content ---------------- */

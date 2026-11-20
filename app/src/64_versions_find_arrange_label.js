@@ -90,6 +90,7 @@ function openFind(){ openModal("#frModal"); setTimeout(() => { $("#frFind").focu
 $("#frBtn").onclick = openFind;
 $("#frList").addEventListener("click", e => { const b = e.target.closest("[data-go]"); if(!b) return; $("#frModal").classList.remove("open"); lastEdited = b.dataset.go; focusItem(b.dataset.go); });
 $("#frGo").onclick = () => {
+  keepVersion("Before Replace all");
   const re = frRegex(); if(!re) return;
   const rep = $("#frRep").value; let n = 0;
   frFields().forEach(([it, tag, get, set]) => { const t = get(); const nt = t.replace(re, () => { n++; return rep; }); if(nt !== t) set(nt); });

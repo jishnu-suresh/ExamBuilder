@@ -259,7 +259,8 @@ document.getElementById("cutGo").onclick = async () => {
   g.drawImage(big, cutRect.fx * big.width, cutRect.fy * big.height, out.width, out.height, 0, 0, out.width, out.height);
   const size = Math.max(15, Math.min(100, Math.round(cutRect.fw * 100 / .8 / 5) * 5));   // about as big as on the PDF page (its text is ~80% of the page wide)
   $("#cutModal").classList.remove("open");
-  placePicture(cutT, { src: out.toDataURL("image/png"), w: out.width, h: out.height }, size);
+  const fin = fitCanvas(out, 2000);   // ≈300 dpi across an A4 page
+  placePicture(cutT, { src: encodeBest(fin), w: fin.width, h: fin.height }, size);
   toast("Picture cut from the PDF — resize or move it under the text");
 };
 /* ---------- ✏️ drawings the AI made as SVG:  {svg} <svg …>…</svg> {/svg} ---------- */
