@@ -9,6 +9,7 @@ WEB = "http://127.0.0.1:8765/"
 os.makedirs(OUT, exist_ok=True)
 P = lambda n: os.path.join(OUT, "stu_" + n)
 res = []
+TEACHER_PW = "Ruche-2026!"
 FAKE_TTS = """() => { const f = { speaking: false, paused: false, q: [], speak(u){ this.q.push(u); this.speaking = true; }, cancel(){ this.q = []; this.speaking = false; this.paused = false; },
   pause(){ this.paused = true; }, resume(){ this.paused = false; }, getVoices(){ return []; }, addEventListener(){} };
   Object.defineProperty(window, "speechSynthesis", { configurable: true, value: f }); }"""   # a voice that keeps talking until it is stopped
@@ -22,7 +23,12 @@ async def make_student_file(b, url=WEB, code="ABCD-2345", tcode="135790", extra=
     await pg.evaluate("loadDemo()"); await pg.wait_for_timeout(2500); await pg.evaluate("tourAt >= 0 && endTour()")
     await pg.evaluate("openStudentDialog()"); await pg.wait_for_timeout(400)
     await pg.fill("#stuCode", code); await pg.fill("#stuTCode", tcode); await pg.select_option("#stuExtra", extra)
-    async with pg.expect_download(timeout=180000) as dl: await pg.click("#stuGo")
+    async with pg.expect_download(timeout=180000) as dl:
+        await pg.click("#stuGo")
+        try:                                        # the first time: choose the teacher password for the new key
+            await pg.wait_for_selector("#pwModal.open", timeout=5000)
+            await pg.fill("#pw1", TEACHER_PW); await pg.fill("#pw2", TEACHER_PW); await pg.click("#pwGo")
+        except Exception: pass
     d = await dl.value
     return ctx, pg, errs, d
 
@@ -49,6 +55,9 @@ async def main():
         ok("first time: BEE asks to back up the teacher key", await pg.evaluate("$('#keyModal').classList.contains('open')"))
         async with pg.expect_download() as dl: await pg.click("#keyBackup")
         await (await dl.value).save_as(P("teacher.beekey"))
+        bk = json.load(open(P("teacher.beekey")))
+        stored = await pg.evaluate("teacherKeys().then(ks => ks.map(k => Object.keys(k)))")
+        ok("teacher key: locked with the password in this browser and in the backup", "privBox" in bk and "priv" not in bk and '"d":' not in json.dumps(bk) and all("priv" not in k and "privBox" in k for k in stored), [list(bk), stored])
         await pg.evaluate("document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'))")
         await pg.evaluate("$('#stuModal').classList.add('open')")
         async with pg.expect_download() as dl: await pg.click("#stuSheet")
@@ -229,6 +238,14 @@ async def main():
         ok("summary: ended by the teacher, MCQ marks", "Tom Dupont" in csv and "teacher" in csv and "Léa Martin" in csv, csv[:300])
         ok("teacher's own exam untouched", await pg.evaluate("S.d.title === 'End-of-Term Examination' && S.items.length === 30"))
         ok("no errors in BEE", not berrs, berrs)
+        # the same browser after a reload: the key is locked again, so the answers need the password
+        await pg.reload(); await pg.wait_for_timeout(1800); await pg.evaluate("$('#startModal').classList.remove('open'); ANS.length = 0")
+        async with pg.expect_file_chooser() as fc: await pg.evaluate("pickAnswers()")
+        await (await fc.value).set_files(P("lea.bee-answers"))
+        await pg.wait_for_selector("#pwModal.open", timeout=8000)
+        ok("same computer after a reload: opening answers asks for the teacher password", await pg.is_visible("#pw1") and not await pg.is_visible("#pw2"))
+        await pg.click("#pwCancel"); await pg.wait_for_timeout(800)
+        ok("without the password the answers stay sealed, even in the teacher's browser", await pg.evaluate("!!ANS[0].err && !ANS[0].P && /password/.test(ANS[0].err)"))
         # another browser without the key can't open them, until the key backup is used
         c2 = await b.new_context(); p2 = await c2.new_page(); await p2.goto(WEB); await p2.wait_for_timeout(1500)
         async with p2.expect_file_chooser() as fc: await p2.evaluate("pickAnswers()")
@@ -236,7 +253,12 @@ async def main():
         ok("without the teacher key the answers stay sealed", await p2.evaluate("!!ANS[0].err && !ANS[0].P"))
         await p2.evaluate("ANS.length = 0; document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'))")
         async with p2.expect_file_chooser() as fc: await p2.evaluate("$('#keyImport').click()")
-        await (await fc.value).set_files(P("teacher.beekey")); await p2.wait_for_timeout(800)
+        await (await fc.value).set_files(P("teacher.beekey"))
+        await p2.wait_for_selector("#pwModal.open", timeout=8000)
+        await p2.fill("#pw1", "wrong-password"); await p2.click("#pwGo"); await p2.wait_for_timeout(2500)
+        ok("key backup: a wrong password is refused", "isn't right" in await p2.text_content("#pwText"))
+        await p2.fill("#pw1", TEACHER_PW); await p2.click("#pwGo"); await p2.wait_for_timeout(2500)
+        await p2.evaluate("document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open'))")
         async with p2.expect_file_chooser() as fc: await p2.evaluate("pickAnswers()")
         async with p2.expect_download(timeout=120000) as dl: await (await fc.value).set_files(P("lea.bee-answers"))
         ok("the key backup opens them on another computer", (await dl.value).suggested_filename.endswith("(answers).pdf"))
@@ -253,7 +275,9 @@ async def main():
         await p5.check("input[name=stuMode][value=read]"); await p5.select_option("#stuVoice", "en-US")
         ok("read-aloud option in the dialog", await p5.text_content("#stuGo") == "⬇ Download the read-aloud file" and not await p5.is_visible("#stuDrawRow"))
         await p5.fill("#stuCode", "READ-2345"); await p5.fill("#stuTCode", "9753")
-        async with p5.expect_download(timeout=180000) as dl: await p5.click("#stuGo")
+        async with p5.expect_download(timeout=180000) as dl:
+            await p5.click("#stuGo"); await p5.wait_for_selector("#pwModal.open", timeout=8000)
+            await p5.fill("#pw1", TEACHER_PW); await p5.fill("#pw2", TEACHER_PW); await p5.click("#pwGo")
         rd = await dl.value; await rd.save_as(P("read.html"))
         ok("read-aloud file is made", rd.suggested_filename.endswith("read-aloud version.html"), rd.suggested_filename)
         await p5.evaluate("document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')); $('#stuModal').classList.add('open')")

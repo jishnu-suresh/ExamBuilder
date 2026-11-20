@@ -181,7 +181,7 @@ A new version shows the "Fresh honey in the hive!" bar. The page only reloads af
 | The paper | AES-GCM, with a key made from the **start code** by PBKDF2 (250,000 rounds). Without the code, the questions can't be read from the file. |
 | The full exam, with the answer key and both codes | **Sealed** with the teacher's public key (RSA-OAEP 2048 + AES-GCM). The student file only carries it along. |
 | The teacher code | Only a PBKDF2 hash is stored. |
-| The teacher key | Kept in BEE's IndexedDB (`teacherKeys`; the first one is the current key). Its backup is a `.beekey` file. Older keys stay, so older answers still open. |
+| The teacher key | Kept in BEE's IndexedDB (`teacherKeys`; the first one is the current key). Its private half is stored only as `privBox`, encrypted with the **teacher password** (PBKDF2 300,000 rounds + AES-GCM), in the browser and in the `.beekey` backup. `openKey()` asks for the password once per session (`OPEN_KEYS`, kept in memory only). 🔒 Lock now, or a reload, locks it again. Keys made before passwords existed get one the first time they are used. Making a student file needs only the public half. Older keys stay, so older answers still open. |
 
 **The student file** (`app/student/`):
 

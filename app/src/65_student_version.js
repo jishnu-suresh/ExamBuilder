@@ -17,43 +17,119 @@ const PLAYER = /*__PLAYER__*/null;        // the offline BEE carries the templat
 const BLUE_HEX = "#1F4FB8";
 
 /* ---- teacher key: kept in this browser, one backup file for safety ---- */
+/* The private half of the key is kept encrypted with the teacher's password (PBKDF2 + AES-GCM): in this browser
+   and in the backup file. It is opened only in memory, once per session, to open students' answers. */
+const KEY_ITER = 300000, OPEN_KEYS = {};          // kid → private key, for this session only
 async function teacherKeys(){ return (await IDB.get("teacherKeys")) || []; }
+async function saveKeys(ks){ await IDB.set("teacherKeys", ks); }
+async function boxPriv(priv, pw){ const salt = BC.b64e(BC.rnd(16)); return { salt, iter: KEY_ITER, box: await BC.lock(await BC.codeKey(pw, salt, KEY_ITER), priv) }; }
+// the password dialog: mode "set" (new password, typed twice) or "enter"
+function askPassword(mode, info){
+  return new Promise(res => {
+    const set = mode === "set";
+    $("#pwTitle").textContent = set ? "🔐 Choose a teacher password" : "🔐 Teacher password";
+    $("#pwText").innerHTML = info || (set ? "It protects your teacher key: <b>without it, nobody can open your students' answers</b>, not even on this computer." : "Type your teacher password to open the answers.");
+    $("#pw1").value = ""; $("#pw2").value = ""; $("#pwErr").textContent = "";
+    $("#pw2Row").classList.toggle("hidden", !set); $("#pwWarn").classList.toggle("hidden", !set);
+    $("#pwGo").textContent = set ? "Save the password" : "Open";
+    openModal("#pwModal"); setTimeout(() => $("#pw1").focus(), 60);
+    const done = v => { $("#pwModal").classList.remove("open"); $("#pwGo").onclick = null; $("#pwCancel").onclick = null; res(v); };
+    $("#pwCancel").onclick = () => done(null);
+    $("#pwGo").onclick = () => {
+      const a = $("#pw1").value;
+      if(set){
+        if(a.length < 6) return $("#pwErr").textContent = "At least 6 characters, please.";
+        if(a !== $("#pw2").value) return $("#pwErr").textContent = "The two passwords are different.";
+      }else if(!a) return;
+      done(a);
+    };
+  });
+}
+["#pw1", "#pw2"].forEach(s => $(s).addEventListener("keydown", e => { if(e.key === "Enter") $("#pwGo").click(); }));
 async function currentKey(create){
   let ks = await teacherKeys();
-  if(!ks.length && create){ const k = await BC.newTeacherKey(); ks = [k]; await IDB.set("teacherKeys", ks); }
+  if(!ks.length && create){
+    const pw = await askPassword("set", "BEE is making your <b>teacher key</b>: only it can open your students' answers. Choose a password to protect it, so <b>nobody else can open the answers</b>, not even on this computer.");
+    if(!pw) return null;
+    const k = await BC.newTeacherKey();
+    ks = [{ pub: k.pub, kid: k.kid, created: k.created, privBox: await boxPriv(k.priv, pw) }];
+    await saveKeys(ks); OPEN_KEYS[k.kid] = k.priv;
+  }
   return ks[0] || null;
+}
+// the private key, after the password (asked once per session); older keys without a password get one now
+async function openKey(k){
+  if(OPEN_KEYS[k.kid]) return OPEN_KEYS[k.kid];
+  if(k.priv){
+    const pw = await askPassword("set", "Your teacher key " + esc(k.kid.slice(0, 6)) + " has no password yet. Choose one now, so <b>nobody else can open your students' answers</b>, not even on this computer.");
+    if(!pw) return null;
+    const ks = await teacherKeys(), x = ks.find(y => y.kid === k.kid);
+    x.privBox = await boxPriv(k.priv, pw); OPEN_KEYS[k.kid] = k.priv; delete x.priv;
+    await saveKeys(ks); return OPEN_KEYS[k.kid];
+  }
+  let msg = "";
+  for(let tries = 0; tries < 5; tries++){
+    const pw = await askPassword("enter", msg || ("Type your teacher password to open the answers (key " + esc(k.kid.slice(0, 6)) + ")."));
+    if(pw == null) return null;
+    try{ OPEN_KEYS[k.kid] = await BC.unlock(await BC.codeKey(pw, k.privBox.salt, k.privBox.iter), k.privBox.box); return OPEN_KEYS[k.kid]; }
+    catch(_){ msg = "<b style='color:var(--danger)'>That password isn't right.</b> Try again."; }
+  }
+  return null;
 }
 async function keyRow(){
   const k = await currentKey(false), el = $("#stuKey"), backed = await IDB.get("teacherKeyBackup");
-  if(!k){ el.className = "key-row"; el.innerHTML = `🔑 A teacher key will be made for you now, so only you can open the answers. <button class="btn sm" type="button" data-keymodal>About the key</button>`; }
-  else if(backed !== k.kid){ el.className = "key-row warn"; el.innerHTML = `🔑 Teacher key <b>${esc(k.kid.slice(0, 6))}</b> — <b>no backup yet</b>. Keep a copy, or you could lose your students' answers. <button class="btn sm primary" type="button" data-keymodal>Back up now</button>`; }
-  else { el.className = "key-row"; el.innerHTML = `🔑 Teacher key <b>${esc(k.kid.slice(0, 6))}</b> · backed up ✓ <button class="btn sm" type="button" data-keymodal>Manage</button>`; }
+  if(!k){ el.className = "key-row"; el.innerHTML = `🔑 A teacher key will be made for you now, protected by a password you choose, so only you can open the answers. <button class="btn sm" type="button" data-keymodal>About the key</button>`; }
+  else if(k.priv){ el.className = "key-row warn"; el.innerHTML = `🔑 Teacher key <b>${esc(k.kid.slice(0, 6))}</b> — <b>no password yet</b>. Anyone using this browser could open your students' answers. <button class="btn sm primary" type="button" data-keymodal>Add a password</button>`; }
+  else if(backed !== k.kid){ el.className = "key-row warn"; el.innerHTML = `🔑 Teacher key <b>${esc(k.kid.slice(0, 6))}</b> 🔐 — <b>no backup yet</b>. Keep a copy, or you could lose your students' answers. <button class="btn sm primary" type="button" data-keymodal>Back up now</button>`; }
+  else { el.className = "key-row"; el.innerHTML = `🔑 Teacher key <b>${esc(k.kid.slice(0, 6))}</b> · password 🔐 · backed up ✓ <button class="btn sm" type="button" data-keymodal>Manage</button>`; }
 }
 document.addEventListener("click", e => { if(e.target.closest("[data-keymodal]")) openKeyModal(); });
 async function openKeyModal(){
   const k = await currentKey(false), ks = await teacherKeys();
-  $("#keyInfo").textContent = k ? `Your key: ${k.kid.slice(0, 6)} · made ${new Date(k.created).toLocaleDateString()}` + (ks.length > 1 ? ` · ${ks.length - 1} older key${ks.length > 2 ? "s" : ""} kept for older answers` : "") : "You don't have a key yet. One is made the first time you download a computer version.";
-  $("#keyBackup").disabled = !k;
+  $("#keyInfo").innerHTML = k ? `Your key: <b>${esc(k.kid.slice(0, 6))}</b> · made ${new Date(k.created).toLocaleDateString()} · ${k.priv ? "<b style='color:var(--danger)'>no password yet</b>" : "protected by your password 🔐" + (OPEN_KEYS[k.kid] ? " (open for now)" : "")}` + (ks.length > 1 ? ` · ${ks.length - 1} older key${ks.length > 2 ? "s" : ""} kept for older answers` : "") : "You don't have a key yet. One is made the first time you download a computer version.";
+  $("#keyBackup").disabled = !k; $("#keyPw").disabled = !k; $("#keyLock").classList.toggle("hidden", !k || !OPEN_KEYS[k.kid]);
+  $("#keyPw").textContent = k && k.priv ? "🔐 Add a password" : "🔐 Change the password";
   openModal("#keyModal");
 }
 $("#keyBackup").onclick = async () => {
-  const k = await currentKey(false); if(!k) return;
+  let k = await currentKey(false); if(!k) return;
+  if(k.priv){ if(!(await openKey(k))) return; k = await currentKey(false); }
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([JSON.stringify({ bee: "teacher-key", v: 1, kid: k.kid, created: k.created, pub: k.pub, priv: k.priv })], { type: "application/json" }));
+  // the backup holds the key still locked with your password
+  a.href = URL.createObjectURL(new Blob([JSON.stringify({ bee: "teacher-key", v: 2, kid: k.kid, created: k.created, pub: k.pub, privBox: k.privBox })], { type: "application/json" }));
   a.download = "BEE teacher key " + k.kid.slice(0, 6) + ".beekey"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   await IDB.set("teacherKeyBackup", k.kid);
-  toast("Key saved. Keep it somewhere safe and private (not on the students' laptops)."); keyRow();
+  toast("Key saved, locked with your password. Keep it somewhere safe (not on the students' laptops)."); keyRow(); openKeyModal();
 };
+$("#keyPw").onclick = async () => {
+  const k = await currentKey(false); if(!k) return;
+  const priv = await openKey(k); if(!priv) return;
+  if(k.priv){ toast("Password saved. Your key is protected."); keyRow(); return openKeyModal(); }    // (just added)
+  const pw = await askPassword("set", "Choose a new teacher password. <b>Your old backup file still opens with the old password</b>: save a new backup afterwards.");
+  if(!pw) return;
+  const ks = await teacherKeys(), x = ks.find(y => y.kid === k.kid); x.privBox = await boxPriv(priv, pw); await saveKeys(ks);
+  await IDB.set("teacherKeyBackup", null);
+  toast("Password changed. Please save a new backup of your key."); keyRow(); openKeyModal();
+};
+$("#keyLock").onclick = () => { Object.keys(OPEN_KEYS).forEach(k => delete OPEN_KEYS[k]); toast("🔒 Locked. The password is needed again to open answers."); openKeyModal(); };
 $("#keyImport").onclick = () => {
   const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".beekey,.json";
   inp.onchange = async () => {
     try{
       const o = JSON.parse(await inp.files[0].text());
-      if(o.bee !== "teacher-key" || !o.pub || !o.priv) throw new Error("This isn't a BEE teacher key.");
+      if(o.bee !== "teacher-key" || !o.pub || !(o.privBox || o.priv)) throw new Error("This isn't a BEE teacher key.");
       const kid = await BC.kidOf(o.pub);
-      const ks = (await teacherKeys()).filter(k => k.kid !== kid);
-      ks.unshift({ pub: o.pub, priv: o.priv, kid, created: o.created || Date.now() });
-      await IDB.set("teacherKeys", ks); await IDB.set("teacherKeyBackup", kid);
+      let rec = { pub: o.pub, kid, created: o.created || Date.now() };
+      if(o.privBox){
+        rec.privBox = o.privBox;
+        const ok = await openKey(rec); if(!ok) throw new Error("the password is needed to use this key");     // check it now, while the teacher is here
+      }else{
+        const pw = await askPassword("set", "This key backup has no password. Choose one to protect it in this browser.");
+        if(!pw) throw new Error("a password is needed");
+        rec.privBox = await boxPriv(o.priv, pw); OPEN_KEYS[kid] = o.priv;
+      }
+      const ks = (await teacherKeys()).filter(k => k.kid !== kid); ks.unshift(rec);
+      await saveKeys(ks); await IDB.set("teacherKeyBackup", o.privBox ? kid : null);
       toast("Teacher key " + kid.slice(0, 6) + " is ready in this browser."); openKeyModal(); keyRow();
     }catch(e){ toast("Couldn't use that key: " + e.message); }
   };
@@ -181,6 +257,7 @@ $("#stuGo").onclick = async () => {
     const { paper, nq, total } = buildPaper(items);
     const noTime = $("#stuNoTime").checked, base = noTime ? 0 : Math.max(1, +$("#stuMin").value || 60), extraPct = noTime ? 0 : +$("#stuExtra").value;
     const key = await currentKey(true);
+    if(!key){ toast("A teacher password is needed to make the key."); return; }
     const salt = BC.b64e(BC.rnd(16)), iter = 250000, salt2 = BC.b64e(BC.rnd(16)), iter2 = 150000;
     const snap = { d: JSON.parse(JSON.stringify(S.d)), logo: S.logo, items: JSON.parse(JSON.stringify(items)), version: ver, exportedAt: Date.now() };
     const EXAM = {
@@ -257,7 +334,8 @@ async function loadAnswers(files){
       if(o.bee !== "answers" || !o.sealed) throw new Error("not a BEE answers file");
       const k = ks.find(k => k.kid === o.kid);
       if(!k) throw new Error("sealed with another teacher key (" + String(o.kid).slice(0, 6) + "). Use 🔑 “Use a key from a backup”");
-      row.P = await BC.unseal(o.sealed, k.priv); row.T = await BC.unseal(o.teacher, k.priv);
+      const priv = await openKey(k); if(!priv) throw new Error("your teacher password is needed to open it");
+      row.P = await BC.unseal(o.sealed, priv); row.T = await BC.unseal(o.teacher, priv);
       row.mcq = markMCQ(row.T.snap, row.P);
       const dup = ANS.findIndex(r => r.P && r.P.examId === row.P.examId && r.P.name === row.P.name && r.P.startedAt === row.P.startedAt);
       if(dup >= 0) ANS.splice(dup, 1);

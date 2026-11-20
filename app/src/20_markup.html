@@ -565,7 +565,20 @@ x = 3
     <p>Student answers are sealed with your <b>teacher key</b>. It stays in this browser, and only it can open them.</p>
     <p><b>Please keep a backup copy</b> (on your own USB stick or drive, not the students'). If this browser is reset or you change computer, you need it to open answers.</p>
     <p class="hint" id="keyInfo"></p>
-    <div class="actions" style="justify-content:flex-end"><button class="btn" id="keyImport">📂 Use a key from a backup</button><button class="btn primary" id="keyBackup">⬇ Save a backup of my key</button><button class="btn" data-close>Close</button></div>
+    <div class="actions" style="justify-content:flex-end;flex-wrap:wrap"><button class="btn" id="keyLock">🔒 Lock now</button><button class="btn" id="keyPw">🔐 Change the password</button><button class="btn" id="keyImport">📂 Use a key from a backup</button><button class="btn primary" id="keyBackup">⬇ Save a backup of my key</button><button class="btn" data-close>Close</button></div>
+  </div>
+</div>
+
+<!-- 🔐 TEACHER PASSWORD -->
+<div class="modal" id="pwModal" style="z-index:70">
+  <div class="box" style="max-width:460px">
+    <h3 id="pwTitle">🔐 Teacher password</h3>
+    <p id="pwText" style="margin:6px 0 10px"></p>
+    <div class="fields"><label class="f full">Password<input type="password" id="pw1" autocomplete="new-password"></label>
+      <label class="f full" id="pw2Row">Type it again<input type="password" id="pw2" autocomplete="new-password"></label></div>
+    <p class="hint" id="pwWarn" style="margin:8px 0 0">⚠ Write it down somewhere safe. <b>If it is forgotten, nobody can open the answers</b>, not even BEE.</p>
+    <p id="pwErr" style="color:var(--danger);font-weight:600;min-height:1.2em;margin:6px 0 0"></p>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" id="pwCancel">Cancel</button><button class="btn primary" id="pwGo">OK</button></div>
   </div>
 </div>
 
