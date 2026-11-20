@@ -5368,6 +5368,12 @@ function parseText(txt){
     const qm = l.match(RE_Q);
     const qo = l.match(RE_QONLY);
     if(qm || qo){ flush(); cur = { type: "q", lines: [qm ? qm[2] : ""] }; continue; }
+    // a multiple-choice question ends after its options: a following passage, caption or instruction is its own text block
+    if(cur && cur.type === "q" && /\{\s*mcq/i.test(cur.lines[0] || "")){
+      const isOpt = OPT_LINE.test(l.replace(/^\s*(?:\*\*|\*|\+\+|~~)+/, ""));
+      if(isOpt) cur.optSeen = true;
+      else if(cur.optSeen && l.trim() && !/^\s*(?:model answer|answer|correct)\s*:/i.test(l) && !/^\s*\{\s*correct\s*\}\s*$/i.test(l)){ flush(); cur = { type: "note", lines: [] }; }
+    }
     if(!cur){ if(!l.trim()) continue; cur = { type: "note", lines: [] }; }
     cur.lines.push(l.replace(/\s+$/, ""));
   }
@@ -7261,7 +7267,10 @@ function buildPDF(opt){
       // a question with sub-questions may break between them: it starts here if the question + (a) fit,
       // and a later sub-question moves to the next page only when it doesn't fit whole
       const splitSubs = it.type === "q" && blk.groupH && blk.groupH.length > 2 && y + blk.h > BOTTOM && y > TOP + 1;
+      // a long reading passage (text only) flows into the space left instead of leaving a gap
+      const flowNote = it.type === "note" && !it.heading && !it.img && blk.h > 40 && y > TOP + 1 && BOTTOM - y >= 30 && !picsOf(it.text).length && !/\{img:|\{mol:|^\s*\|/m.test(it.text || "");
       if(splitSubs){ if(y + blk.groupH[0] + blk.groupH[1] > BOTTOM) newPage(); }
+      else if(flowNote){ if(y + blk.first > BOTTOM) newPage(); }
       else if(blk.h <= pageAvail ? y + blk.h > BOTTOM : y + blk.first > BOTTOM) newPage();
       pageOf[it.id] = doc.getNumberOfPages();
       const panel = COLOUR && it.type === "note" && !it.heading && blk.h > 14;
@@ -7926,7 +7935,7 @@ FORMAT RULES
 2. If the material has a rubric, scoring table or marking criteria (or I ask for one), put it right after the details: a line  Rubric: <title of the rubric page>  then a Markdown table with the columns  | Criterion | Points |  (add a Description column in the middle if there are descriptions). One row per criterion; for a part with sub-criteria, give the part row first and then its sub-rows starting with A., B. or Question 1, Question 2. End with  | TOTAL | n |  and, if the original has it,  | TOTAL EXAM GRADE | % |.
 3. Part headings on their own line, e.g.:  Part I: Algebra   — add the part's total marks if known:  Part I: Algebra [20]
    Sub-parts inside a part (A., B., …) on their own line starting with  Sub-part:  e.g.  Sub-part: A. Definitions (18 points)
-   Where the original starts a new page, put  {newpage}  on its own line.
+   Do NOT copy the original's page breaks — BEE arranges the pages itself. Only put  {newpage}  on its own line where I ask for a new page.
    A question that has no number in the original (e.g. "Use the word … in a sentence:"): still number it like the others, and put  {nonum}  after its marks — the number is then left off the paper. Add  {nomarks}  if the original doesn't show its marks.
 4. Instructions or reading passages that are not questions: plain paragraphs.
 5. Every question starts on a new line with its number:  1. Question text
