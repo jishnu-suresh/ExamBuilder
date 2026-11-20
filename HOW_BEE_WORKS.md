@@ -18,7 +18,7 @@ exams, student names and photos stay on the teacher's computer.
                                     └─► autosave ─► .exam.json file + browser storage
 ```
 
-* **One source file:** `app/app.html` holds all the HTML, CSS and JavaScript.
+* **One source, in sections:** `app/src/` holds the HTML, CSS and JavaScript, split into numbered files by topic. `app/src/ORDER.txt` lists them in order; the build joins them into one page.
 * **One build step:** `build/build.py` turns it into the two things people use:
   * `docs/` is the installable web app (PWA) served by GitHub Pages at https://jishnu-suresh.github.io/ExamBuilder/
   * `docs/download/Exam_Builder_offline.html` is a single file with everything inside, which works with no internet.
@@ -27,14 +27,16 @@ exams, student names and photos stay on the teacher's computer.
 
 | Path | What it is |
 |---|---|
-| `app/app.html` | **The application.** Edit this, never the files in `docs/`. |
+| `app/src/` | **The application.** Edit these files, never the files in `docs/`. |
+| `app/src/ORDER.txt` | The order in which the build joins the files. A new file must be listed here. |
 | `build/build.py` | Builds `docs/` and the offline file, makes the icons and copies the demo files. |
 | `build/fetch_vendor.sh` | Downloads the pinned libraries into `.vendor/` (run once, needs npm). |
 | `build/sw.template.js` | The service worker template (offline cache and update logic). |
 | `docs/` | **Generated.** The live site. Committed, because GitHub Pages serves it. |
 | `docs/vendor/` | Libraries copied by the build (jsPDF, MathJax, MathLive, pdf.js, Tesseract, SortableJS, smiles-drawer, fonts). |
 | `demo/` | Demo exams and AI answers, copied into `docs/demo/`. |
-| `tests/` | Browser tests (Playwright) and sample inputs. See `tests/README.md`. |
+| `tests/` | Browser tests (Playwright) and sample inputs. `tests/run_all.py` runs them all. See `tests/README.md`. |
+| `.github/workflows/tests.yml` | Runs the tests on every push, and checks that `docs/` was rebuilt from `app/src/`. |
 
 ## 3. Libraries (all run locally)
 
@@ -103,7 +105,25 @@ Questions are plain text with small tags. The same format is used when typing, p
 | `[diagram: page 2 — …]` | A missing picture: a red box with 📄 *Cut from PDF*. |
 | `Title:` `Subject:` … `Instructions:` `Rubric:` + table | Exam details and rubric (at the top of pasted text). |
 
-## 6. Main code paths in `app/app.html`
+## 6. Main code paths in `app/src/`
+
+| File | What's in it |
+|---|---|
+| `00_head.html`, `10_styles.css`, `20_markup.html` | Page head, all styles, all HTML (panels, dialogs, the tour) |
+| `30_state_and_saving.js` | `S`, browser storage, project files, autosave, 🕘 version history |
+| `31_text_parsing.js` | Turning pasted text into items |
+| `32_adding_content.js` | Adding questions, photos and pictures (incl. picture compression) |
+| `40_editor_cards.js` | The question cards |
+| `41_rich_text_and_pictures.js` | Pictures inside text, ✂ Cut from PDF |
+| `50_pdf.js` | `buildPDF()` and the preview |
+| `60_photo_reader.js` | Offline text reading (Tesseract) |
+| `61_equations_and_graphs.js` | Equation editor, graphs, molecules |
+| `62_ai_prompts.js` | The ready-made AI prompts |
+| `63_formatting_and_rubric.js` | Format bar, ＋ Insert and ⋯ More menus, rubric page |
+| `64_versions_find_arrange_label.js` | Versions A/B/C, find & replace, arrange view, labelled diagrams |
+| `70_events_and_start.js` | Buttons, settings tabs, start screen, demo exam, welcome tour, PWA, start-up |
+| `99_end.html` | Closing tags |
+
 
 **Importing text:** `handleFiles()` / the *Paste* box →
 `takeDrawings()` (SVG → pictures) → `extractExtras()` (details, rubric) → `parseText()` → `finishBlock()` (marks, tags, options, sub-questions).
@@ -119,7 +139,7 @@ Every change calls `changed()`, which updates totals and undo history and schedu
 * `qBlock(it, X, W)` lays out one item into **parts**, each with a height and a `draw(y)` function.
   * Parts have a group number `g` (question text, then (a), (b)… or option C, D…), so a long question can continue on the next page.
 * Text layout uses `layoutRich()` (paragraphs, maths, tables, pictures, molecules) and `layoutPara()` (word wrapping, justification, styles).
-* The main loop places parts on pages and keeps headings with what follows. It records `regions`, which the preview uses so a click on it jumps to the right card.
+* The main loop places parts on pages and keeps headings, and short lead-ins such as "Refer to the picture below.", with what follows. It records `regions`, which the preview uses so a click on it jumps to the right card.
 * Before building, `prepareMath()` turns every formula and molecule into PNGs (cached).
 
 **Preview:** `preview()` → `buildPDF()` → `showPreview()` (pdf.js canvases). `pvLocate()` and `jumpToItem()` handle clicks.
@@ -128,6 +148,10 @@ Every change calls `changed()`, which updates totals and undo history and schedu
 * Chrome and Edge save to a real file through the File System Access API (`saveAs()`, `writeProject()`, `setHandle()`), with an autosave every minute.
 * Safari and Firefox download the file instead (`downloadProject()`).
 * The last state is also kept in browser storage (`saveLocal()` / `loadLocal()`).
+* **🕘 Version history:** `keepVersion(reason)` stores a copy in IndexedDB (`versions` list plus `v:<id>`), at most 30 copies or 60 MB, skipping exact duplicates. It runs every 5 minutes while the exam changes, and before anything that replaces it (opening a file, new exam, paste, clear all, replace all, restore, demo).
+* **Pictures are kept small:** `fitCanvas()` limits the size (photos 1600 px, PDF cuts 2000 px) and `encodeBest()` keeps PNG unless JPEG is far smaller.
+
+**Start screen, demo and tour:** `openStart()`; `loadDemo()` opens `demo/demo_all_features.exam.json` (fetched by the website; built into the offline file through the `/*__DEMO__*/` placeholder) and never writes it into the teacher's project file. `startTour()` shows 4 steps (`TOUR`); it runs once, the first time the start screen closes (`localStorage` key `bee.toured`), and is skipped in automated browsers so tests aren't interrupted.
 
 **AI prompts:** `USER_AI_PROMPT` (generic). `IXL_AI_PROMPT` is built from it plus `IXL_RULES`, so changing the generic prompt updates both.
 
@@ -138,23 +162,24 @@ A new version shows the "Fresh honey in the hive!" bar. The page only reloads af
 
 ```bash
 build/fetch_vendor.sh            # once
-python3 build/build.py           # after every change to app/app.html
+python3 build/build.py           # after every change in app/src/
 ```
 
 Run the tests before every push (see `tests/README.md`). They open the built app in Chrome with Playwright:
 
 ```bash
-cp docs/download/Exam_Builder_offline.html /path/to/work/Exam_Builder.html
-(cd docs && python3 -m http.server 8765 &)          # tpwa.py needs this
-python3 tests/dry.py; python3 tests/t11.py; python3 tests/tfeat.py; python3 tests/tpwa.py
+pip install playwright && python -m playwright install chromium   # once
+python3 tests/run_all.py         # builds nothing; tests the docs/ you just built. Ends with "ALL PASSED"
 ```
 
+GitHub runs the same tests on every push (`.github/workflows/tests.yml`), and fails if `docs/` doesn't match a fresh build of `app/src/`.
+
 Releasing is a push to `main`. GitHub Pages republishes `docs/` within a few minutes, and installed apps then offer the update.
-Commit both `app/app.html` **and** the rebuilt `docs/`.
+Commit both `app/src/` **and** the rebuilt `docs/`.
 
 ## 8. Lessons learned (please keep these in mind)
 
-* **Edit `app/app.html`, then rebuild.** Changes made directly in `docs/` are overwritten by the next build.
+* **Edit `app/src/`, then rebuild.** Changes made directly in `docs/` are overwritten by the next build.
 * **Page layout:** `html, body` use `overflow-x: clip`, not `hidden`. `hidden` breaks the sticky preview on desktop.
 * **Top-level code runs before `$` exists** in some sections. Use `document.getElementById` in code that runs while the page loads.
 * **Inside `buildPDF`, the translator is `PT()`**, because `T` is already used as a variable in `qBlock`.

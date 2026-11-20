@@ -1,6 +1,24 @@
 /* ---------------- text formatting (per question) ---------------- */
 const SWATCHES = [["#111111", "Black"], ["#C0392B", "Red"], ["#1F5FBF", "Blue"], ["#2E7D32", "Green"], ["#D35400", "Orange"], ["#7B3FA0", "Purple"]];
 const alDef = () => S.d.justify !== false ? "justify" : "left";   // what a line with no alignment of its own looks like
+// ⋯ More: the less-used switches of a card; whatever is switched on also shows as a chip so it's never hidden
+const MORE = {
+  nonum:     { ic: "#", label: "No number", sub: "print it without a question number", on: it => it.nonum, q: true },
+  hidemarks: { ic: "✕", label: "Hide marks", sub: "don't print [marks] (they still count)", on: it => it.hideMarks, q: true },
+  half:      { ic: "◧", label: "Half width", sub: "two short questions side by side", on: it => it.width === "half", q: true },
+  newpage:   { ic: "⤓", label: "Start on a new page", sub: "", on: it => it.newPage },
+  linenums:  { ic: "№", label: "Line numbers", sub: "number every 5th line (passages)", on: it => it.lineNums }
+};
+function moreMenu(it){
+  const keys = Object.keys(MORE).filter(k => it.type === "q" || !MORE[k].q);
+  return `<span class="ins-wrap"><button type="button" class="btn sm" data-ins title="More options for this ${it.type === "q" ? "question" : "text"}">⋯ More ▾</button><div class="ins-menu hidden">
+    ${keys.map(k => { const m = MORE[k], on = !!m.on(it); return `<button type="button" class="ins-it ${on ? "is-on" : ""}" data-act="${k}"><span class="ic">${on ? "✓" : m.ic}</span><span><b>${m.label}</b>${m.sub ? `<small>${m.sub}</small>` : ""}</span></button>`; }).join("")}
+  </div></span>`;
+}
+function moreChips(it){
+  const on = Object.keys(MORE).filter(k => (it.type === "q" || !MORE[k].q) && MORE[k].on(it));
+  return on.length ? `<div class="flags">${on.map(k => `<button type="button" class="flag" data-act="${k}" title="Switch off">${MORE[k].ic} ${MORE[k].label} ✕</button>`).join("")}</div>` : "";
+}
 function insertMenu(it){
   const I = (act, ic, label, sub, title) => `<button type="button" class="ins-it" data-act="${act}" title="${title || ""}"><span class="ic">${ic}</span><span><b>${label}</b><small>${sub}</small></span></button>`;
   return `<span class="ins-wrap"><button type="button" class="btn sm" data-ins title="Put a table, equation, graph, molecule or picture where the cursor is">＋ Insert ▾</button><div class="ins-menu hidden">

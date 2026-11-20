@@ -29,6 +29,9 @@ async def main():
         ok("A1 start screen shown on launch", await pg.is_visible('#startModal'))
         await pg.screenshot(path='dry_start.png')
         await pg.click('#stNew'); await pg.clock.run_for(300)
+        for _ in range(50):   # ＋ New first keeps a 🕘 copy in IndexedDB (real time, not the fake clock)
+            if await pg.is_visible('#saveModal'): break
+            await asyncio.sleep(.1)
         ok("A1b name dialog shown first", await pg.is_visible('#saveModal'))
         await pg.fill('#svName', 'Dry run exam'); await pg.click('#svGo'); await pg.clock.run_for(500)
         ok("A2 new project file created & written", await pg.evaluate("__writes")>=1, await pg.evaluate("Object.keys(__files)"))
@@ -42,6 +45,10 @@ async def main():
         await pg.click('#tilePaste'); await pg.fill('#pasteArea', open(__import__('_bee').fx('ai_paste.txt')).read()); await pg.dispatch_event('#pasteArea','input'); await pg.clock.run_for(200)
         ok("B1 paste count preview", 'Found 11 questions in 3 parts' in await pg.text_content('#pasteCount'), await pg.text_content('#pasteCount'))
         await pg.click('#pasteGo'); await pg.clock.run_for(1500)
+        for _ in range(50):   # the paste first keeps a 🕘 copy in IndexedDB (real time, not the fake clock)
+            if not await pg.evaluate("$('#pasteModal').classList.contains('open')"): break
+            await asyncio.sleep(.1)
+        await pg.clock.run_for(500)
         S = await pg.evaluate("__exam.S().items")
         qs=[x for x in S if x['type']=='q']
         ok("B2 11 questions, 3 parts", len(qs)==11 and sum(x['type']=='section' for x in S)==3)

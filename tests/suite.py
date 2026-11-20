@@ -4,7 +4,7 @@ Every check prints PASS/FAIL; the script exits with 1 if anything failed."""
 import asyncio, base64, os, sys, traceback
 from playwright.async_api import async_playwright
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from _bee import APP, FIX, OUT, ROOT, chrome
+from _bee import APP, FIX, OFFLINE, OUT, ROOT, chrome
 
 R = []
 def ok(name, cond, extra=""):
@@ -175,8 +175,77 @@ async def looks(b):
     except Exception as e: ok("French + colourful + molecule + number line + emoji build a PDF", False, e)
     ok("molecule drawing library works", await pg.evaluate("(async()=>!!(await getMol('CCO')).png)()")); await c.close()
 
+async def lead_in(b):
+    # a short "Refer to the picture below." note must never be left alone at the foot of a page
+    c, pg, errs = await fresh(b); hit = 0; bad = []
+    for n in range(10, 40):
+        items = [{"id": f"f{k}", "type": "q", "text": "Filler question number %d." % k, "marks": "1"} for k in range(n)]
+        items += [{"id": "lead", "type": "note", "text": "Refer to the picture below."},
+                  {"id": "pic", "type": "q", "text": "{img: p1 | 60% | center}\nWhat does the picture show?", "marks": "2", "lines": 4,
+                   "pics": {"p1": {"src": IMG, "w": 400, "h": 300}}}]
+        await pg.evaluate("it => __exam.set({d:{}, items: it})", items)
+        r = await build(pg); a, z = pages_of(r, "lead"), pages_of(r, "pic")
+        if a and z and a[-1] != z[0]: bad.append(n)
+        if a and z and a[0] > 1 and min(x["y0"] for x in r["regions"] if x["id"] == "lead") < 40: hit += 1
+    ok("lead-in note stays with the picture question it introduces", not bad, f"split at {bad}")
+    ok("lead-in check really reached a page edge", hit >= 1, f"{hit} cases moved"); await c.close()
+
+async def settings_tabs(b):
+    c, pg, errs = await fresh(b)
+    vis = lambda k: pg.evaluate(f"!!document.querySelector('[data-k={k}]').offsetParent")
+    first = [await vis("title"), await vis("style"), await vis("paper")]
+    await pg.click("#setTabs [data-tab=look]"); look = [await vis("title"), await vis("style"), await vis("accent")]
+    await pg.click("#setTabs [data-tab=print]"); prn = [await vis("paper"), await vis("showMarks"), await vis("answerMode")]
+    keys = await pg.evaluate("[...document.querySelectorAll('#setTabs ~ .tabpane [data-k]')].map(e => e.dataset.k)")
+    ok("settings tabs: Exam / Look / Printing each show their own settings", first == [True, False, False] and look == [False, True, True] and all(prn), (first, look, prn))
+    ok("settings tabs: every setting is in exactly one tab", len(keys) == len(set(keys)) == 28, len(keys))
+    await pg.reload(); await pg.wait_for_timeout(1200)
+    ok("settings tabs: last tab is remembered", await pg.evaluate("$('#setTabs .on').dataset.tab") == "print")
+    await pg.evaluate("localStorage.removeItem('bee.tab')"); await c.close()
+
+async def more_menu(b):
+    c, pg, errs = await fresh(b)
+    await pg.evaluate("__exam.set({d:{}, items:[{id:'q1',type:'q',text:'What is 2+2?',marks:'1'}]})"); await pg.wait_for_timeout(300)
+    card = ".card[data-id=q1]"
+    before = await pg.evaluate(f"[...document.querySelector('{card} [data-ins]').closest('.row, div').querySelectorAll(':scope > .btn, :scope > .ins-wrap > .btn')].filter(b => b.offsetParent).length")
+    await pg.click(f"{card} [data-ins]:has-text('More')"); await pg.click(f"{card} .ins-it[data-act=nonum]"); await pg.wait_for_timeout(300)
+    st = await pg.evaluate("S.items[0].nonum")
+    chip = await pg.evaluate(f"!!document.querySelector('{card} .flag[data-act=nonum]')")
+    await pg.click(f"{card} .flag[data-act=nonum]"); await pg.wait_for_timeout(300)
+    await pg.click(f"{card} [data-ins]:has-text('More')"); await pg.click(f"{card} .ins-it[data-act=half]"); await pg.wait_for_timeout(300)
+    ok("More ▾ menu: switches work and show as a chip", st and chip and not await pg.evaluate("S.items[0].nonum") and await pg.evaluate("S.items[0].width") == "half")
+    ok("More ▾ menu: card has fewer buttons on show", before <= 4, f"{before} buttons in the bottom row"); await c.close()
+
+async def tour_and_demo(b):
+    for w, h in [(1400, 1000), (390, 844)]:
+        c, pg, errs = await fresh(b, viewport={"width": w, "height": h}, is_mobile=w < 700, has_touch=w < 700)
+        await pg.evaluate("startTour()"); good = 0
+        for k in range(4):
+            await pg.wait_for_timeout(250)
+            r = await pg.evaluate("""() => { const t = $('#tourTip').getBoundingClientRect(), g = $('#tourRing').getBoundingClientRect();
+                return { inside: t.left >= 0 && t.top >= 0 && t.right <= innerWidth && t.bottom <= innerHeight, ring: !$('#tourRing').classList.contains('hidden') && g.height > 10,
+                         overlap: !(t.bottom <= g.top || t.top >= g.bottom || t.right <= g.left || t.left >= g.right) }; }""")
+            good += r["inside"] and r["ring"]
+            if k == 1 and w > 700: await pg.screenshot(path=os.path.join(OUT, "tour_step2.png"))
+            await pg.click("#tourNext")
+        ok(f"welcome tour {w}px: all 4 steps on screen and pointing at something", good == 4, f"{good}/4")
+        ok(f"welcome tour {w}px: closes and is remembered", await pg.evaluate("$('#tourTip').classList.contains('hidden') && localStorage.getItem('bee.toured') === '1'"))
+        await c.close()
+    c, pg, errs = await fresh(b)
+    await pg.evaluate("openStart()"); await pg.click("#stDemo"); await pg.wait_for_timeout(1500)
+    d = await pg.evaluate("({ t: S.d.title, q: S.items.filter(i => i.type === 'q').length, file: proj.handle, open: $('#startModal').classList.contains('open') })")
+    r = await build(pg)
+    ok("demo exam (website): opens with its questions and builds", d["t"] and d["q"] >= 20 and not d["file"] and not d["open"] and r["pages"] >= 3, (d, r["pages"]))
+    await pg.evaluate("tourAt >= 0 && endTour()"); await c.close()
+    c = await b.new_context(viewport={"width": 1400, "height": 1000}); pg = await c.new_page()
+    await pg.goto("file://" + OFFLINE); await pg.wait_for_timeout(2500)
+    await pg.evaluate("openStart()"); await pg.click("#stDemo"); await pg.wait_for_timeout(1500)
+    n = await pg.evaluate("S.items.filter(i => i.type === 'q').length")
+    ok("demo exam (offline file): works without internet", n >= 20, n); await c.close()
+
 CHECKS = [phones, sticky_preview, paste_details_rubric, formatting, pdf_guard, cut_from_pdf, drawings, mcq_ends_after_options,
-          sub_question_split, mcq_split, page_breaks, click_to_jump, insert_menu, save_dialog, prompts, looks]
+          sub_question_split, mcq_split, page_breaks, click_to_jump, insert_menu, save_dialog, prompts, looks,
+          lead_in, settings_tabs, more_menu, tour_and_demo]
 
 async def main():
     os.chdir(OUT)

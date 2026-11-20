@@ -96,7 +96,7 @@ function render(){
         <div class="miss hidden" data-miss></div><div class="picstrip hidden" data-pics></div>
         <div class="rich hidden" data-rich></div>
         ${imgBlock}<div class="row">${insertMenu(it)}
-        <span class="grow"></span><button class="btn sm ${it.lineNums ? "on-t" : ""}" data-act="linenums" title="Number every 5th line (for reading passages)">№ Line numbers</button><button class="btn sm ${it.newPage ? "on-t" : ""}" data-act="newpage" title="Start on a new page">⤓ New page</button></div>
+        <span class="grow"></span>${moreMenu(it)}</div>${moreChips(it)}
       </div></div>`;
     }
     return `<div class="card" data-id="${it.id}"><div class="badge">${it.nonum ? "–" : meta[it.id]}</div><div class="body">
@@ -114,18 +114,15 @@ function render(){
         ${(it.subs || []).some(sb => num(sb.marks) > 0) ? `<label title="The sum of the sub-question marks">Marks <input type="number" disabled value="${fmt(qMarks(it))}" style="opacity:.7"></label>` : `<label>Marks <input type="number" min="0" step="0.5" data-f="marks" value="${esc(it.marks)}"></label>`}
         ${it.mcq ? "" : spaceCtl(it, "data-f")}
         <label>Part <select data-part>${partOpts(it.id)}</select></label>
-        <label>Width <select data-f="width">${opt("", "Full", it.width)}${opt("half", "Half · 2 per row", it.width)}</select></label>
         <label>Type <select data-f="mcq">${opt("", "Written", it.mcq)}${opt("single", "MCQ · one answer", it.mcq)}${opt("multi", "MCQ · multiple answers", it.mcq)}</select></label>
         ${it.mcq || /^\s*\(?[a-hA-H][\).]/m.test(qText(it)) ? `<label>Options <select data-f="optCols">${opt("", "1 per line", it.optCols)}${opt("2", "2 columns", it.optCols)}${opt("4", "4 columns", it.optCols)}</select></label>` : ""}
         <span class="grow"></span>
-        <button class="btn sm ${it.nonum ? "on-t" : ""}" data-act="nonum" title="Print this question without a number (e.g. “Use the word … in a sentence”)"># No number</button>
-        <button class="btn sm ${it.hideMarks ? "on-t" : ""}" data-act="hidemarks" title="Don't print [marks] for this question (they still count in the total)">Hide marks</button>
-        <button class="btn sm ${it.newPage ? "on-t" : ""}" data-act="newpage" title="Start this question on a new page">⤓ New page</button>
-        <button class="btn sm ${it.lineNums ? "on-t" : ""}" data-act="linenums" title="Number every 5th line of the question text">№ Line numbers</button>
         ${it.mcq ? "" : `<button class="btn sm" data-act="subadd" title="Add (a), (b), (c)… parts with their own marks">＋ Sub-question</button>`}
         ${it.mcq || (it.answer || "").trim() || it._ans ? "" : `<button class="btn sm" data-act="showans" title="Model answer for the answer key (teacher copy)">✎ Model answer</button>`}
         ${insertMenu(it)}
+        ${moreMenu(it)}
       </div>
+      ${moreChips(it)}
     </div></div>`;
   }).join("");
   list.querySelectorAll("textarea").forEach(autoGrow);
@@ -232,6 +229,7 @@ async function onListClick(e){
     case "nonum": it.nonum = !it.nonum; break;
     case "hidemarks": it.hideMarks = !it.hideMarks; break;
     case "linenums": it.lineNums = !it.lineNums; break;
+    case "half": it.width = it.width === "half" ? "" : "half"; break;
     case "correct": { ensureOptions(it); const oi = +b.dataset.oi; let c = new Set(it.correct || []); if(c.has(oi)) c.delete(oi); else { if(it.mcq !== "multi") c = new Set(); c.add(oi); } it.correct = [...c].sort((a, b2) => a - b2); break; }
     case "showans": it._ans = true; render(); setTimeout(() => { const t = document.querySelector(`.card[data-id="${it.id}"] textarea[data-f=answer]`); if(t) t.focus(); }, 30); return;
     case "subadd": { it.subs = it.subs || []; const sb = { id: nid(), text: "", marks: "", lines: "", space: "lines", answer: "" }; it.subs.push(sb); render(); changed(); setTimeout(() => { const t = document.querySelector(`.card[data-id="${it.id}"] textarea[data-sub="${sb.id}"][data-sf=text]`); if(t) t.focus(); }, 30); return; }

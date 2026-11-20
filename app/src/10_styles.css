@@ -90,6 +90,22 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+.tour-ring{position:fixed;z-index:70;border-radius:12px;box-shadow:0 0 0 4px var(--gold),0 0 0 9999px rgba(30,24,10,.38);pointer-events:none;transition:all .25s ease}
+.tour-tip{position:fixed;z-index:71;width:min(340px,calc(100vw - 24px));background:#fff;border-radius:14px;padding:16px 18px 14px;box-shadow:0 14px 40px rgba(0,0,0,.28);transition:top .25s ease,left .25s ease}
+.tour-tip h3{font-size:16px;margin:2px 0 6px}
+.tour-tip p{font-size:13.5px;line-height:1.5;color:#444;margin:0 0 12px}
+.tour-step{font:600 11px system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-d)}
+.tour-btns{display:flex;align-items:center;gap:6px}
+.tour-btns a{font-size:12.5px;color:var(--muted)}
+.ins-it.is-on .ic{color:#2A9D5C;font-weight:800}
+.flags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.flag{border:1px solid #E7D7A8;background:#FFF7DF;color:#6B5313;border-radius:999px;padding:2px 9px;font:12px system-ui,sans-serif;cursor:pointer}
+.flag:hover{background:#FDECEA;border-color:#E9B4AD;color:#8E2B20}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-4px 0 14px;overflow-x:auto}
+.tabs button{border:0;background:none;padding:8px 14px;font:600 13.5px system-ui,sans-serif;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px;cursor:pointer;white-space:nowrap;border-radius:6px 6px 0 0}
+.tabs button:hover{color:var(--ink);background:#FBF7EE}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--gold)}
+.tabpane .checks{margin-top:12px}
 .hist-list{max-height:60vh;overflow:auto;border:1px solid var(--line);border-radius:10px}
 .hist-row{display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);font-size:13.5px}
 .hist-row:last-child{border-bottom:0}.hist-row:hover{background:#FBF7EE}.hist-act{display:flex;gap:6px}

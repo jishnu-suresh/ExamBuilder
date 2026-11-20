@@ -46,6 +46,7 @@ single.update({
     "/*__SORTABLE__*/": rd(os.path.join(V, "sortable", "Sortable.min.js")),
     "/*__SMILES__*/": rd(os.path.join(V, "smiles", "smiles-drawer.min.js")).replace("</script", "<\\/script"),
     "/*__PDFJS__*/": rd(os.path.join(V, "pdfjs", "pdf.min.js")),
+    "/*__DEMO__*/null": rd(os.path.join(ROOT, "demo", "demo_all_features.exam.json")).strip().replace("</", "<\\/"),
     "__PDFJS_WORKER__": rd(os.path.join(V, "pdfjs", "pdf.worker.min.js")),
 })
 single_html = fill(src, single)

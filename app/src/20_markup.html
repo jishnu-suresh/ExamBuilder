@@ -33,7 +33,13 @@
     <!-- STEP 1 -->
     <section class="panel">
       <h2><span class="step">1</span>Exam details</h2>
-      <div class="fields">
+      <div class="tabs" role="tablist" id="setTabs">
+        <button type="button" role="tab" data-tab="exam" class="on">📝 Exam</button>
+        <button type="button" role="tab" data-tab="look">🎨 Look</button>
+        <button type="button" role="tab" data-tab="print">🖨 Printing</button>
+      </div>
+      <div class="tabpane" data-pane="exam">
+        <div class="fields">
         <label class="f">Exam title<input data-k="title" placeholder="Semester 1 Exam"></label>
         <label class="f"><span>Subtitle <span class="hint">· optional, under the title</span></span><input data-k="subtitle" placeholder="e.g. Unit 3 — Fractions &amp; Percentages"></label>
         <label class="f">Academic year<input data-k="year" placeholder="2025-2026"></label>
@@ -43,25 +49,18 @@
         <label class="f"><span>Class / Grade <span class="hint">· leave blank → students fill in</span></span><input data-k="className" placeholder="e.g. Grade 8B"></label>
         <label class="f"><span>Date <span class="hint">· leave blank → students fill in</span></span><input data-k="date" placeholder="e.g. 12 Dec 2025"></label>
         <label class="f"><span>Total marks <span class="hint" id="autoTotalHint">· auto: 0</span></span><input data-k="totalOverride" type="number" min="0" step="0.5" placeholder="auto from questions"></label>
-        <label class="f full">Where do students write their answers?
-          <select data-k="answerMode">
-            <option value="paper">On the question paper — with answer lines</option>
-            <option value="sheet">On a separate answer sheet — compact question paper, no answer lines</option>
-          </select></label>
-        <label class="f full">Instructions <span class="hint">one instruction per line — each becomes a bullet</span><textarea data-k="instructions"></textarea></label>
-      </div>
-
-      <details class="more">
-        <summary>Layout &amp; branding</summary>
-        <div class="fields" style="margin-top:12px">
           <label class="f">School name<input data-k="school" placeholder="The Hive Academy"></label>
-          <label class="f">Language on the paper<select data-k="lang"><option value="">English</option><option value="fr">Français</option></select></label>
-          <label class="f">Paper size<select data-k="paper"><option value="a4">A4</option><option value="letter">US Letter</option></select></label>
-          <label class="f">Question font size<select data-k="fontSize"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt</option><option value="13">13 pt</option><option value="14">14 pt</option><option value="16">16 pt</option><option value="18">18 pt</option></select></label>
-          <label class="f">Line spacing<select data-k="lineSpacing"><option value="1">Normal</option><option value="1.5">1.5 lines</option><option value="2">Double</option></select></label>
+        <label class="f full">Instructions <span class="hint">one instruction per line — each becomes a bullet</span><textarea data-k="instructions"></textarea></label>
+        </div>
+      </div>
+      <div class="tabpane hidden" data-pane="look">
+        <div class="fields">
           <label class="f">Style<select data-k="style"><option value="">Classic (black &amp; white friendly)</option><option value="colour">🎨 Colourful</option></select></label>
           <label class="f" data-show-colour>Colours<select data-k="palette"><option value="">🌈 Rainbow</option><option value="honey">🍯 Honey</option><option value="ocean">🌊 Ocean</option><option value="garden">🌿 Garden</option><option value="berry">🫐 Berry</option></select></label>
           <label class="f">Accent colour<input data-k="accent" type="color" style="height:36px;padding:3px"></label>
+          <label class="f">Language on the paper<select data-k="lang"><option value="">English</option><option value="fr">Français</option></select></label>
+          <label class="f">Question font size<select data-k="fontSize"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt</option><option value="13">13 pt</option><option value="14">14 pt</option><option value="16">16 pt</option><option value="18">18 pt</option></select></label>
+          <label class="f">Line spacing<select data-k="lineSpacing"><option value="1">Normal</option><option value="1.5">1.5 lines</option><option value="2">Double</option></select></label>
           <div class="f full">
             <span class="kind" style="margin-bottom:6px">Logo</span>
             <div class="logo-row">
@@ -73,17 +72,29 @@
           </div>
         </div>
         <div class="checks">
+          <label title="Paragraphs get a straight right edge, like a book. Single lines, options and tables stay as they are."><input type="checkbox" data-k="justify"> Justify paragraphs (straight right edge)</label>
+          <label><input type="checkbox" data-k="bigInline"> Full-size fractions &amp; limits inside sentences</label>
+        </div>
+      </div>
+      <div class="tabpane hidden" data-pane="print">
+        <div class="fields">
+          <label class="f">Paper size<select data-k="paper"><option value="a4">A4</option><option value="letter">US Letter</option></select></label>
+        <label class="f full">Where do students write their answers?
+          <select data-k="answerMode">
+            <option value="paper">On the question paper — with answer lines</option>
+            <option value="sheet">On a separate answer sheet — compact question paper, no answer lines</option>
+          </select></label>
+        </div>
+        <div class="checks">
           <label><input type="checkbox" data-k="showMarks"> Show marks beside questions</label>
           <label><input type="checkbox" data-k="nameEveryPage"> Name field on every page</label>
           <label><input type="checkbox" data-k="restartNumbering"> Restart numbering in each part</label>
-          <label title="Paragraphs get a straight right edge, like a book. Single lines, options and tables stay as they are."><input type="checkbox" data-k="justify"> Justify paragraphs (straight right edge)</label>
           <label><input type="checkbox" data-k="sectionNewPage"> Start each part on a new page</label>
           <label><input type="checkbox" data-k="endMarker"> “End of exam” marker</label>
           <label><input type="checkbox" data-k="scoreTable"> Points per part on cover</label>
-          <label><input type="checkbox" data-k="bigInline"> Full-size fractions &amp; limits inside sentences</label>
           <label><input type="checkbox" data-k="largePrint"> <b>Accommodation / large print</b> (16 pt, double spacing)</label>
         </div>
-      </details>
+      </div>
     </section>
 
     <!-- RUBRIC -->
@@ -479,7 +490,9 @@ x = 3
       <button class="start-btn hidden" id="stContinueLocal"><b>Continue where you left off</b><span id="stLocalInfo">kept in this browser</span></button>
       <button class="start-btn" id="stNew"><b>＋ New exam</b><span>First choose where to save the project file</span></button>
       <button class="start-btn" id="stOpen"><b>📂 Open a saved exam</b><span>An .exam.json project file</span></button>
+      <button class="start-btn" id="stDemo"><b>🐝 Try the demo exam</b><span>A finished sample paper to look around and play with</span></button>
     </div>
+    <p style="text-align:center;margin:10px 0 0"><a href="#" id="stTour" style="font-size:13px;color:var(--gold-d)">New here? Take the 1-minute tour →</a></p>
     <p class="hint" id="stNote" style="margin:12px 0 0"></p>
     <p style="text-align:center;margin:14px 0 0;font:italic 12px Georgia,serif;color:var(--muted)">🐝 BEE · Build • Edit • Evaluate · © Jishnu</p>
     <p style="text-align:center;margin:6px 0 0"><a href="#" id="stSkip" style="color:var(--muted);font-size:13px">Continue without a project file</a></p>
@@ -488,6 +501,11 @@ x = 3
 
 <div class="updbar hidden" id="updBar"><span class="upd-hex" aria-hidden="true">🍯</span><span><b>Fresh honey in the hive!</b><br><small>A new version of 🐝 BEE is ready — your work stays safe.</small></span><button class="btn sm primary" id="updGo">🐝 Update now</button></div>
 <button class="pvfab" id="pvFab" title="Jump to the preview">👁 <span>Preview</span></button>
+<div class="tour-ring hidden" id="tourRing" aria-hidden="true"></div>
+<div class="tour-tip hidden" id="tourTip" role="dialog" aria-live="polite">
+  <div class="tour-step" id="tourStep"></div><h3 id="tourTitle"></h3><p id="tourText"></p>
+  <div class="tour-btns"><a href="#" id="tourSkip">Skip tour</a><span style="flex:1"></span><button class="btn sm" id="tourBack">← Back</button><button class="btn sm primary" id="tourNext">Next →</button></div>
+</div>
 <div class="wm" aria-hidden="true">🐝 BEE · © Jishnu</div>
 <!-- VERSIONS -->
 <div class="modal" id="verModal">

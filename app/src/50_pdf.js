@@ -899,7 +899,19 @@ function buildPDF(opt){
       const splitSubs = it.type === "q" && blk.groupH && blk.groupH.length > 2 && y + blk.h > BOTTOM && y > TOP + 1;
       // a long reading passage (text only) flows into the space left instead of leaving a gap
       const flowNote = it.type === "note" && !it.heading && !it.img && blk.h > 40 && y > TOP + 1 && BOTTOM - y >= 30 && !picsOf(it.text).length && !/\{img:|\{mol:|^\s*\|/m.test(it.text || "");
-      if(splitSubs){ if(y + blk.groupH[0] + blk.groupH[1] > BOTTOM) newPage(); }
+      // a short lead-in ("Refer to the image below.", "Figure 2", "Answer questions 5–8:") never sits alone at the
+      // bottom of a page: if what it introduces has to start on the next page, the lead-in goes with it
+      const leadIn = it.type === "note" && !it.heading && blk.h <= 24 && y > TOP + 1 && y + blk.h <= BOTTOM && (() => {
+        const nx = items[idx + 1]; if(!nx || nx.type === "section" || nx.heading || nx.pagebreak || nx.newPage) return false;
+        const nb = nx.type === "q" && nx.width === "half" ? qBlock(nx, ML, (CW - 8) / 2) : qBlock(nx, ML, CW);
+        const canFlow = nx.type === "note" && !nx.img && nb.h > 40 && !picsOf(nx.text).length && !/\{img:|\{mol:|^\s*\|/m.test(nx.text || "");
+        let need = nb.h <= pageAvail && !canFlow ? nb.h : nb.first;
+        if(nx.type === "q" && nb.groupH && nb.groupH.length > 2 && nb.h > pageAvail * .5) need = Math.min(need, nb.groupH[0] + nb.groupH[1]);
+        const y2 = y + blk.h + NGAP;
+        return blk.h + need <= pageAvail * .9 && y2 + need > BOTTOM;
+      })();
+      if(leadIn) newPage();
+      else if(splitSubs){ if(y + blk.groupH[0] + blk.groupH[1] > BOTTOM) newPage(); }
       else if(flowNote){ if(y + blk.first > BOTTOM) newPage(); }
       else if(blk.h <= pageAvail ? y + blk.h > BOTTOM : y + blk.first > BOTTOM) newPage();
       pageOf[it.id] = doc.getNumberOfPages();

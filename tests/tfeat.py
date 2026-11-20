@@ -72,7 +72,7 @@ async def main():
         await pg.click(f'{c2} [data-act=correct][data-oi="2"]'); await pg.wait_for_timeout(150)
         ok("2c ✓ on a single-answer MCQ replaces the old correct one", await pg.evaluate(f"__exam.S().items.find(x=>x.id=='{q2}').correct")==[2])
         await pg.click(f'{c2} [data-act=correct][data-oi="1"]'); await pg.wait_for_timeout(150)
-        await pg.click(f'{c5} [data-act=newpage]'); await pg.click(f'{c5} [data-act=linenums]'); await pg.wait_for_timeout(150)
+        await pg.click(f'{c5} [data-ins]:has-text("More")'); await pg.click(f'{c5} .ins-it[data-act=newpage]'); await pg.click(f'{c5} [data-ins]:has-text("More")'); await pg.click(f'{c5} .ins-it[data-act=linenums]'); await pg.wait_for_timeout(150)
         ok("2d new page + line numbers toggles", await pg.evaluate(f"(()=>{{const i=__exam.S().items.find(x=>x.id=='{q5}'); return !!i.newPage && !!i.lineNums}})()"))
         # equation into the sub-question box
         await pg.focus(f'{c7} textarea[data-sub="{sid}"][data-sf=text]'); await pg.keyboard.press('End')

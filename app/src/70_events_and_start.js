@@ -136,6 +136,15 @@ $("#pasteGo").onclick = async () => {
   if(firstMiss) setTimeout(() => { const c = $("#list").querySelector(`.card[data-id="${firstMiss.id}"]`); if(c) c.scrollIntoView({ behavior: "smooth", block: "center" }); }, 400);
 };
 $("#formatHelp").onclick = () => openModal("#helpModal");
+// settings tabs: 📝 Exam · 🎨 Look · 🖨 Printing (the last one used is remembered)
+function setTab(t){
+  if(!document.querySelector(`#setTabs [data-tab="${t}"]`)) t = "exam";
+  document.querySelectorAll("#setTabs [data-tab]").forEach(b => { b.classList.toggle("on", b.dataset.tab === t); b.setAttribute("aria-selected", b.dataset.tab === t); });
+  document.querySelectorAll(".tabpane[data-pane]").forEach(p => p.classList.toggle("hidden", p.dataset.pane !== t));
+  try{ localStorage.setItem("bee.tab", t); }catch(_){}
+}
+$("#setTabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if(b) setTab(b.dataset.tab); });
+try{ setTab(localStorage.getItem("bee.tab") || "exam"); }catch(_){}
 $("#clearAll").onclick = () => { if(!S.items.length) return; keepVersion("Before Clear all"); if(confirm("Remove all questions? (Exam details are kept.)")){ S.items = []; render(); changed(); } };
 $("#btnDownload").onclick = () => download();
 $("#dlMenuBtn").onclick = e => { e.stopPropagation(); $("#dlMenu").classList.toggle("hidden"); };
@@ -222,6 +231,68 @@ $("#stContinueFile").onclick = async () => {
     $("#startModal").classList.remove("open");
   }catch(e){ toast("Couldn't open " + h.name + " — was it moved or deleted?"); }
 };
+
+/* ---------------- 🐝 demo exam + first-time tour ---------------- */
+const DEMO = /*__DEMO__*/null;   // the single offline file carries the demo inside it; the website fetches it
+async function loadDemo(){
+  let o = DEMO;
+  if(!o){ try{ o = await (await fetch("demo/demo_all_features.exam.json")).json(); }catch(_){ toast("The demo exam needs an internet connection the first time"); return false; } }
+  await keepVersion("Before opening the demo exam");
+  applyState(JSON.parse(JSON.stringify(o)));
+  // the demo is never written into the teacher's own project file
+  proj.handle = null; proj.name = ""; proj.dirty = false; storedHandle = null;
+  try{ await IDB.del("handle"); }catch(_){}
+  saveLocal(); updateChip();
+  toast("🐝 Demo exam opened — change anything you like. Your earlier work is in 🕘 History.");
+  return true;
+}
+$("#stDemo").onclick = async () => { if(await loadDemo()){ $("#startModal").classList.remove("open"); setTimeout(() => startTour(), 500); } };
+$("#stTour").onclick = e => { e.preventDefault(); $("#startModal").classList.remove("open"); setTimeout(() => startTour(), 300); };
+
+const TOUR = [
+  { el: "#setTabs", t: "Exam details", p: "Title, subject and teacher go in <b>📝 Exam</b>. <b>🎨 Look</b> changes the font, colours and logo; <b>🖨 Printing</b> sets the paper and answer lines." },
+  { el: "#drop", t: "Add your questions", p: "Paste what ChatGPT, Claude or Gemini wrote, add photos of a worksheet, or type your own with <b>＋ Question</b>. Each question gets its own card you can edit." },
+  { el: ".preview", t: "Check the preview", p: "This is the real PDF, updated as you type. Click any question in it to jump straight to its card." },
+  { el: "#btnDownload", t: "Download the PDF", p: "Get the student paper, the answer key or both. Your work saves itself every minute, and <b>🕘</b> keeps earlier versions in case you want to go back." }
+];
+let tourAt = -1;
+function startTour(){ tourAt = 0; showTourStep(); }
+function endTour(){ tourAt = -1; $("#tourTip").classList.add("hidden"); $("#tourRing").classList.add("hidden"); try{ localStorage.setItem("bee.toured", "1"); }catch(_){} }
+function placeTour(){
+  if(tourAt < 0) return;
+  const st = TOUR[tourAt], el = document.querySelector(st.el), tip = $("#tourTip"), ring = $("#tourRing");
+  if(!el || !el.offsetParent && el.tagName !== "ASIDE"){ ring.classList.add("hidden"); tip.style.left = (innerWidth - tip.offsetWidth) / 2 + "px"; tip.style.top = (innerHeight - tip.offsetHeight) / 2 + "px"; return; }
+  const r = el.getBoundingClientRect(), pad = 6;
+  const top = Math.max(4, r.top - pad), bot = Math.min(innerHeight - 4, r.bottom + pad);
+  Object.assign(ring.style, { left: r.left - pad + "px", top: top + "px", width: r.width + pad * 2 + "px", height: Math.max(0, bot - top) + "px" }); ring.classList.remove("hidden");
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let y = bot + 12 + h < innerHeight ? bot + 12 : top - 12 - h >= 0 ? top - 12 - h : Math.max(8, innerHeight - h - 12);
+  let x = Math.min(Math.max(12, r.left + Math.min(r.width, 300) / 2 - w / 2), innerWidth - w - 12);
+  // a tall target (the preview) leaves no room above or below: sit beside it instead
+  if(r.height > innerHeight * .6){ x = r.left > w + 24 ? r.left - w - 16 : Math.min(r.right + 16, innerWidth - w - 12); y = Math.min(Math.max(12, r.top + 40), innerHeight - h - 12); }
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+function showTourStep(){
+  const st = TOUR[tourAt], el = document.querySelector(st.el);
+  $("#tourStep").textContent = "Step " + (tourAt + 1) + " of " + TOUR.length;
+  $("#tourTitle").textContent = st.t; $("#tourText").innerHTML = st.p;
+  $("#tourBack").classList.toggle("hidden", tourAt === 0);
+  $("#tourNext").textContent = tourAt === TOUR.length - 1 ? "Got it 🐝" : "Next →";
+  $("#tourTip").classList.remove("hidden");
+  if(el && el.getBoundingClientRect){ const r = el.getBoundingClientRect(); if(r.top < 60 || r.bottom > innerHeight - 20) el.scrollIntoView({ block: r.height > innerHeight * .6 ? "start" : "center" }); }
+  placeTour(); setTimeout(placeTour, 60);
+}
+$("#tourNext").onclick = () => { if(tourAt >= TOUR.length - 1) endTour(); else { tourAt++; showTourStep(); } };
+$("#tourBack").onclick = () => { if(tourAt > 0){ tourAt--; showTourStep(); } };
+$("#tourSkip").onclick = e => { e.preventDefault(); endTour(); };
+addEventListener("resize", placeTour); addEventListener("scroll", placeTour, { passive: true });
+document.addEventListener("keydown", e => { if(tourAt >= 0 && e.key === "Escape") endTour(); });
+// first visit: once the start screen is closed, offer the tour (not in automated browsers, so tests aren't interrupted)
+new MutationObserver(() => {
+  if($("#startModal").classList.contains("open") || tourAt >= 0 || navigator.webdriver) return;
+  let seen = "1"; try{ seen = localStorage.getItem("bee.toured"); }catch(_){}
+  if(!seen) setTimeout(() => { if(tourAt < 0 && !document.querySelector(".modal.open")) startTour(); }, 600);
+}).observe($("#startModal"), { attributes: true, attributeFilter: ["class"] });
 
 /* ---------------- phones: jump between the editor and the preview ---------------- */
 (() => {

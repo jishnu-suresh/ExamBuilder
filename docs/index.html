@@ -105,6 +105,22 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+.tour-ring{position:fixed;z-index:70;border-radius:12px;box-shadow:0 0 0 4px var(--gold),0 0 0 9999px rgba(30,24,10,.38);pointer-events:none;transition:all .25s ease}
+.tour-tip{position:fixed;z-index:71;width:min(340px,calc(100vw - 24px));background:#fff;border-radius:14px;padding:16px 18px 14px;box-shadow:0 14px 40px rgba(0,0,0,.28);transition:top .25s ease,left .25s ease}
+.tour-tip h3{font-size:16px;margin:2px 0 6px}
+.tour-tip p{font-size:13.5px;line-height:1.5;color:#444;margin:0 0 12px}
+.tour-step{font:600 11px system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-d)}
+.tour-btns{display:flex;align-items:center;gap:6px}
+.tour-btns a{font-size:12.5px;color:var(--muted)}
+.ins-it.is-on .ic{color:#2A9D5C;font-weight:800}
+.flags{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.flag{border:1px solid #E7D7A8;background:#FFF7DF;color:#6B5313;border-radius:999px;padding:2px 9px;font:12px system-ui,sans-serif;cursor:pointer}
+.flag:hover{background:#FDECEA;border-color:#E9B4AD;color:#8E2B20}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:-4px 0 14px;overflow-x:auto}
+.tabs button{border:0;background:none;padding:8px 14px;font:600 13.5px system-ui,sans-serif;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px;cursor:pointer;white-space:nowrap;border-radius:6px 6px 0 0}
+.tabs button:hover{color:var(--ink);background:#FBF7EE}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--gold)}
+.tabpane .checks{margin-top:12px}
 .hist-list{max-height:60vh;overflow:auto;border:1px solid var(--line);border-radius:10px}
 .hist-row{display:grid;grid-template-columns:120px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);font-size:13.5px}
 .hist-row:last-child{border-bottom:0}.hist-row:hover{background:#FBF7EE}.hist-act{display:flex;gap:6px}
@@ -418,7 +434,13 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
     <!-- STEP 1 -->
     <section class="panel">
       <h2><span class="step">1</span>Exam details</h2>
-      <div class="fields">
+      <div class="tabs" role="tablist" id="setTabs">
+        <button type="button" role="tab" data-tab="exam" class="on">📝 Exam</button>
+        <button type="button" role="tab" data-tab="look">🎨 Look</button>
+        <button type="button" role="tab" data-tab="print">🖨 Printing</button>
+      </div>
+      <div class="tabpane" data-pane="exam">
+        <div class="fields">
         <label class="f">Exam title<input data-k="title" placeholder="Semester 1 Exam"></label>
         <label class="f"><span>Subtitle <span class="hint">· optional, under the title</span></span><input data-k="subtitle" placeholder="e.g. Unit 3 — Fractions &amp; Percentages"></label>
         <label class="f">Academic year<input data-k="year" placeholder="2025-2026"></label>
@@ -428,25 +450,18 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
         <label class="f"><span>Class / Grade <span class="hint">· leave blank → students fill in</span></span><input data-k="className" placeholder="e.g. Grade 8B"></label>
         <label class="f"><span>Date <span class="hint">· leave blank → students fill in</span></span><input data-k="date" placeholder="e.g. 12 Dec 2025"></label>
         <label class="f"><span>Total marks <span class="hint" id="autoTotalHint">· auto: 0</span></span><input data-k="totalOverride" type="number" min="0" step="0.5" placeholder="auto from questions"></label>
-        <label class="f full">Where do students write their answers?
-          <select data-k="answerMode">
-            <option value="paper">On the question paper — with answer lines</option>
-            <option value="sheet">On a separate answer sheet — compact question paper, no answer lines</option>
-          </select></label>
-        <label class="f full">Instructions <span class="hint">one instruction per line — each becomes a bullet</span><textarea data-k="instructions"></textarea></label>
-      </div>
-
-      <details class="more">
-        <summary>Layout &amp; branding</summary>
-        <div class="fields" style="margin-top:12px">
           <label class="f">School name<input data-k="school" placeholder="The Hive Academy"></label>
-          <label class="f">Language on the paper<select data-k="lang"><option value="">English</option><option value="fr">Français</option></select></label>
-          <label class="f">Paper size<select data-k="paper"><option value="a4">A4</option><option value="letter">US Letter</option></select></label>
-          <label class="f">Question font size<select data-k="fontSize"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt</option><option value="13">13 pt</option><option value="14">14 pt</option><option value="16">16 pt</option><option value="18">18 pt</option></select></label>
-          <label class="f">Line spacing<select data-k="lineSpacing"><option value="1">Normal</option><option value="1.5">1.5 lines</option><option value="2">Double</option></select></label>
+        <label class="f full">Instructions <span class="hint">one instruction per line — each becomes a bullet</span><textarea data-k="instructions"></textarea></label>
+        </div>
+      </div>
+      <div class="tabpane hidden" data-pane="look">
+        <div class="fields">
           <label class="f">Style<select data-k="style"><option value="">Classic (black &amp; white friendly)</option><option value="colour">🎨 Colourful</option></select></label>
           <label class="f" data-show-colour>Colours<select data-k="palette"><option value="">🌈 Rainbow</option><option value="honey">🍯 Honey</option><option value="ocean">🌊 Ocean</option><option value="garden">🌿 Garden</option><option value="berry">🫐 Berry</option></select></label>
           <label class="f">Accent colour<input data-k="accent" type="color" style="height:36px;padding:3px"></label>
+          <label class="f">Language on the paper<select data-k="lang"><option value="">English</option><option value="fr">Français</option></select></label>
+          <label class="f">Question font size<select data-k="fontSize"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt</option><option value="13">13 pt</option><option value="14">14 pt</option><option value="16">16 pt</option><option value="18">18 pt</option></select></label>
+          <label class="f">Line spacing<select data-k="lineSpacing"><option value="1">Normal</option><option value="1.5">1.5 lines</option><option value="2">Double</option></select></label>
           <div class="f full">
             <span class="kind" style="margin-bottom:6px">Logo</span>
             <div class="logo-row">
@@ -458,17 +473,29 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
           </div>
         </div>
         <div class="checks">
+          <label title="Paragraphs get a straight right edge, like a book. Single lines, options and tables stay as they are."><input type="checkbox" data-k="justify"> Justify paragraphs (straight right edge)</label>
+          <label><input type="checkbox" data-k="bigInline"> Full-size fractions &amp; limits inside sentences</label>
+        </div>
+      </div>
+      <div class="tabpane hidden" data-pane="print">
+        <div class="fields">
+          <label class="f">Paper size<select data-k="paper"><option value="a4">A4</option><option value="letter">US Letter</option></select></label>
+        <label class="f full">Where do students write their answers?
+          <select data-k="answerMode">
+            <option value="paper">On the question paper — with answer lines</option>
+            <option value="sheet">On a separate answer sheet — compact question paper, no answer lines</option>
+          </select></label>
+        </div>
+        <div class="checks">
           <label><input type="checkbox" data-k="showMarks"> Show marks beside questions</label>
           <label><input type="checkbox" data-k="nameEveryPage"> Name field on every page</label>
           <label><input type="checkbox" data-k="restartNumbering"> Restart numbering in each part</label>
-          <label title="Paragraphs get a straight right edge, like a book. Single lines, options and tables stay as they are."><input type="checkbox" data-k="justify"> Justify paragraphs (straight right edge)</label>
           <label><input type="checkbox" data-k="sectionNewPage"> Start each part on a new page</label>
           <label><input type="checkbox" data-k="endMarker"> “End of exam” marker</label>
           <label><input type="checkbox" data-k="scoreTable"> Points per part on cover</label>
-          <label><input type="checkbox" data-k="bigInline"> Full-size fractions &amp; limits inside sentences</label>
           <label><input type="checkbox" data-k="largePrint"> <b>Accommodation / large print</b> (16 pt, double spacing)</label>
         </div>
-      </details>
+      </div>
     </section>
 
     <!-- RUBRIC -->
@@ -864,7 +891,9 @@ x = 3
       <button class="start-btn hidden" id="stContinueLocal"><b>Continue where you left off</b><span id="stLocalInfo">kept in this browser</span></button>
       <button class="start-btn" id="stNew"><b>＋ New exam</b><span>First choose where to save the project file</span></button>
       <button class="start-btn" id="stOpen"><b>📂 Open a saved exam</b><span>An .exam.json project file</span></button>
+      <button class="start-btn" id="stDemo"><b>🐝 Try the demo exam</b><span>A finished sample paper to look around and play with</span></button>
     </div>
+    <p style="text-align:center;margin:10px 0 0"><a href="#" id="stTour" style="font-size:13px;color:var(--gold-d)">New here? Take the 1-minute tour →</a></p>
     <p class="hint" id="stNote" style="margin:12px 0 0"></p>
     <p style="text-align:center;margin:14px 0 0;font:italic 12px Georgia,serif;color:var(--muted)">🐝 BEE · Build • Edit • Evaluate · © Jishnu</p>
     <p style="text-align:center;margin:6px 0 0"><a href="#" id="stSkip" style="color:var(--muted);font-size:13px">Continue without a project file</a></p>
@@ -873,6 +902,11 @@ x = 3
 
 <div class="updbar hidden" id="updBar"><span class="upd-hex" aria-hidden="true">🍯</span><span><b>Fresh honey in the hive!</b><br><small>A new version of 🐝 BEE is ready — your work stays safe.</small></span><button class="btn sm primary" id="updGo">🐝 Update now</button></div>
 <button class="pvfab" id="pvFab" title="Jump to the preview">👁 <span>Preview</span></button>
+<div class="tour-ring hidden" id="tourRing" aria-hidden="true"></div>
+<div class="tour-tip hidden" id="tourTip" role="dialog" aria-live="polite">
+  <div class="tour-step" id="tourStep"></div><h3 id="tourTitle"></h3><p id="tourText"></p>
+  <div class="tour-btns"><a href="#" id="tourSkip">Skip tour</a><span style="flex:1"></span><button class="btn sm" id="tourBack">← Back</button><button class="btn sm primary" id="tourNext">Next →</button></div>
+</div>
 <div class="wm" aria-hidden="true">🐝 BEE · © Jishnu</div>
 <!-- VERSIONS -->
 <div class="modal" id="verModal">
@@ -1717,7 +1751,7 @@ function render(){
         <div class="miss hidden" data-miss></div><div class="picstrip hidden" data-pics></div>
         <div class="rich hidden" data-rich></div>
         ${imgBlock}<div class="row">${insertMenu(it)}
-        <span class="grow"></span><button class="btn sm ${it.lineNums ? "on-t" : ""}" data-act="linenums" title="Number every 5th line (for reading passages)">№ Line numbers</button><button class="btn sm ${it.newPage ? "on-t" : ""}" data-act="newpage" title="Start on a new page">⤓ New page</button></div>
+        <span class="grow"></span>${moreMenu(it)}</div>${moreChips(it)}
       </div></div>`;
     }
     return `<div class="card" data-id="${it.id}"><div class="badge">${it.nonum ? "–" : meta[it.id]}</div><div class="body">
@@ -1735,18 +1769,15 @@ function render(){
         ${(it.subs || []).some(sb => num(sb.marks) > 0) ? `<label title="The sum of the sub-question marks">Marks <input type="number" disabled value="${fmt(qMarks(it))}" style="opacity:.7"></label>` : `<label>Marks <input type="number" min="0" step="0.5" data-f="marks" value="${esc(it.marks)}"></label>`}
         ${it.mcq ? "" : spaceCtl(it, "data-f")}
         <label>Part <select data-part>${partOpts(it.id)}</select></label>
-        <label>Width <select data-f="width">${opt("", "Full", it.width)}${opt("half", "Half · 2 per row", it.width)}</select></label>
         <label>Type <select data-f="mcq">${opt("", "Written", it.mcq)}${opt("single", "MCQ · one answer", it.mcq)}${opt("multi", "MCQ · multiple answers", it.mcq)}</select></label>
         ${it.mcq || /^\s*\(?[a-hA-H][\).]/m.test(qText(it)) ? `<label>Options <select data-f="optCols">${opt("", "1 per line", it.optCols)}${opt("2", "2 columns", it.optCols)}${opt("4", "4 columns", it.optCols)}</select></label>` : ""}
         <span class="grow"></span>
-        <button class="btn sm ${it.nonum ? "on-t" : ""}" data-act="nonum" title="Print this question without a number (e.g. “Use the word … in a sentence”)"># No number</button>
-        <button class="btn sm ${it.hideMarks ? "on-t" : ""}" data-act="hidemarks" title="Don't print [marks] for this question (they still count in the total)">Hide marks</button>
-        <button class="btn sm ${it.newPage ? "on-t" : ""}" data-act="newpage" title="Start this question on a new page">⤓ New page</button>
-        <button class="btn sm ${it.lineNums ? "on-t" : ""}" data-act="linenums" title="Number every 5th line of the question text">№ Line numbers</button>
         ${it.mcq ? "" : `<button class="btn sm" data-act="subadd" title="Add (a), (b), (c)… parts with their own marks">＋ Sub-question</button>`}
         ${it.mcq || (it.answer || "").trim() || it._ans ? "" : `<button class="btn sm" data-act="showans" title="Model answer for the answer key (teacher copy)">✎ Model answer</button>`}
         ${insertMenu(it)}
+        ${moreMenu(it)}
       </div>
+      ${moreChips(it)}
     </div></div>`;
   }).join("");
   list.querySelectorAll("textarea").forEach(autoGrow);
@@ -1853,6 +1884,7 @@ async function onListClick(e){
     case "nonum": it.nonum = !it.nonum; break;
     case "hidemarks": it.hideMarks = !it.hideMarks; break;
     case "linenums": it.lineNums = !it.lineNums; break;
+    case "half": it.width = it.width === "half" ? "" : "half"; break;
     case "correct": { ensureOptions(it); const oi = +b.dataset.oi; let c = new Set(it.correct || []); if(c.has(oi)) c.delete(oi); else { if(it.mcq !== "multi") c = new Set(); c.add(oi); } it.correct = [...c].sort((a, b2) => a - b2); break; }
     case "showans": it._ans = true; render(); setTimeout(() => { const t = document.querySelector(`.card[data-id="${it.id}"] textarea[data-f=answer]`); if(t) t.focus(); }, 30); return;
     case "subadd": { it.subs = it.subs || []; const sb = { id: nid(), text: "", marks: "", lines: "", space: "lines", answer: "" }; it.subs.push(sb); render(); changed(); setTimeout(() => { const t = document.querySelector(`.card[data-id="${it.id}"] textarea[data-sub="${sb.id}"][data-sf=text]`); if(t) t.focus(); }, 30); return; }
@@ -3400,7 +3432,19 @@ function buildPDF(opt){
       const splitSubs = it.type === "q" && blk.groupH && blk.groupH.length > 2 && y + blk.h > BOTTOM && y > TOP + 1;
       // a long reading passage (text only) flows into the space left instead of leaving a gap
       const flowNote = it.type === "note" && !it.heading && !it.img && blk.h > 40 && y > TOP + 1 && BOTTOM - y >= 30 && !picsOf(it.text).length && !/\{img:|\{mol:|^\s*\|/m.test(it.text || "");
-      if(splitSubs){ if(y + blk.groupH[0] + blk.groupH[1] > BOTTOM) newPage(); }
+      // a short lead-in ("Refer to the image below.", "Figure 2", "Answer questions 5–8:") never sits alone at the
+      // bottom of a page: if what it introduces has to start on the next page, the lead-in goes with it
+      const leadIn = it.type === "note" && !it.heading && blk.h <= 24 && y > TOP + 1 && y + blk.h <= BOTTOM && (() => {
+        const nx = items[idx + 1]; if(!nx || nx.type === "section" || nx.heading || nx.pagebreak || nx.newPage) return false;
+        const nb = nx.type === "q" && nx.width === "half" ? qBlock(nx, ML, (CW - 8) / 2) : qBlock(nx, ML, CW);
+        const canFlow = nx.type === "note" && !nx.img && nb.h > 40 && !picsOf(nx.text).length && !/\{img:|\{mol:|^\s*\|/m.test(nx.text || "");
+        let need = nb.h <= pageAvail && !canFlow ? nb.h : nb.first;
+        if(nx.type === "q" && nb.groupH && nb.groupH.length > 2 && nb.h > pageAvail * .5) need = Math.min(need, nb.groupH[0] + nb.groupH[1]);
+        const y2 = y + blk.h + NGAP;
+        return blk.h + need <= pageAvail * .9 && y2 + need > BOTTOM;
+      })();
+      if(leadIn) newPage();
+      else if(splitSubs){ if(y + blk.groupH[0] + blk.groupH[1] > BOTTOM) newPage(); }
       else if(flowNote){ if(y + blk.first > BOTTOM) newPage(); }
       else if(blk.h <= pageAvail ? y + blk.h > BOTTOM : y + blk.first > BOTTOM) newPage();
       pageOf[it.id] = doc.getNumberOfPages();
@@ -4188,6 +4232,24 @@ $("#promptToPaste").onclick = () => { $("#promptModal").classList.remove("open")
 /* ---------------- text formatting (per question) ---------------- */
 const SWATCHES = [["#111111", "Black"], ["#C0392B", "Red"], ["#1F5FBF", "Blue"], ["#2E7D32", "Green"], ["#D35400", "Orange"], ["#7B3FA0", "Purple"]];
 const alDef = () => S.d.justify !== false ? "justify" : "left";   // what a line with no alignment of its own looks like
+// ⋯ More: the less-used switches of a card; whatever is switched on also shows as a chip so it's never hidden
+const MORE = {
+  nonum:     { ic: "#", label: "No number", sub: "print it without a question number", on: it => it.nonum, q: true },
+  hidemarks: { ic: "✕", label: "Hide marks", sub: "don't print [marks] (they still count)", on: it => it.hideMarks, q: true },
+  half:      { ic: "◧", label: "Half width", sub: "two short questions side by side", on: it => it.width === "half", q: true },
+  newpage:   { ic: "⤓", label: "Start on a new page", sub: "", on: it => it.newPage },
+  linenums:  { ic: "№", label: "Line numbers", sub: "number every 5th line (passages)", on: it => it.lineNums }
+};
+function moreMenu(it){
+  const keys = Object.keys(MORE).filter(k => it.type === "q" || !MORE[k].q);
+  return `<span class="ins-wrap"><button type="button" class="btn sm" data-ins title="More options for this ${it.type === "q" ? "question" : "text"}">⋯ More ▾</button><div class="ins-menu hidden">
+    ${keys.map(k => { const m = MORE[k], on = !!m.on(it); return `<button type="button" class="ins-it ${on ? "is-on" : ""}" data-act="${k}"><span class="ic">${on ? "✓" : m.ic}</span><span><b>${m.label}</b>${m.sub ? `<small>${m.sub}</small>` : ""}</span></button>`; }).join("")}
+  </div></span>`;
+}
+function moreChips(it){
+  const on = Object.keys(MORE).filter(k => (it.type === "q" || !MORE[k].q) && MORE[k].on(it));
+  return on.length ? `<div class="flags">${on.map(k => `<button type="button" class="flag" data-act="${k}" title="Switch off">${MORE[k].ic} ${MORE[k].label} ✕</button>`).join("")}</div>` : "";
+}
 function insertMenu(it){
   const I = (act, ic, label, sub, title) => `<button type="button" class="ins-it" data-act="${act}" title="${title || ""}"><span class="ic">${ic}</span><span><b>${label}</b><small>${sub}</small></span></button>`;
   return `<span class="ins-wrap"><button type="button" class="btn sm" data-ins title="Put a table, equation, graph, molecule or picture where the cursor is">＋ Insert ▾</button><div class="ins-menu hidden">
@@ -4820,6 +4882,15 @@ $("#pasteGo").onclick = async () => {
   if(firstMiss) setTimeout(() => { const c = $("#list").querySelector(`.card[data-id="${firstMiss.id}"]`); if(c) c.scrollIntoView({ behavior: "smooth", block: "center" }); }, 400);
 };
 $("#formatHelp").onclick = () => openModal("#helpModal");
+// settings tabs: 📝 Exam · 🎨 Look · 🖨 Printing (the last one used is remembered)
+function setTab(t){
+  if(!document.querySelector(`#setTabs [data-tab="${t}"]`)) t = "exam";
+  document.querySelectorAll("#setTabs [data-tab]").forEach(b => { b.classList.toggle("on", b.dataset.tab === t); b.setAttribute("aria-selected", b.dataset.tab === t); });
+  document.querySelectorAll(".tabpane[data-pane]").forEach(p => p.classList.toggle("hidden", p.dataset.pane !== t));
+  try{ localStorage.setItem("bee.tab", t); }catch(_){}
+}
+$("#setTabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if(b) setTab(b.dataset.tab); });
+try{ setTab(localStorage.getItem("bee.tab") || "exam"); }catch(_){}
 $("#clearAll").onclick = () => { if(!S.items.length) return; keepVersion("Before Clear all"); if(confirm("Remove all questions? (Exam details are kept.)")){ S.items = []; render(); changed(); } };
 $("#btnDownload").onclick = () => download();
 $("#dlMenuBtn").onclick = e => { e.stopPropagation(); $("#dlMenu").classList.toggle("hidden"); };
@@ -4906,6 +4977,68 @@ $("#stContinueFile").onclick = async () => {
     $("#startModal").classList.remove("open");
   }catch(e){ toast("Couldn't open " + h.name + " — was it moved or deleted?"); }
 };
+
+/* ---------------- 🐝 demo exam + first-time tour ---------------- */
+const DEMO = /*__DEMO__*/null;   // the single offline file carries the demo inside it; the website fetches it
+async function loadDemo(){
+  let o = DEMO;
+  if(!o){ try{ o = await (await fetch("demo/demo_all_features.exam.json")).json(); }catch(_){ toast("The demo exam needs an internet connection the first time"); return false; } }
+  await keepVersion("Before opening the demo exam");
+  applyState(JSON.parse(JSON.stringify(o)));
+  // the demo is never written into the teacher's own project file
+  proj.handle = null; proj.name = ""; proj.dirty = false; storedHandle = null;
+  try{ await IDB.del("handle"); }catch(_){}
+  saveLocal(); updateChip();
+  toast("🐝 Demo exam opened — change anything you like. Your earlier work is in 🕘 History.");
+  return true;
+}
+$("#stDemo").onclick = async () => { if(await loadDemo()){ $("#startModal").classList.remove("open"); setTimeout(() => startTour(), 500); } };
+$("#stTour").onclick = e => { e.preventDefault(); $("#startModal").classList.remove("open"); setTimeout(() => startTour(), 300); };
+
+const TOUR = [
+  { el: "#setTabs", t: "Exam details", p: "Title, subject and teacher go in <b>📝 Exam</b>. <b>🎨 Look</b> changes the font, colours and logo; <b>🖨 Printing</b> sets the paper and answer lines." },
+  { el: "#drop", t: "Add your questions", p: "Paste what ChatGPT, Claude or Gemini wrote, add photos of a worksheet, or type your own with <b>＋ Question</b>. Each question gets its own card you can edit." },
+  { el: ".preview", t: "Check the preview", p: "This is the real PDF, updated as you type. Click any question in it to jump straight to its card." },
+  { el: "#btnDownload", t: "Download the PDF", p: "Get the student paper, the answer key or both. Your work saves itself every minute, and <b>🕘</b> keeps earlier versions in case you want to go back." }
+];
+let tourAt = -1;
+function startTour(){ tourAt = 0; showTourStep(); }
+function endTour(){ tourAt = -1; $("#tourTip").classList.add("hidden"); $("#tourRing").classList.add("hidden"); try{ localStorage.setItem("bee.toured", "1"); }catch(_){} }
+function placeTour(){
+  if(tourAt < 0) return;
+  const st = TOUR[tourAt], el = document.querySelector(st.el), tip = $("#tourTip"), ring = $("#tourRing");
+  if(!el || !el.offsetParent && el.tagName !== "ASIDE"){ ring.classList.add("hidden"); tip.style.left = (innerWidth - tip.offsetWidth) / 2 + "px"; tip.style.top = (innerHeight - tip.offsetHeight) / 2 + "px"; return; }
+  const r = el.getBoundingClientRect(), pad = 6;
+  const top = Math.max(4, r.top - pad), bot = Math.min(innerHeight - 4, r.bottom + pad);
+  Object.assign(ring.style, { left: r.left - pad + "px", top: top + "px", width: r.width + pad * 2 + "px", height: Math.max(0, bot - top) + "px" }); ring.classList.remove("hidden");
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let y = bot + 12 + h < innerHeight ? bot + 12 : top - 12 - h >= 0 ? top - 12 - h : Math.max(8, innerHeight - h - 12);
+  let x = Math.min(Math.max(12, r.left + Math.min(r.width, 300) / 2 - w / 2), innerWidth - w - 12);
+  // a tall target (the preview) leaves no room above or below: sit beside it instead
+  if(r.height > innerHeight * .6){ x = r.left > w + 24 ? r.left - w - 16 : Math.min(r.right + 16, innerWidth - w - 12); y = Math.min(Math.max(12, r.top + 40), innerHeight - h - 12); }
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+function showTourStep(){
+  const st = TOUR[tourAt], el = document.querySelector(st.el);
+  $("#tourStep").textContent = "Step " + (tourAt + 1) + " of " + TOUR.length;
+  $("#tourTitle").textContent = st.t; $("#tourText").innerHTML = st.p;
+  $("#tourBack").classList.toggle("hidden", tourAt === 0);
+  $("#tourNext").textContent = tourAt === TOUR.length - 1 ? "Got it 🐝" : "Next →";
+  $("#tourTip").classList.remove("hidden");
+  if(el && el.getBoundingClientRect){ const r = el.getBoundingClientRect(); if(r.top < 60 || r.bottom > innerHeight - 20) el.scrollIntoView({ block: r.height > innerHeight * .6 ? "start" : "center" }); }
+  placeTour(); setTimeout(placeTour, 60);
+}
+$("#tourNext").onclick = () => { if(tourAt >= TOUR.length - 1) endTour(); else { tourAt++; showTourStep(); } };
+$("#tourBack").onclick = () => { if(tourAt > 0){ tourAt--; showTourStep(); } };
+$("#tourSkip").onclick = e => { e.preventDefault(); endTour(); };
+addEventListener("resize", placeTour); addEventListener("scroll", placeTour, { passive: true });
+document.addEventListener("keydown", e => { if(tourAt >= 0 && e.key === "Escape") endTour(); });
+// first visit: once the start screen is closed, offer the tour (not in automated browsers, so tests aren't interrupted)
+new MutationObserver(() => {
+  if($("#startModal").classList.contains("open") || tourAt >= 0 || navigator.webdriver) return;
+  let seen = "1"; try{ seen = localStorage.getItem("bee.toured"); }catch(_){}
+  if(!seen) setTimeout(() => { if(tourAt < 0 && !document.querySelector(".modal.open")) startTour(); }, 600);
+}).observe($("#startModal"), { attributes: true, attributeFilter: ["class"] });
 
 /* ---------------- phones: jump between the editor and the preview ---------------- */
 (() => {

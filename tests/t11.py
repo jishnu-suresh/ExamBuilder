@@ -58,7 +58,7 @@ async def main():
         async def pages(large=False):
             return await pg.evaluate(f"(async()=>{{await prepareMath(); const d=__exam.buildPDF({{large:{str(large).lower()}}}); return [d.getNumberOfPages(), d.output('datauristring')]}})()")
         p1=(await pages())[0]
-        await pg.select_option('[data-k=answerMode]','sheet'); await pg.wait_for_timeout(300)
+        await pg.click('#setTabs [data-tab=print]'); await pg.select_option('[data-k=answerMode]','sheet'); await pg.wait_for_timeout(300)
         dis = await pg.evaluate("[...document.querySelectorAll('.card input[placeholder=sheet]')].length")
         nonmcq = await pg.evaluate("__exam.S().items.filter(x=>x.type=='q' && !x.mcq).length")
         ok("3a answer-space boxes disabled on every written question", dis==nonmcq and dis>=5, f"{dis}/{nonmcq}")
