@@ -253,7 +253,7 @@ async function loadDemo(){
   applyState(JSON.parse(JSON.stringify(o)));
   try{ await IDB.del("handle"); }catch(_){}
   saveLocal(); updateChip();
-  toast("🐝 Demo exam opened — change anything you like. Your earlier work is in 🕘 History.");
+  toast("🐝 Demo exam opened — change anything you like. Your earlier work is in 🕰️ History.");
   return true;
 }
 $("#stDemo").onclick = async () => { if(await loadDemo()){ $("#startModal").classList.remove("open"); setTimeout(() => startTour(), 500); } };
@@ -263,7 +263,7 @@ const TOUR = [
   { el: "#setTabs", t: "Exam details", p: "Title, subject and teacher go in <b>📝 Exam</b>. <b>🎨 Look</b> changes the font, colours and logo; <b>🖨 Printing</b> sets the paper and answer lines." },
   { el: "#drop", t: "Add your questions", p: "Paste what ChatGPT, Claude or Gemini wrote, add photos of a worksheet, or type your own with <b>＋ Question</b>. Each question gets its own card you can edit." },
   { el: ".preview", t: "Check the preview", p: "This is the real PDF, updated as you type. Click any question in it to jump straight to its card." },
-  { el: "#btnDownload", t: "Download the PDF", p: "Get the student paper, the answer key or both. Your work saves itself every minute, and <b>🕘</b> keeps earlier versions in case you want to go back." }
+  { el: "#btnDownload", t: "Download the PDF", p: "Get the student paper, the answer key or both. Your work saves itself every minute, and <b>🕰️</b> keeps earlier versions in case you want to go back." }
 ];
 let tourAt = -1;
 function startTour(){ tourAt = 0; showTourStep(); }

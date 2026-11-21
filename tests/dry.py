@@ -32,7 +32,7 @@ async def main():
         ok("A1 start screen shown on launch", await pg.is_visible('#startModal'))
         await pg.screenshot(path='dry_start.png')
         await pg.click('#stNew'); await pg.clock.run_for(300)
-        for _ in range(50):   # ＋ New first keeps a 🕘 copy in IndexedDB (real time, not the fake clock)
+        for _ in range(50):   # ＋ New first keeps a 🕰️ copy in IndexedDB (real time, not the fake clock)
             if await pg.is_visible('#saveModal'): break
             await asyncio.sleep(.1)
         ok("A1b name dialog shown first", await pg.is_visible('#saveModal'))
@@ -48,7 +48,7 @@ async def main():
         await pg.click('#tilePaste'); await pg.fill('#pasteArea', open(__import__('_bee').fx('ai_paste.txt')).read()); await pg.dispatch_event('#pasteArea','input'); await pg.clock.run_for(200)
         ok("B1 paste count preview", 'Found 11 questions in 3 parts' in await pg.text_content('#pasteCount'), await pg.text_content('#pasteCount'))
         await pg.click('#pasteGo'); await pg.clock.run_for(1500)
-        for _ in range(50):   # the paste first keeps a 🕘 copy in IndexedDB (real time, not the fake clock)
+        for _ in range(50):   # the paste first keeps a 🕰️ copy in IndexedDB (real time, not the fake clock)
             if not await pg.evaluate("$('#pasteModal').classList.contains('open')"): break
             await asyncio.sleep(.1)
         await pg.clock.run_for(500)

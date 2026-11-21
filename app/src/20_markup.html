@@ -3,14 +3,13 @@
 <body>
 
 <header class="topbar">
-  <img id="topLogo" alt="">
   <h1 class="brand"><span class="bee" aria-hidden="true">🐝</span><span class="bee-name">BEE</span><span class="bee-tag">Build&nbsp;•&nbsp;Edit&nbsp;•&nbsp;Evaluate</span></h1>
   <button class="savechip" id="saveChip" title="Your project is saved automatically every minute">…</button>
   <span class="sp"></span>
   <button class="btn sm hidden" id="btnInstall" title="Install BEE as an app on this computer">⤓ <span class="lbl">Install app</span></button>
-  <button class="btn sm icon" id="btnUndo" title="Undo (Ctrl/⌘ + Z)" disabled>↶</button>
-  <button class="btn sm icon" id="btnRedo" title="Redo (Ctrl/⌘ + Shift + Z, or Ctrl + Y)" disabled>↷</button>
-  <button class="btn sm icon" id="btnHistory" title="🕘 Earlier versions of your exam (kept in this browser)">🕘</button>
+  <button class="btn sm icon" id="btnUndo" title="Undo (Ctrl/⌘ + Z)" disabled>↩️</button>
+  <button class="btn sm icon" id="btnRedo" title="Redo (Ctrl/⌘ + Shift + Z, or Ctrl + Y)" disabled>↪️</button>
+  <button class="btn sm icon" id="btnHistory" title="🕰️ Earlier versions of your exam (kept in this browser)">🕰️</button>
   <button class="btn sm" id="btnNew" title="Start a new exam">＋ <span class="lbl">New</span></button>
   <button class="btn sm" id="btnOpen" title="Open a saved .exam.json project">📂 <span class="lbl">Open</span></button>
   <button class="btn sm" id="btnSave" title="Save the project to a (new) file">💾 <span class="lbl">Save as…</span></button>
@@ -278,7 +277,7 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
 <!-- EQUATION EDITOR -->
 <div class="modal" id="histModal">
   <div class="box" style="max-width:640px">
-    <h3 style="margin:0 0 4px">🕘 Earlier versions</h3>
+    <h3 style="margin:0 0 4px">🕰️ Earlier versions</h3>
     <p class="hint" style="margin:0 0 10px">Copies BEE kept in this browser while you worked. <b>Restore</b> brings one back (your current work is kept as a version first); <b>⬇</b> saves it as a separate file.</p>
     <div id="histList" class="hist-list"></div>
     <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" data-close>Close</button></div>
@@ -572,7 +571,7 @@ x = 3
     <h3>📥 Student answers</h3>
     <div id="ansList"></div>
     <label class="hint" style="display:flex;gap:6px;align-items:center;margin:4px 0 0"><input type="checkbox" id="ansKey"> <span>Add the answer key for marking: model answers in red under each student answer, and ✓ on the right MCQ options</span></label>
-    <div class="actions" style="justify-content:flex-end"><button class="btn" id="ansMore">＋ Add more files</button><button class="btn" id="ansCsv">⬇ Summary (CSV)</button><button class="btn primary" id="ansZip">⬇ All PDFs (ZIP)</button><button class="btn" data-close>Close</button></div>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" id="ansMore">＋ Add more files</button><button class="btn primary" id="ansZip">⬇ All PDFs (ZIP)</button><button class="btn" data-close>Close</button></div>
   </div>
 </div>
 <!-- 🔑 TEACHER KEY -->

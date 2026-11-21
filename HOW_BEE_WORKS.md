@@ -111,7 +111,7 @@ Questions are plain text with small tags. The same format is used when typing, p
 | File | What's in it |
 |---|---|
 | `00_head.html`, `10_styles.css`, `20_markup.html` | Page head, all styles, all HTML (panels, dialogs, the tour) |
-| `30_state_and_saving.js` | `S`, browser storage, project files, autosave, 🕘 version history |
+| `30_state_and_saving.js` | `S`, browser storage, project files, autosave, 🕰️ version history |
 | `31_text_parsing.js` | Turning pasted text into items |
 | `32_adding_content.js` | Adding questions, photos and pictures (incl. picture compression) |
 | `35_beecrypt.js` | 🔐 Sealing and codes (`BC`), shared with the student version |
@@ -152,7 +152,7 @@ Every change calls `changed()`, which updates totals and undo history and schedu
 * Chrome and Edge save to a real file through the File System Access API (`saveAs()`, `writeProject()`, `setHandle()`), with an autosave every minute.
 * Safari and Firefox download the file instead (`downloadProject()`).
 * The last state is also kept in browser storage (`saveLocal()` / `loadLocal()`).
-* **🕘 Version history:** `keepVersion(reason)` stores a copy in IndexedDB (`versions` list plus `v:<id>`), at most 30 copies or 60 MB, skipping exact duplicates. It runs every 5 minutes while the exam changes, and before anything that replaces it (opening a file, new exam, paste, clear all, replace all, restore, demo).
+* **🕰️ Version history:** `keepVersion(reason)` stores a copy in IndexedDB (`versions` list plus `v:<id>`), at most 30 copies or 60 MB, skipping exact duplicates. It runs every 5 minutes while the exam changes, and before anything that replaces it (opening a file, new exam, paste, clear all, replace all, restore, demo).
 * **💾 The save light (`saveState()` / `updateChip()`):**
   * 🟢 the latest changes are in the project file, or in a downloaded copy in Safari/Firefox
   * 🟠 they are only in this browser

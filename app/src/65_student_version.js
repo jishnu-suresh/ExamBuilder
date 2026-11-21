@@ -370,7 +370,6 @@ async function loadAnswers(files){
       if(!k) throw new Error("sealed with a school key this computer doesn't have (" + String(o.kid).slice(0, 6) + "). Load the school key file first (🐝 School key)");
       const priv = await openKey(k); if(!priv) throw new Error("the school key password is needed to open it");
       row.P = await BC.unseal(o.sealed, priv); row.T = await BC.unseal(o.teacher, priv);
-      row.mcq = markMCQ(row.T.snap, row.P);
       const dup = ANS.findIndex(r => r.P && r.P.examId === row.P.examId && r.P.name === row.P.name && r.P.startedAt === row.P.startedAt);
       if(dup >= 0) ANS.splice(dup, 1);
     }catch(e){ row.err = e.message; }
@@ -379,31 +378,16 @@ async function loadAnswers(files){
   renderAnswers(); openModal("#ansModal");
   if(first && ANS[0] && ANS[0].P) answerPDF(ANS[0]).then(r => r.doc.save(r.name)).catch(e => toast("Couldn't make the PDF: " + e.message));
 }
-function markMCQ(snap, P){
-  const meta = (() => { const saved = S.items; S.items = snap.items; try{ return computeMeta().meta; }finally{ S.items = saved; } })();
-  const rows = []; let got = 0, max = 0;
-  for(const it0 of snap.items){
-    const it = cloneItem(it0); if(it.type !== "q" || !it.mcq) continue; ensureOptions(it);
-    if(!(it.correct || []).length) continue;
-    const L = optionList(it), letter = i => (L.find(x => x.i === i) || {}).L || "?";
-    const ch = ((P.answers[it.id] || {}).choice || []).slice().sort(), co = it.correct.slice().sort();
-    const ok = ch.length === co.length && ch.every((v, k) => v === co[k]), mk = qMarks(it) || 1;
-    rows.push({ no: meta[it.id] || "–", chosen: ch.map(letter).join(", ") || "—", correct: co.map(letter).join(", "), ok, marks: mk, got: ok ? mk : 0 });
-    max += mk; if(ok) got += mk;
-  }
-  return { rows, got, max };
-}
 const minsOf = ms => Math.round(ms / 60000);
 function renderAnswers(){
-  $("#ansList").innerHTML = ANS.length ? `<table class="ans-table"><tr><th>Student</th><th>Ended</th><th>Time used</th><th>Left the test</th><th>MCQ (auto)</th><th></th></tr>${ANS.map((r, i) => r.err ? `<tr><td colspan="5" class="bad">⚠ ${esc(r.file)}: ${esc(r.err)}</td><td></td></tr>` : `<tr>
+  $("#ansList").innerHTML = ANS.length ? `<table class="ans-table"><tr><th>Student</th><th>Ended</th><th>Time used</th><th>Left the test</th><th></th></tr>${ANS.map((r, i) => r.err ? `<tr><td colspan="4" class="bad">⚠ ${esc(r.file)}: ${esc(r.err)}</td><td></td></tr>` : `<tr>
     <td><b>${esc(r.P.name)}</b>${r.P.cls ? `<br><span class="hint">${esc(r.P.cls)}</span>` : ""}<br><span class="hint">${esc(r.T.snap.d.title || "")}${r.T.snap.version ? " · Version " + esc(r.T.snap.version) : ""}</span></td>
     <td>${new Date(r.P.endedAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}${r.P.endedBy === "time" ? "<br><span class='hint'>time was up</span>" : r.P.endedBy === "teacher" ? "<br><span class='hint'>by the teacher</span>" : ""}</td>
     <td>${minsOf(r.P.endedAt - r.P.startedAt)} min${r.P.timeMin ? ` <span class="hint">of ${r.P.timeMin + (r.P.extraMin || 0)}</span>` : ""}</td>
     <td class="${leftCount(r.P) ? "bad" : ""}">${leftCount(r.P) ? leftCount(r.P) + "×" : "never"}</td>
-    <td>${r.mcq.max ? `${fmt(r.mcq.got)} / ${fmt(r.mcq.max)}` : "—"}</td>
     <td><button class="btn sm primary" data-anspdf="${i}">⬇ PDF</button></td></tr>`).join("")}</table>
-    <p class="hint">Blue in the PDF = what the student typed. Multiple-choice is marked for you (shown on the first page); written answers are for you to mark.</p>` : "<p>No files yet.</p>";
-  const ok = ANS.some(r => r.P); $("#ansZip").disabled = $("#ansCsv").disabled = !ok;
+    <p class="hint">Blue in the PDF = what the student typed or chose. Mark it like any paper.</p>` : "<p>No files yet.</p>";
+  $("#ansZip").disabled = !ANS.some(r => r.P);
 }
 const leftCount = P => (P.log || []).filter(l => l.kind === "left").length;
 $("#ansList").addEventListener("click", async e => {
@@ -419,7 +403,7 @@ async function answerPDF(r){
   const jobs = [];
   Object.values(P.answers || {}).forEach(A => Object.values(A.areas || {}).forEach(bl => bl.forEach(b => { if(b.t === "math" && String(b.v || "").trim()){ const m = texSVG(mathColor(b.v, BLUE_HEX), true); if(m.svg && !m.png && !m.err) jobs.push(mathPNG(m).catch(() => {})); } })));
   await Promise.all(jobs);
-  const resp = Object.assign({}, P, { mcq: r.mcq, title: snap.d.title, version: snap.version });
+  const resp = Object.assign({}, P, { title: snap.d.title, version: snap.version });
   // the student's exam is in place only while the PDF is drawn — no waiting, so nothing can save it over yours
   const saved = S; let doc;
   S = { d: snap.d, logo: snap.logo, items: snap.items };
@@ -436,19 +420,11 @@ $("#ansZip").onclick = async () => {
       const x = await answerPDF(r); let n = x.name; if(used[n]){ n = n.replace(/\.pdf$/, "_" + (++used[n]) + ".pdf"); } else used[n] = 1;
       files.push({ name: n, data: new Uint8Array(x.doc.output("arraybuffer")) });
     }
-    files.push({ name: "Summary.csv", data: new TextEncoder().encode(answersCSV()) });
     const title = (ANS.find(r => r.P) || {}).T.snap.d.title || "Exam";
     const a = document.createElement("a"); a.href = URL.createObjectURL(zipStore(files)); a.download = fileStem(title, "student answers") + ".zip"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   }catch(e){ console.error(e); toast("Couldn't make the ZIP: " + e.message); }
   btn.disabled = false; btn.textContent = lbl;
 };
-function answersCSV(){
-  const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-  const rows = [["Name", "Class", "Exam", "Version", "Started", "Ended", "Ended by", "Time used (min)", "Time allowed (min)", "Left the test", "MCQ marks", "MCQ out of"]];
-  ANS.filter(r => r.P).forEach(r => { const P = r.P; rows.push([P.name, P.cls, r.T.snap.d.title, r.T.snap.version || "", new Date(P.startedAt).toLocaleString(), new Date(P.endedAt).toLocaleString(), P.endedBy, minsOf(P.endedAt - P.startedAt), P.timeMin ? P.timeMin + (P.extraMin || 0) : "", leftCount(P), r.mcq.max ? r.mcq.got : "", r.mcq.max || ""]); });
-  return "﻿" + rows.map(r => r.map(q).join(",")).join("\r\n");
-}
-$("#ansCsv").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([answersCSV()], { type: "text/csv" })); a.download = "Student-answers_summary.csv"; a.click(); };
 // a ZIP with no compression (PDFs are already compressed): enough for "all papers in one download"
 function zipStore(files){
   const crcT = zipStore.t || (zipStore.t = Array.from({ length: 256 }, (_, n) => { let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; }));
@@ -533,22 +509,6 @@ function respRecord(doc, R, h){
     if(shown.length > list.length){ font(SANS, "italic", 8.5, MUTED); doc.text("… and " + (shown.length - list.length) + " more", ML + 18, y); y += 4.6; }
   }
   y += 5;
-  // MCQ marked automatically
-  const M = R.mcq || { rows: [] };
-  if(M.rows.length){
-    font(SANS, "bold", 11.5, INK); doc.text(`Multiple choice, marked automatically: ${fmt(M.got)} / ${fmt(M.max)}`, ML, y); y += 6;
-    const cols = [ML + 2, ML + 22, ML + 52, ML + 82, ML + 100];
-    font(SANS, "bold", 8.5, MUTED); ["Question", "Chose", "Correct", "", "Marks"].forEach((s, k) => doc.text(s, cols[k], y)); y += 4.6;
-    for(const r of M.rows){
-      if(y > PH - 22){ font(SANS, "italic", 8.5, MUTED); doc.text("…", ML + 2, y); break; }
-      font(SANS, "normal", 9.5, INK); doc.text(String(r.no), cols[0], y);
-      font(SANS, "bold", 9.5, BLUE); doc.text(r.chosen, cols[1], y);
-      font(SANS, "normal", 9.5, INK); doc.text(r.correct, cols[2], y);
-      font(SANS, "bold", 10, r.ok ? [42, 125, 79] : [180, 69, 47]); doc.text(r.ok ? "✓" : "✗", cols[3], y);
-      font(SANS, "normal", 9.5, INK); doc.text(fmt(r.got) + " / " + fmt(r.marks), cols[4], y); y += 4.8;
-    }
-    y += 3;
-  }
   font(SANS, "italic", 8.5, MUTED);
-  doc.text("Written answers are not marked automatically. The student's typing is in blue; empty answer spaces were left blank.", ML, PH - 14);
+  doc.text("The student's typing and choices are in blue; empty answer spaces were left blank.", ML, PH - 14);
 }

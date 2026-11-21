@@ -194,14 +194,16 @@ function buildPDF(opt){
     if(draw){
       doc.setDrawColor(...ACC_L); doc.setLineWidth(.4); doc.setFillColor(255, 255, 255);
       doc.roundedRect(ML, y, CW, boxH, 2.5, 2.5, "S");
-      const field = (x, w, yy, label, value) => {
+      const field = (x, w, yy, label, value, col) => {
         font(SANS, "bold", 7, MUTED); doc.text(label.toUpperCase(), x, yy + 5.2, { charSpace: .7 });
-        if(value){ font(SANS, "normal", fv, INK); doc.text(fitText(value, w - 2), x, yy + rowH - 3.9); }
+        if(value){ font(SANS, "normal", fv, col || INK); doc.text(fitText(value, w - 2), x, yy + rowH - 3.9); }
         else { doc.setDrawColor(...RULE); doc.setLineWidth(.25); doc.line(x, yy + rowH - 3.1, x + w - 4, yy + rowH - 3.1); }
       };
       const bx = ML + 6, bw = CW - 12;
-      field(bx, bw * .62, y + 1, PT("Student name"), "");
-      field(bx + bw * .64, bw * .36, y + 1, PT("Class / Grade"), D.className);
+      // the answers PDF of the computer version: the student's own name (and class), in blue like their answers
+      const RN = opt.resp ? opt.resp.name : "", RC = opt.resp && !D.className ? opt.resp.cls : "";
+      field(bx, bw * .62, y + 1, PT("Student name"), RN, [31, 79, 184]);
+      field(bx + bw * .64, bw * .36, y + 1, PT("Class / Grade"), D.className || RC, RC ? [31, 79, 184] : null);
       doc.setDrawColor(...ACC_XL); doc.setLineWidth(.3); doc.line(ML + 4, y + rowH + 1.2, ML + CW - 4, y + rowH + 1.2);
       field(bx, bw * .4, y + rowH + 1.5, PT("Date"), D.date);
       field(bx + bw * .44, bw * .56, y + rowH + 1.5, PT("Teacher"), D.teacher);
@@ -424,6 +426,7 @@ function buildPDF(opt){
       const lineW = 46; rx = right - lineW - lw2;
       doc.text(lab, rx, 19.5, { charSpace: .5 });
       doc.setDrawColor(...RULE); doc.setLineWidth(.25); doc.line(rx + lw2 + 1, 20, right, 20);
+      if(opt.resp && opt.resp.name){ font(SANS, "normal", 8.5, [31, 79, 184]); doc.text(fitText(opt.resp.name, lineW - 3), rx + lw2 + 2, 19.2); }
       rx -= 6;
     }
     font(SANS, "normal", 8.5, MUTED);

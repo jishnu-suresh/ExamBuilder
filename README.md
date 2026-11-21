@@ -31,7 +31,7 @@ No internet / no install? Download the single-file version: [`docs/download/Exam
 - Bold / italic / underline / colour, find & replace, undo/redo, arrange view (drag & drop)
 - Accommodations: large print (16 pt, double spacing) download; separate-answer-sheet mode (compact paper)
 - Auto-saves to a project file every minute (Chrome/Edge); double-click `.exam.json` files to open them in the app
-- **🕘 Version history:** earlier copies of the exam kept in the browser, one click to restore or download
+- **🕰️ Version history:** earlier copies of the exam kept in the browser, one click to restore or download
 - A 1-minute welcome tour for first-time users
 
 ## For developers

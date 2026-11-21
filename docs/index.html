@@ -105,6 +105,8 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+#btnUndo,#btnRedo{padding:3px 6px;min-width:0;font-size:13px;line-height:1;opacity:.85}
+#btnUndo:disabled,#btnRedo:disabled{opacity:.35}
 body:not(.beta) .beta-only{display:none!important}
 .modal.open{padding-bottom:var(--kbh,0px)!important;transition:padding .15s}
 .modal.open .box{max-height:calc(92vh - var(--kbh,0px))}
@@ -212,7 +214,7 @@ label.f .sv-name input,.sv-name input{flex:1;border:0!important;outline:0;box-sh
 @media (max-width:700px){
   html,body{font-size:15px}
   .topbar{flex-wrap:wrap;gap:8px 6px;padding:8px 10px;position:sticky}
-  .topbar #topLogo{display:none}
+
   .topbar h1{order:1;font-size:17px}
   .brand .bee{font-size:19px}.bee-name{font-size:19px;letter-spacing:2px}
   .topbar .sp{display:none}
@@ -436,14 +438,13 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 <body>
 
 <header class="topbar">
-  <img id="topLogo" alt="">
   <h1 class="brand"><span class="bee" aria-hidden="true">🐝</span><span class="bee-name">BEE</span><span class="bee-tag">Build&nbsp;•&nbsp;Edit&nbsp;•&nbsp;Evaluate</span></h1>
   <button class="savechip" id="saveChip" title="Your project is saved automatically every minute">…</button>
   <span class="sp"></span>
   <button class="btn sm hidden" id="btnInstall" title="Install BEE as an app on this computer">⤓ <span class="lbl">Install app</span></button>
-  <button class="btn sm icon" id="btnUndo" title="Undo (Ctrl/⌘ + Z)" disabled>↶</button>
-  <button class="btn sm icon" id="btnRedo" title="Redo (Ctrl/⌘ + Shift + Z, or Ctrl + Y)" disabled>↷</button>
-  <button class="btn sm icon" id="btnHistory" title="🕘 Earlier versions of your exam (kept in this browser)">🕘</button>
+  <button class="btn sm icon" id="btnUndo" title="Undo (Ctrl/⌘ + Z)" disabled>↩️</button>
+  <button class="btn sm icon" id="btnRedo" title="Redo (Ctrl/⌘ + Shift + Z, or Ctrl + Y)" disabled>↪️</button>
+  <button class="btn sm icon" id="btnHistory" title="🕰️ Earlier versions of your exam (kept in this browser)">🕰️</button>
   <button class="btn sm" id="btnNew" title="Start a new exam">＋ <span class="lbl">New</span></button>
   <button class="btn sm" id="btnOpen" title="Open a saved .exam.json project">📂 <span class="lbl">Open</span></button>
   <button class="btn sm" id="btnSave" title="Save the project to a (new) file">💾 <span class="lbl">Save as…</span></button>
@@ -711,7 +712,7 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
 <!-- EQUATION EDITOR -->
 <div class="modal" id="histModal">
   <div class="box" style="max-width:640px">
-    <h3 style="margin:0 0 4px">🕘 Earlier versions</h3>
+    <h3 style="margin:0 0 4px">🕰️ Earlier versions</h3>
     <p class="hint" style="margin:0 0 10px">Copies BEE kept in this browser while you worked. <b>Restore</b> brings one back (your current work is kept as a version first); <b>⬇</b> saves it as a separate file.</p>
     <div id="histList" class="hist-list"></div>
     <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" data-close>Close</button></div>
@@ -1005,7 +1006,7 @@ x = 3
     <h3>📥 Student answers</h3>
     <div id="ansList"></div>
     <label class="hint" style="display:flex;gap:6px;align-items:center;margin:4px 0 0"><input type="checkbox" id="ansKey"> <span>Add the answer key for marking: model answers in red under each student answer, and ✓ on the right MCQ options</span></label>
-    <div class="actions" style="justify-content:flex-end"><button class="btn" id="ansMore">＋ Add more files</button><button class="btn" id="ansCsv">⬇ Summary (CSV)</button><button class="btn primary" id="ansZip">⬇ All PDFs (ZIP)</button><button class="btn" data-close>Close</button></div>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" id="ansMore">＋ Add more files</button><button class="btn primary" id="ansZip">⬇ All PDFs (ZIP)</button><button class="btn" data-close>Close</button></div>
   </div>
 </div>
 <!-- 🔑 TEACHER KEY -->
@@ -1183,7 +1184,7 @@ const IDB = {
   async set(k, v){ const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); },
   async del(k){ const db = await this.open(); return new Promise(res => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").delete(k); t.oncomplete = () => res(); t.onerror = () => res(); }); }
 };
-/* ---------- 🕘 version history: copies of the exam kept in this browser ---------- */
+/* ---------- 🕰️ version history: copies of the exam kept in this browser ---------- */
 const VERS_MAX = 30, VERS_BYTES = 60e6;
 let versLastAt = 0, versLastSig = "";
 async function keepVersion(reason){
@@ -1225,7 +1226,7 @@ document.getElementById("histList").addEventListener("click", async e => {
   if(e.target.closest("[data-hrestore]")){
     await keepVersion("Before restoring an earlier version");
     applyState(o); saveLocal(); $("#histModal").classList.remove("open");
-    toast("Earlier version restored — your work just before is kept in 🕘 History too");
+    toast("Earlier version restored — your work just before is kept in 🕰️ History too");
   }
 });
 document.getElementById("btnHistory").onclick = () => openHistory();
@@ -1973,7 +1974,6 @@ function updateLogoUI(){
   const src = S.logo && S.logo.src;
   $("#logoThumb").src = src || "";
   $("#logoThumb").classList.toggle("hidden", !src);
-  $("#topLogo").src = src || DEFAULT_LOGO;
 }
 
 function render(){
@@ -3017,14 +3017,16 @@ function buildPDF(opt){
     if(draw){
       doc.setDrawColor(...ACC_L); doc.setLineWidth(.4); doc.setFillColor(255, 255, 255);
       doc.roundedRect(ML, y, CW, boxH, 2.5, 2.5, "S");
-      const field = (x, w, yy, label, value) => {
+      const field = (x, w, yy, label, value, col) => {
         font(SANS, "bold", 7, MUTED); doc.text(label.toUpperCase(), x, yy + 5.2, { charSpace: .7 });
-        if(value){ font(SANS, "normal", fv, INK); doc.text(fitText(value, w - 2), x, yy + rowH - 3.9); }
+        if(value){ font(SANS, "normal", fv, col || INK); doc.text(fitText(value, w - 2), x, yy + rowH - 3.9); }
         else { doc.setDrawColor(...RULE); doc.setLineWidth(.25); doc.line(x, yy + rowH - 3.1, x + w - 4, yy + rowH - 3.1); }
       };
       const bx = ML + 6, bw = CW - 12;
-      field(bx, bw * .62, y + 1, PT("Student name"), "");
-      field(bx + bw * .64, bw * .36, y + 1, PT("Class / Grade"), D.className);
+      // the answers PDF of the computer version: the student's own name (and class), in blue like their answers
+      const RN = opt.resp ? opt.resp.name : "", RC = opt.resp && !D.className ? opt.resp.cls : "";
+      field(bx, bw * .62, y + 1, PT("Student name"), RN, [31, 79, 184]);
+      field(bx + bw * .64, bw * .36, y + 1, PT("Class / Grade"), D.className || RC, RC ? [31, 79, 184] : null);
       doc.setDrawColor(...ACC_XL); doc.setLineWidth(.3); doc.line(ML + 4, y + rowH + 1.2, ML + CW - 4, y + rowH + 1.2);
       field(bx, bw * .4, y + rowH + 1.5, PT("Date"), D.date);
       field(bx + bw * .44, bw * .56, y + rowH + 1.5, PT("Teacher"), D.teacher);
@@ -3247,6 +3249,7 @@ function buildPDF(opt){
       const lineW = 46; rx = right - lineW - lw2;
       doc.text(lab, rx, 19.5, { charSpace: .5 });
       doc.setDrawColor(...RULE); doc.setLineWidth(.25); doc.line(rx + lw2 + 1, 20, right, 20);
+      if(opt.resp && opt.resp.name){ font(SANS, "normal", 8.5, [31, 79, 184]); doc.text(fitText(opt.resp.name, lineW - 3), rx + lw2 + 2, 19.2); }
       rx -= 6;
     }
     font(SANS, "normal", 8.5, MUTED);
@@ -5476,7 +5479,6 @@ async function loadAnswers(files){
       if(!k) throw new Error("sealed with a school key this computer doesn't have (" + String(o.kid).slice(0, 6) + "). Load the school key file first (🐝 School key)");
       const priv = await openKey(k); if(!priv) throw new Error("the school key password is needed to open it");
       row.P = await BC.unseal(o.sealed, priv); row.T = await BC.unseal(o.teacher, priv);
-      row.mcq = markMCQ(row.T.snap, row.P);
       const dup = ANS.findIndex(r => r.P && r.P.examId === row.P.examId && r.P.name === row.P.name && r.P.startedAt === row.P.startedAt);
       if(dup >= 0) ANS.splice(dup, 1);
     }catch(e){ row.err = e.message; }
@@ -5485,31 +5487,16 @@ async function loadAnswers(files){
   renderAnswers(); openModal("#ansModal");
   if(first && ANS[0] && ANS[0].P) answerPDF(ANS[0]).then(r => r.doc.save(r.name)).catch(e => toast("Couldn't make the PDF: " + e.message));
 }
-function markMCQ(snap, P){
-  const meta = (() => { const saved = S.items; S.items = snap.items; try{ return computeMeta().meta; }finally{ S.items = saved; } })();
-  const rows = []; let got = 0, max = 0;
-  for(const it0 of snap.items){
-    const it = cloneItem(it0); if(it.type !== "q" || !it.mcq) continue; ensureOptions(it);
-    if(!(it.correct || []).length) continue;
-    const L = optionList(it), letter = i => (L.find(x => x.i === i) || {}).L || "?";
-    const ch = ((P.answers[it.id] || {}).choice || []).slice().sort(), co = it.correct.slice().sort();
-    const ok = ch.length === co.length && ch.every((v, k) => v === co[k]), mk = qMarks(it) || 1;
-    rows.push({ no: meta[it.id] || "–", chosen: ch.map(letter).join(", ") || "—", correct: co.map(letter).join(", "), ok, marks: mk, got: ok ? mk : 0 });
-    max += mk; if(ok) got += mk;
-  }
-  return { rows, got, max };
-}
 const minsOf = ms => Math.round(ms / 60000);
 function renderAnswers(){
-  $("#ansList").innerHTML = ANS.length ? `<table class="ans-table"><tr><th>Student</th><th>Ended</th><th>Time used</th><th>Left the test</th><th>MCQ (auto)</th><th></th></tr>${ANS.map((r, i) => r.err ? `<tr><td colspan="5" class="bad">⚠ ${esc(r.file)}: ${esc(r.err)}</td><td></td></tr>` : `<tr>
+  $("#ansList").innerHTML = ANS.length ? `<table class="ans-table"><tr><th>Student</th><th>Ended</th><th>Time used</th><th>Left the test</th><th></th></tr>${ANS.map((r, i) => r.err ? `<tr><td colspan="4" class="bad">⚠ ${esc(r.file)}: ${esc(r.err)}</td><td></td></tr>` : `<tr>
     <td><b>${esc(r.P.name)}</b>${r.P.cls ? `<br><span class="hint">${esc(r.P.cls)}</span>` : ""}<br><span class="hint">${esc(r.T.snap.d.title || "")}${r.T.snap.version ? " · Version " + esc(r.T.snap.version) : ""}</span></td>
     <td>${new Date(r.P.endedAt).toLocaleString([], { dateStyle: "short", timeStyle: "short" })}${r.P.endedBy === "time" ? "<br><span class='hint'>time was up</span>" : r.P.endedBy === "teacher" ? "<br><span class='hint'>by the teacher</span>" : ""}</td>
     <td>${minsOf(r.P.endedAt - r.P.startedAt)} min${r.P.timeMin ? ` <span class="hint">of ${r.P.timeMin + (r.P.extraMin || 0)}</span>` : ""}</td>
     <td class="${leftCount(r.P) ? "bad" : ""}">${leftCount(r.P) ? leftCount(r.P) + "×" : "never"}</td>
-    <td>${r.mcq.max ? `${fmt(r.mcq.got)} / ${fmt(r.mcq.max)}` : "—"}</td>
     <td><button class="btn sm primary" data-anspdf="${i}">⬇ PDF</button></td></tr>`).join("")}</table>
-    <p class="hint">Blue in the PDF = what the student typed. Multiple-choice is marked for you (shown on the first page); written answers are for you to mark.</p>` : "<p>No files yet.</p>";
-  const ok = ANS.some(r => r.P); $("#ansZip").disabled = $("#ansCsv").disabled = !ok;
+    <p class="hint">Blue in the PDF = what the student typed or chose. Mark it like any paper.</p>` : "<p>No files yet.</p>";
+  $("#ansZip").disabled = !ANS.some(r => r.P);
 }
 const leftCount = P => (P.log || []).filter(l => l.kind === "left").length;
 $("#ansList").addEventListener("click", async e => {
@@ -5525,7 +5512,7 @@ async function answerPDF(r){
   const jobs = [];
   Object.values(P.answers || {}).forEach(A => Object.values(A.areas || {}).forEach(bl => bl.forEach(b => { if(b.t === "math" && String(b.v || "").trim()){ const m = texSVG(mathColor(b.v, BLUE_HEX), true); if(m.svg && !m.png && !m.err) jobs.push(mathPNG(m).catch(() => {})); } })));
   await Promise.all(jobs);
-  const resp = Object.assign({}, P, { mcq: r.mcq, title: snap.d.title, version: snap.version });
+  const resp = Object.assign({}, P, { title: snap.d.title, version: snap.version });
   // the student's exam is in place only while the PDF is drawn — no waiting, so nothing can save it over yours
   const saved = S; let doc;
   S = { d: snap.d, logo: snap.logo, items: snap.items };
@@ -5542,19 +5529,11 @@ $("#ansZip").onclick = async () => {
       const x = await answerPDF(r); let n = x.name; if(used[n]){ n = n.replace(/\.pdf$/, "_" + (++used[n]) + ".pdf"); } else used[n] = 1;
       files.push({ name: n, data: new Uint8Array(x.doc.output("arraybuffer")) });
     }
-    files.push({ name: "Summary.csv", data: new TextEncoder().encode(answersCSV()) });
     const title = (ANS.find(r => r.P) || {}).T.snap.d.title || "Exam";
     const a = document.createElement("a"); a.href = URL.createObjectURL(zipStore(files)); a.download = fileStem(title, "student answers") + ".zip"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   }catch(e){ console.error(e); toast("Couldn't make the ZIP: " + e.message); }
   btn.disabled = false; btn.textContent = lbl;
 };
-function answersCSV(){
-  const q = v => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
-  const rows = [["Name", "Class", "Exam", "Version", "Started", "Ended", "Ended by", "Time used (min)", "Time allowed (min)", "Left the test", "MCQ marks", "MCQ out of"]];
-  ANS.filter(r => r.P).forEach(r => { const P = r.P; rows.push([P.name, P.cls, r.T.snap.d.title, r.T.snap.version || "", new Date(P.startedAt).toLocaleString(), new Date(P.endedAt).toLocaleString(), P.endedBy, minsOf(P.endedAt - P.startedAt), P.timeMin ? P.timeMin + (P.extraMin || 0) : "", leftCount(P), r.mcq.max ? r.mcq.got : "", r.mcq.max || ""]); });
-  return "﻿" + rows.map(r => r.map(q).join(",")).join("\r\n");
-}
-$("#ansCsv").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([answersCSV()], { type: "text/csv" })); a.download = "Student-answers_summary.csv"; a.click(); };
 // a ZIP with no compression (PDFs are already compressed): enough for "all papers in one download"
 function zipStore(files){
   const crcT = zipStore.t || (zipStore.t = Array.from({ length: 256 }, (_, n) => { let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; }));
@@ -5639,24 +5618,8 @@ function respRecord(doc, R, h){
     if(shown.length > list.length){ font(SANS, "italic", 8.5, MUTED); doc.text("… and " + (shown.length - list.length) + " more", ML + 18, y); y += 4.6; }
   }
   y += 5;
-  // MCQ marked automatically
-  const M = R.mcq || { rows: [] };
-  if(M.rows.length){
-    font(SANS, "bold", 11.5, INK); doc.text(`Multiple choice, marked automatically: ${fmt(M.got)} / ${fmt(M.max)}`, ML, y); y += 6;
-    const cols = [ML + 2, ML + 22, ML + 52, ML + 82, ML + 100];
-    font(SANS, "bold", 8.5, MUTED); ["Question", "Chose", "Correct", "", "Marks"].forEach((s, k) => doc.text(s, cols[k], y)); y += 4.6;
-    for(const r of M.rows){
-      if(y > PH - 22){ font(SANS, "italic", 8.5, MUTED); doc.text("…", ML + 2, y); break; }
-      font(SANS, "normal", 9.5, INK); doc.text(String(r.no), cols[0], y);
-      font(SANS, "bold", 9.5, BLUE); doc.text(r.chosen, cols[1], y);
-      font(SANS, "normal", 9.5, INK); doc.text(r.correct, cols[2], y);
-      font(SANS, "bold", 10, r.ok ? [42, 125, 79] : [180, 69, 47]); doc.text(r.ok ? "✓" : "✗", cols[3], y);
-      font(SANS, "normal", 9.5, INK); doc.text(fmt(r.got) + " / " + fmt(r.marks), cols[4], y); y += 4.8;
-    }
-    y += 3;
-  }
   font(SANS, "italic", 8.5, MUTED);
-  doc.text("Written answers are not marked automatically. The student's typing is in blue; empty answer spaces were left blank.", ML, PH - 14);
+  doc.text("The student's typing and choices are in blue; empty answer spaces were left blank.", ML, PH - 14);
 }
 
 /* ---------------- 🔊 reading maths, science and chemistry aloud ----------------
@@ -6158,7 +6121,7 @@ async function loadDemo(){
   applyState(JSON.parse(JSON.stringify(o)));
   try{ await IDB.del("handle"); }catch(_){}
   saveLocal(); updateChip();
-  toast("🐝 Demo exam opened — change anything you like. Your earlier work is in 🕘 History.");
+  toast("🐝 Demo exam opened — change anything you like. Your earlier work is in 🕰️ History.");
   return true;
 }
 $("#stDemo").onclick = async () => { if(await loadDemo()){ $("#startModal").classList.remove("open"); setTimeout(() => startTour(), 500); } };
@@ -6168,7 +6131,7 @@ const TOUR = [
   { el: "#setTabs", t: "Exam details", p: "Title, subject and teacher go in <b>📝 Exam</b>. <b>🎨 Look</b> changes the font, colours and logo; <b>🖨 Printing</b> sets the paper and answer lines." },
   { el: "#drop", t: "Add your questions", p: "Paste what ChatGPT, Claude or Gemini wrote, add photos of a worksheet, or type your own with <b>＋ Question</b>. Each question gets its own card you can edit." },
   { el: ".preview", t: "Check the preview", p: "This is the real PDF, updated as you type. Click any question in it to jump straight to its card." },
-  { el: "#btnDownload", t: "Download the PDF", p: "Get the student paper, the answer key or both. Your work saves itself every minute, and <b>🕘</b> keeps earlier versions in case you want to go back." }
+  { el: "#btnDownload", t: "Download the PDF", p: "Get the student paper, the answer key or both. Your work saves itself every minute, and <b>🕰️</b> keeps earlier versions in case you want to go back." }
 ];
 let tourAt = -1;
 function startTour(){ tourAt = 0; showTourStep(); }

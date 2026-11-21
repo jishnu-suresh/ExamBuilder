@@ -142,7 +142,7 @@ async function finishReading(by){
   $("#scrEnded h1").textContent = "Finished";
   $("#enWho").textContent = by === "time" ? "Time is up." : by === "teacher" ? "Your teacher closed the paper." : "";
   $("#scrEnded p:nth-of-type(2)").textContent = "Hand in your printed paper. You can close this window.";
-  $("#enWhere").classList.add("hidden"); $("#enAgain").classList.add("hidden");
+  $("#enWhere").classList.add("hidden"); $("#enAgain").classList.add("hidden"); $("#enNewRow").classList.add("hidden");
 }
 async function endTest(by){
   if(READ_ONLY()) return finishReading(by);
@@ -164,6 +164,18 @@ async function endTest(by){
   await saveNow();
   showEnded(done);
 }
+/* the same laptop, the next student: the teacher code clears this computer for a new start.
+   The finished student's sealed file was already saved; a copy also stays here, just in case. */
+$("#enNew").onclick = () => { $("#enNewRow").classList.add("hidden"); $("#enNewBox").classList.remove("hidden"); $("#enCode").value = ""; $("#enErr").textContent = ""; setTimeout(() => $("#enCode").focus(), 50); };
+$("#enCancel").onclick = () => { $("#enNewBox").classList.add("hidden"); $("#enNewRow").classList.remove("hidden"); };
+$("#enCode").addEventListener("keydown", e => { if(e.key === "Enter") $("#enNewGo").click(); });
+$("#enNewGo").onclick = async () => {
+  if(!(await teacherOK($("#enCode").value))){ $("#enErr").textContent = "That's not the teacher code."; return; }
+  const done = await DB.get(DONE());
+  if(done) await DB.set("archive:" + EXAM.examId + ":" + (done.at || now()), done);
+  await DB.set(DONE(), null); await DB.set(RUN(), null);
+  location.reload();
+};
 function showEnded(done){
   show("#scrEnded");
   $("#enWho").textContent = (done.who ? done.who + " · " : "") + "ended at " + hm(done.at) + (done.by === "time" ? " (time was up)" : done.by === "teacher" ? " (by the teacher)" : "");

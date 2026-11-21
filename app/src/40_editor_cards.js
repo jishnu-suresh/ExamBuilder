@@ -31,7 +31,6 @@ function updateLogoUI(){
   const src = S.logo && S.logo.src;
   $("#logoThumb").src = src || "";
   $("#logoThumb").classList.toggle("hidden", !src);
-  $("#topLogo").src = src || DEFAULT_LOGO;
 }
 
 function render(){

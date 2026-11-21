@@ -90,6 +90,8 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .toast.show{opacity:1}
 .hidden{display:none!important}
+#btnUndo,#btnRedo{padding:3px 6px;min-width:0;font-size:13px;line-height:1;opacity:.85}
+#btnUndo:disabled,#btnRedo:disabled{opacity:.35}
 body:not(.beta) .beta-only{display:none!important}
 .modal.open{padding-bottom:var(--kbh,0px)!important;transition:padding .15s}
 .modal.open .box{max-height:calc(92vh - var(--kbh,0px))}
@@ -197,7 +199,7 @@ label.f .sv-name input,.sv-name input{flex:1;border:0!important;outline:0;box-sh
 @media (max-width:700px){
   html,body{font-size:15px}
   .topbar{flex-wrap:wrap;gap:8px 6px;padding:8px 10px;position:sticky}
-  .topbar #topLogo{display:none}
+
   .topbar h1{order:1;font-size:17px}
   .brand .bee{font-size:19px}.bee-name{font-size:19px;letter-spacing:2px}
   .topbar .sp{display:none}

@@ -68,6 +68,13 @@
     <p>Your answers are saved in a sealed file: <b id="enFile"></b>. Only your teacher can open it.</p>
     <p class="muted" id="enWhere">It is in this computer's <b>Downloads</b> folder. Give it to your teacher (USB stick, shared folder or email).</p>
     <div class="row"><button class="btn primary" id="enAgain">⬇ Download the answers file again</button></div>
+    <div class="row" id="enNewRow" style="border-top:1px solid var(--line);padding-top:14px"><button class="btn" id="enNew">👩‍🏫 New student on this computer</button></div>
+    <div id="enNewBox" class="hidden" style="border-top:1px solid var(--line);margin-top:14px;padding-top:6px">
+      <p class="muted">For the teacher: the next student starts the test on this computer. The answers above are already saved.</p>
+      <label for="enCode">Teacher code</label><input type="password" id="enCode" class="code" autocomplete="off" inputmode="numeric">
+      <div class="err" id="enErr"></div>
+      <div class="row"><button class="btn" id="enCancel">Cancel</button><button class="btn primary" id="enNewGo">Start a new student</button></div>
+    </div>
   </div>
 </div>
 

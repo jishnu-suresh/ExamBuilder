@@ -25,7 +25,7 @@ const IDB = {
   async set(k, v){ const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").put(v, k); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }); },
   async del(k){ const db = await this.open(); return new Promise(res => { const t = db.transaction("kv", "readwrite"); t.objectStore("kv").delete(k); t.oncomplete = () => res(); t.onerror = () => res(); }); }
 };
-/* ---------- 🕘 version history: copies of the exam kept in this browser ---------- */
+/* ---------- 🕰️ version history: copies of the exam kept in this browser ---------- */
 const VERS_MAX = 30, VERS_BYTES = 60e6;
 let versLastAt = 0, versLastSig = "";
 async function keepVersion(reason){
@@ -67,7 +67,7 @@ document.getElementById("histList").addEventListener("click", async e => {
   if(e.target.closest("[data-hrestore]")){
     await keepVersion("Before restoring an earlier version");
     applyState(o); saveLocal(); $("#histModal").classList.remove("open");
-    toast("Earlier version restored — your work just before is kept in 🕘 History too");
+    toast("Earlier version restored — your work just before is kept in 🕰️ History too");
   }
 });
 document.getElementById("btnHistory").onclick = () => openHistory();
