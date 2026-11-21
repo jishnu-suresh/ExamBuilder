@@ -456,3 +456,4 @@ body.basic .adv{display:none!important}
 .mode-btn{font-weight:600}
 .mode-btn .bees{font-size:14px;letter-spacing:-1px;line-height:1}
 body.basic .mode-btn{background:#EEF6E8;border-color:#B9D7A5;color:#2F5D1E}
+#wipeModal{z-index:60}

@@ -285,7 +285,17 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
     <h3 style="margin:0 0 4px">🕰️ Earlier versions</h3>
     <p class="hint" style="margin:0 0 10px">Copies BEE kept in this browser while you worked. <b>Restore</b> brings one back (your current work is kept as a version first); <b>⬇</b> saves it as a separate file.</p>
     <div id="histList" class="hist-list"></div>
-    <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" data-close>Close</button></div>
+    <div class="row" style="justify-content:space-between;margin-top:10px"><button class="btn" data-wipe title="For shared computers: removes your exams and earlier versions from this browser">🧹 Remove my exams from this browser</button><button class="btn" data-close>Close</button></div>
+  </div>
+</div>
+<div class="modal" id="wipeModal">
+  <div class="box" style="max-width:520px">
+    <h3 style="margin:0 0 8px">🧹 Remove my exams from this browser?</h3>
+    <p>On a shared computer, do this when you have finished, so the next person can't see your exam or its answer key.</p>
+    <p>This removes, <b>from this browser only</b>:</p>
+    <ul style="margin:0 0 8px 18px"><li>the exam you were working on,</li><li>all its earlier versions (🕰️),</li><li>the link to your project file.</li></ul>
+    <p class="hint">Your saved project files (.exam.json) and PDFs stay where they are. Not saved to a file yet? Cancel, and click 💾 Save as… first.</p>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" data-close>Cancel</button><button class="btn danger" id="wipeGo">🧹 Remove</button></div>
   </div>
 </div>
 <div class="modal" id="cutModal">
@@ -507,6 +517,7 @@ x = 3
     <p class="hint" id="stNote" style="margin:12px 0 0"></p>
     <p style="text-align:center;margin:14px 0 0;font:italic 12px Georgia,serif;color:var(--muted)">🐝 BEE · Build • Edit • Evaluate · © Jishnu</p>
     <p style="text-align:center;margin:6px 0 0"><a href="#" id="stSkip" style="color:var(--muted);font-size:13px">Continue without a project file</a></p>
+    <p style="text-align:center;margin:6px 0 0"><a href="#" id="stWipe" data-wipe style="color:var(--muted);font-size:12.5px">🧹 Shared computer? Remove my exams from this browser</a></p>
   </div>
 </div>
 

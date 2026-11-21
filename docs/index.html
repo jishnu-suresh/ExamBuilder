@@ -471,6 +471,7 @@ body.basic .adv{display:none!important}
 .mode-btn{font-weight:600}
 .mode-btn .bees{font-size:14px;letter-spacing:-1px;line-height:1}
 body.basic .mode-btn{background:#EEF6E8;border-color:#B9D7A5;color:#2F5D1E}
+#wipeModal{z-index:60}
 
 </style>
 </head>
@@ -759,7 +760,17 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
     <h3 style="margin:0 0 4px">🕰️ Earlier versions</h3>
     <p class="hint" style="margin:0 0 10px">Copies BEE kept in this browser while you worked. <b>Restore</b> brings one back (your current work is kept as a version first); <b>⬇</b> saves it as a separate file.</p>
     <div id="histList" class="hist-list"></div>
-    <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn" data-close>Close</button></div>
+    <div class="row" style="justify-content:space-between;margin-top:10px"><button class="btn" data-wipe title="For shared computers: removes your exams and earlier versions from this browser">🧹 Remove my exams from this browser</button><button class="btn" data-close>Close</button></div>
+  </div>
+</div>
+<div class="modal" id="wipeModal">
+  <div class="box" style="max-width:520px">
+    <h3 style="margin:0 0 8px">🧹 Remove my exams from this browser?</h3>
+    <p>On a shared computer, do this when you have finished, so the next person can't see your exam or its answer key.</p>
+    <p>This removes, <b>from this browser only</b>:</p>
+    <ul style="margin:0 0 8px 18px"><li>the exam you were working on,</li><li>all its earlier versions (🕰️),</li><li>the link to your project file.</li></ul>
+    <p class="hint">Your saved project files (.exam.json) and PDFs stay where they are. Not saved to a file yet? Cancel, and click 💾 Save as… first.</p>
+    <div class="actions" style="justify-content:flex-end"><button class="btn" data-close>Cancel</button><button class="btn danger" id="wipeGo">🧹 Remove</button></div>
   </div>
 </div>
 <div class="modal" id="cutModal">
@@ -981,6 +992,7 @@ x = 3
     <p class="hint" id="stNote" style="margin:12px 0 0"></p>
     <p style="text-align:center;margin:14px 0 0;font:italic 12px Georgia,serif;color:var(--muted)">🐝 BEE · Build • Edit • Evaluate · © Jishnu</p>
     <p style="text-align:center;margin:6px 0 0"><a href="#" id="stSkip" style="color:var(--muted);font-size:13px">Continue without a project file</a></p>
+    <p style="text-align:center;margin:6px 0 0"><a href="#" id="stWipe" data-wipe style="color:var(--muted);font-size:12.5px">🧹 Shared computer? Remove my exams from this browser</a></p>
   </div>
 </div>
 
@@ -1231,6 +1243,7 @@ const IDB = {
 const VERS_MAX = 30, VERS_BYTES = 60e6;
 let versLastAt = 0, versLastSig = "";
 async function keepVersion(reason){
+  if(window.__wiped) return;
   try{
     if(!S.items.length && !S.d.title) return;
     const snap = snapshot(), json = JSON.stringify(snap), sig = json.length + ":" + strHash(json);
@@ -1313,7 +1326,23 @@ let saveT;
   if(document.readyState === "loading") addEventListener("DOMContentLoaded", wire); else wire();
   window.__otherTabs = () => others.size;
 })();
+// 🧹 shared computers: remove this teacher's exams from this browser (the school key and preferences stay)
+async function wipeBrowser(){
+  window.__wiped = true; clearTimeout(saveT); proj.dirty = false; proj.handle = null;
+  try{
+    const db = await IDB.open();
+    const keys = await new Promise(res => { const q = db.transaction("kv").objectStore("kv").getAllKeys(); q.onsuccess = () => res(q.result || []); q.onerror = () => res([]); });
+    for(const k of keys) if(!/^teacherKey/.test(String(k))) await IDB.del(k);
+  }catch(e){ console.warn("wipe", e); }
+  try{ localStorage.removeItem(STORE_KEY); }catch(_){}
+}
+document.addEventListener("click", e => { if(e.target.closest("[data-wipe]")){ e.preventDefault(); document.querySelectorAll(".modal.open").forEach(m => { if(m.id !== "startModal") m.classList.remove("open"); }); openModal("#wipeModal"); } });
+document.addEventListener("click", async e => {
+  if(!e.target.closest("#wipeGo")) return;
+  await wipeBrowser(); location.reload();
+});
 function saveLocal(clean){
+  if(window.__wiped) return;
   S.savedAt = Date.now(); if(!clean) proj.dirty = true; updateChip();
   clearTimeout(saveT);
   saveT = setTimeout(async () => {
@@ -1529,6 +1558,7 @@ async function newProject(){
 setInterval(() => { if(proj.dirty && proj.handle) writeProject(); }, 60000);
 document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden" && proj.dirty && proj.handle) writeProject(); });
 window.addEventListener("beforeunload", e => {
+  if(window.__wiped) return;
   if(proj.dirty && proj.handle) writeProject();
   if(!navigator.webdriver && unsavedWork()){ e.preventDefault(); e.returnValue = ""; }
 });

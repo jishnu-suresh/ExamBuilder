@@ -29,6 +29,7 @@ const IDB = {
 const VERS_MAX = 30, VERS_BYTES = 60e6;
 let versLastAt = 0, versLastSig = "";
 async function keepVersion(reason){
+  if(window.__wiped) return;
   try{
     if(!S.items.length && !S.d.title) return;
     const snap = snapshot(), json = JSON.stringify(snap), sig = json.length + ":" + strHash(json);
@@ -111,7 +112,23 @@ let saveT;
   if(document.readyState === "loading") addEventListener("DOMContentLoaded", wire); else wire();
   window.__otherTabs = () => others.size;
 })();
+// 🧹 shared computers: remove this teacher's exams from this browser (the school key and preferences stay)
+async function wipeBrowser(){
+  window.__wiped = true; clearTimeout(saveT); proj.dirty = false; proj.handle = null;
+  try{
+    const db = await IDB.open();
+    const keys = await new Promise(res => { const q = db.transaction("kv").objectStore("kv").getAllKeys(); q.onsuccess = () => res(q.result || []); q.onerror = () => res([]); });
+    for(const k of keys) if(!/^teacherKey/.test(String(k))) await IDB.del(k);
+  }catch(e){ console.warn("wipe", e); }
+  try{ localStorage.removeItem(STORE_KEY); }catch(_){}
+}
+document.addEventListener("click", e => { if(e.target.closest("[data-wipe]")){ e.preventDefault(); document.querySelectorAll(".modal.open").forEach(m => { if(m.id !== "startModal") m.classList.remove("open"); }); openModal("#wipeModal"); } });
+document.addEventListener("click", async e => {
+  if(!e.target.closest("#wipeGo")) return;
+  await wipeBrowser(); location.reload();
+});
 function saveLocal(clean){
+  if(window.__wiped) return;
   S.savedAt = Date.now(); if(!clean) proj.dirty = true; updateChip();
   clearTimeout(saveT);
   saveT = setTimeout(async () => {
@@ -327,6 +344,7 @@ async function newProject(){
 setInterval(() => { if(proj.dirty && proj.handle) writeProject(); }, 60000);
 document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden" && proj.dirty && proj.handle) writeProject(); });
 window.addEventListener("beforeunload", e => {
+  if(window.__wiped) return;
   if(proj.dirty && proj.handle) writeProject();
   if(!navigator.webdriver && unsavedWork()){ e.preventDefault(); e.returnValue = ""; }
 });
