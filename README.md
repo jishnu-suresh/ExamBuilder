@@ -29,7 +29,9 @@ No internet / no install? Download the single-file version: [`docs/download/Exam
 - **Answer key** (teacher copy): ✓ correct MCQ options and model answers in red
 - **Versions A, B, C…** at download time: shuffled questions and MCQ options, each with its own answer key
 - Bold / italic / underline / colour, find & replace, undo/redo, arrange view (drag & drop)
-- Accommodations: large print (16 pt, double spacing) download; separate-answer-sheet mode (compact paper)
+- **⬇ Download menu** in three groups — 📄 Paper, 🌻 Accommodations, 👩‍🏫 Teacher — with short, tidy file names (`Subject_Title_Class.pdf`)
+- 🌻 Accommodations: large print (16 pt, double spacing); **easy-to-read PDF** (Atkinson Hyperlegible or OpenDyslexic font, optional cream paper); separate-answer-sheet mode (compact paper)
+- **Save light** in the top bar: 🟢 saved, 🟠 saving, 🔴 not saved yet — plus a warning before closing with unsaved changes
 - Auto-saves to a project file every minute (Chrome/Edge); double-click `.exam.json` files to open them in the app
 - **🕰️ Version history:** earlier copies of the exam kept in the browser, one click to restore or download
 - A 1-minute welcome tour for first-time users
@@ -45,7 +47,7 @@ python3 build/build.py     # builds docs/ (the web app) and docs/download/Exam_B
 - `app/student/` — 🧪 work in progress, not launched yet (see HOW_BEE_WORKS.md)
 - `build/` — build script, service-worker template, vendor fetcher
 - `docs/` — generated site served by GitHub Pages (Settings → Pages → Branch `main`, folder `/docs`)
-- `tests/` — browser tests: `python3 tests/run_all.py` (also run by GitHub on every push)
+- `tests/` — browser tests: `python3 tests/run_all.py` (also run by GitHub on every push, in Chrome; `tests/tbrowsers.py` repeats the main steps in Firefox and Safari/WebKit)
 
 Libraries: jsPDF, MathJax, MathLive, pdf.js, Tesseract.js, SortableJS, DejaVu fonts (subset).
 
