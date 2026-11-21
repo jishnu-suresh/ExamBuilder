@@ -17,22 +17,23 @@ def ok(name, cond, info=""):
     res.append(bool(cond)); print(("PASS " if cond else "FAIL ") + name + ("" if cond else f"   → {info}"))
 
 async def export_student(pg, key_mode="make", keyfile=None):
-    """Press ⬇ Download; the first time on a computer, make the school key (once) or load its file."""
+    """Press ⬇ Download; the first time on a computer, make the school key (once) or load its file.
+    The key window can take a while to appear on a slow machine, so keep watching for it until the file arrives."""
     downs = []; pg.on("download", lambda d: downs.append(d))
     await pg.click("#stuGo")
-    try: await pg.wait_for_selector("#needKeyModal.open", timeout=5000)
-    except Exception: pass
-    else:
-        if key_mode == "make":
-            await pg.click("#needKeyModal summary"); await pg.click("[data-needkey=make]")
-            await pg.wait_for_selector("#pwModal.open"); await pg.fill("#pw1", TEACHER_PW); await pg.fill("#pw2", TEACHER_PW); await pg.click("#pwGo")
-        else:
-            async with pg.expect_file_chooser() as fc: await pg.click("[data-needkey=load]")
-            await (await fc.value).set_files(keyfile)
-            await pg.wait_for_selector("#pwModal.open"); await pg.fill("#pw1", TEACHER_PW); await pg.click("#pwGo")
+    handled = False
     for _ in range(900):                          # up to 7½ minutes: the sealing is slow on purpose, and slower still in WebKit on GitHub's machines
         h = [d for d in downs if d.suggested_filename.endswith(".html")]
         if h: return h[0], [d for d in downs if d.suggested_filename.endswith(".beekey")]
+        if not handled and await pg.evaluate("$('#needKeyModal').classList.contains('open')"):
+            handled = True
+            if key_mode == "make":
+                await pg.click("#needKeyModal summary"); await pg.click("[data-needkey=make]")
+                await pg.wait_for_selector("#pwModal.open"); await pg.fill("#pw1", TEACHER_PW); await pg.fill("#pw2", TEACHER_PW); await pg.click("#pwGo")
+            else:
+                async with pg.expect_file_chooser() as fc: await pg.click("[data-needkey=load]")
+                await (await fc.value).set_files(keyfile)
+                await pg.wait_for_selector("#pwModal.open"); await pg.fill("#pw1", TEACHER_PW); await pg.click("#pwGo")
         await pg.wait_for_timeout(500)
     raise Exception("no student file was downloaded")
 
