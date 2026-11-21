@@ -264,3 +264,9 @@ Commit both `app/src/` **and** the rebuilt `docs/`.
 * **Pictures for the PDF must be PNG or JPEG.** SVG (drawings, molecules, maths) is rasterised first, with a transparent background so no box shows.
 * **Modals stack by DOM order.** Dialogs that open from other dialogs (save, PDF pop-up) get a higher `z-index`.
 * **Never trust pasted text:** PDFs and Word files are stopped (`fileKind()`), binary "text" is refused, and SVG from the AI is cleaned (`cleanSvg()`) and drawn only as an image.
+
+## 📖 Teacher guide
+`app/guide/guide.md` is the teacher guide (exported as Markdown from the guide doc). The build turns it into
+`docs/guide.html` (a page teachers can open or share) and builds a copy into BEE, so **📖 Teacher guide** on the
+start screen works in the offline file too. To update it: export the doc as Markdown, replace `guide.md`, rebuild.
+

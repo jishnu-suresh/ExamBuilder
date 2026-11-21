@@ -67,7 +67,7 @@ jobs:
         run: bash build/fetch_vendor.sh
       - name: Rebuild
         run: |
-          pip install pillow==12.3.0
+          pip install pillow==12.3.0 markdown==3.11
           python3 build/build.py
       - name: The committed docs/ must equal a fresh build
         run: |

@@ -16,7 +16,41 @@ SRC = os.path.join(ROOT, "app", "src")
 ORDER = [l.strip() for l in rd(os.path.join(SRC, "ORDER.txt")).splitlines() if l.strip() and not l.startswith("#")]
 src = "\n".join(rd(os.path.join(SRC, n)) for n in ORDER)
 logo = os.path.join(A, "logo.png"); LW, LH = Image.open(logo).size
-common = {"__LOGO__": "data:image/png;base64," + b64(logo), "__LOGO_W__": str(LW), "__LOGO_H__": str(LH)}
+# 📖 the teacher guide: app/guide/guide.md (exported from the guide doc) → a page of its own, also built into the app
+import markdown as _md
+def guide_page():
+    t = rd(os.path.join(ROOT, "app", "guide", "guide.md"))
+    t = re.sub(r"(?m)^ {2,3}(?=[-*] |\d+\. )", "    ", t)            # nested list items: 4 spaces for Python-Markdown
+    body = _md.markdown(t, extensions=["tables", "sane_lists"])
+    body = re.sub(r'<a href="(https?:[^"]+)"', r'<a href="\1" target="_blank" rel="noopener"', body)
+    return """<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BEE — Quick-start guide for teachers</title>
+<style>
+:root{--ink:#24211C;--muted:#6E665A;--gold:#B5892E;--gold-l:#FBF3DF;--line:#E8E0D0;--paper:#FFFDF8}
+*{box-sizing:border-box}
+body{margin:0;background:#F6F1E6;color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+main{max-width:820px;margin:24px auto;background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:34px 44px 40px;box-shadow:0 6px 24px rgba(60,45,20,.08)}
+h1{font:700 30px/1.2 Georgia,serif;margin:0 0 4px}
+h1+p{color:var(--muted);font-size:14px;margin:0 0 18px}
+h2{font:700 21px/1.3 Georgia,serif;margin:30px 0 10px;padding-top:14px;border-top:1px solid var(--line)}
+a{color:#8A6418}
+table{border-collapse:collapse;width:100%;margin:10px 0 14px;font-size:15px}
+th,td{border:1px solid var(--line);padding:7px 10px;text-align:left;vertical-align:top}
+th{background:var(--gold-l)}
+code{background:#F3EDE0;border-radius:4px;padding:1px 5px;font-size:.92em}
+li{margin:3px 0}
+.bar{max-width:820px;margin:18px auto 0;display:flex;justify-content:space-between;align-items:center;padding:0 6px;color:var(--muted);font-size:14px}
+.bar b{font:700 18px Georgia,serif;color:var(--ink)}
+.bar button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;font:inherit;cursor:pointer}
+@media (max-width:700px){main{margin:10px;padding:22px 20px}}
+@media print{body{background:#fff}main{border:0;box-shadow:none;margin:0;padding:0}.bar{display:none}h2{break-after:avoid}table,li{break-inside:avoid}}
+</style></head>
+<body><div class="bar"><span><b>🐝 BEE</b> · Teacher guide</span><button onclick="print()">🖨 Print</button></div>
+<main>""" + body + """</main></body></html>"""
+GUIDE_HTML = guide_page()
+common = {"__LOGO__": "data:image/png;base64," + b64(logo), "__LOGO_W__": str(LW), "__LOGO_H__": str(LH),
+          '/*__GUIDE__*/""': json.dumps(GUIDE_HTML).replace("</", "<\\/")}
 
 def easyfonts():
     f = lambda fam: {"r": b64(os.path.join(A, fam + "-Regular.ttf")), "b": b64(os.path.join(A, fam + "-Bold.ttf")), "i": b64(os.path.join(A, fam + "-Italic.ttf"))}
@@ -214,6 +248,7 @@ pwa.update({
 })
 index_html = fill(src, pwa)
 open(os.path.join(OUT, "index.html"), "w").write(index_html)
+open(os.path.join(OUT, "guide.html"), "w").write(GUIDE_HTML)          # a link teachers can share
 os.makedirs(os.path.join(OUT, "download"))
 # the offline file carries its own bee tab icon (no icons folder next to it)
 import base64
@@ -231,7 +266,7 @@ def h(paths):
     return m.hexdigest()[:12]
 CORE = ["./", "index.html", "manifest.webmanifest", "vendor/jspdf.umd.min.js", "vendor/mathjax/tex-svg-full.js", "vendor/mathlive/mathlive.min.js",
         "vendor/mathlive/fonts.css", "vendor/sortable.min.js", "vendor/smiles-drawer.min.js", "vendor/pdfjs/pdf.min.js", "vendor/pdfjs/pdf.worker.min.js",
-        "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/bee-apple-touch-icon.png", "icons/bee-favicon-32.png"]
+        "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/bee-apple-touch-icon.png", "icons/bee-favicon-32.png", "guide.html"]
 LAZY = ["student/player.html", "vendor/fonts.js", "vendor/easyfonts.js", "vendor/ocr/tesseract.min.js", "vendor/ocr/worker.min.js", "vendor/ocr/tesseract-core-simd-lstm.wasm.js", "vendor/ocr/lang/eng.traineddata.gz"]
 sw = rd(os.path.join(ROOT, "build", "sw.template.js"))
 sw = sw.replace("__CORE_VERSION__", h([p for p in CORE if p != "./"])).replace("__LAZY_VERSION__", h(LAZY))

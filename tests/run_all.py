@@ -23,7 +23,7 @@ for t in TESTS:
     print(f"{'✗' if bad else '✓'} {t:12s} {summary}  ({time.time() - t0:.0f}s)", flush=True)
     if bad:
         failed.append(t)
-        print("\n".join("    " + l for l in out.splitlines() if l.startswith("FAIL") or "Error" in l)[:3000])
+        print("\n".join("    " + l for l in out.splitlines() if l.startswith("FAIL") or "Error" in l or "Exception" in l)[:3000])
 srv.shutdown()
 print("\nALL PASSED" if not failed else "\nFAILED: " + ", ".join(failed))
 sys.exit(1 if failed else 0)

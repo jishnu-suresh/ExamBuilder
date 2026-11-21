@@ -35,7 +35,11 @@ async def export_student(pg, key_mode="make", keyfile=None):
                 await (await fc.value).set_files(keyfile)
                 await pg.wait_for_selector("#pwModal.open"); await pg.fill("#pw1", TEACHER_PW); await pg.click("#pwGo")
         await pg.wait_for_timeout(500)
-    raise Exception("no student file was downloaded")
+    # stuck: say what the page shows, so a failure on GitHub explains itself
+    try: state = await pg.evaluate("""({ modals: [...document.querySelectorAll('.modal.open')].map(m => m.id), toast: (document.querySelector('.toast') || {}).textContent,
+        stu: ($('#stuStatus') || {}).textContent, btn: ($('#stuGo') || {}).textContent, pw: ($('#pwErr') || {}).textContent })""")
+    except Exception as e: state = repr(e)
+    raise Exception(f"no student file was downloaded; downloads={[d.suggested_filename for d in downs]}; page={state}")
 
 async def make_student_file(b, url=WEB, code="ABCD-2345", tcode="135790", extra="25", key_mode="make", keyfile=None, setup=None):
     ctx = await b.new_context(accept_downloads=True, viewport={"width": 1300, "height": 900}); pg = await ctx.new_page()

@@ -154,6 +154,14 @@ $("#dlMenu").addEventListener("click", e => {
   ({ full: () => download(), large: () => download({ large: true }), cover: () => download({ coverOnly: true }), rubric: () => download({ rubricOnly: true }), questions: () => download({ noCover: true }), key: () => download({ key: true }), versions: () => openModal("#verModal"), dys: () => openModal("#dysModal"), student: () => openStudentDialog(), answers: () => pickAnswers() })[b.dataset.dl]();
 });
 $("#btnRefresh").onclick = preview;
+// 📖 the teacher guide opens in a new window: the website's guide.html, or (offline file) the copy built into BEE
+document.addEventListener("click", e => {
+  const a = e.target.closest("[data-guide]"); if(!a) return;
+  if(window.__PWA__) return;                       // website / installed app: the link opens guide.html itself
+  e.preventDefault();
+  const w = window.open(URL.createObjectURL(new Blob([GUIDE_HTML], { type: "text/html" })), "_blank");
+  if(!w) toast("Your browser blocked the new window: allow pop-ups for BEE to open the guide.");
+});
 // 🌱 Basic / 🐝 Full mode (remembered in this browser)
 function setMode(basic){
   document.body.classList.toggle("basic", !!basic);

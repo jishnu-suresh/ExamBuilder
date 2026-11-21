@@ -513,7 +513,7 @@ x = 3
       <button class="start-btn" id="stOpen"><b>📂 Open a saved exam</b><span>An .exam.json project file</span></button>
       <button class="start-btn" id="stDemo"><b>🐝 Try the demo exam</b><span>A finished sample paper to look around and play with</span></button>
     </div>
-    <p style="text-align:center;margin:10px 0 0"><a href="#" id="stTour" style="font-size:13px;color:var(--gold-d)">New here? Take the 1-minute tour →</a></p>
+    <p style="text-align:center;margin:10px 0 0"><a href="#" id="stTour" style="font-size:13px;color:var(--gold-d)">New here? Take the 1-minute tour →</a> <span style="color:var(--muted)">·</span> <a href="guide.html" target="_blank" rel="noopener" id="stGuide" data-guide style="font-size:13px;color:var(--gold-d)">📖 Teacher guide</a></p>
     <p class="hint" id="stNote" style="margin:12px 0 0"></p>
     <p style="text-align:center;margin:14px 0 0;font:italic 12px Georgia,serif;color:var(--muted)">🐝 BEE · Build • Edit • Evaluate · © Jishnu <a class="fb-link" href="https://forms.cloud.microsoft/r/KXXUcfCRvs" target="_blank" rel="noopener" title="Report a problem or share an idea (feedback form)" aria-label="Feedback form: report a problem or share an idea">💬</a></p>
     <p style="text-align:center;margin:6px 0 0"><a href="#" id="stSkip" style="color:var(--muted);font-size:13px">Continue without a project file</a></p>
@@ -718,6 +718,7 @@ if(window.pdfjsLib){
 <script>
 "use strict";
 const DEFAULT_LOGO = "__LOGO__";
+const GUIDE_HTML = /*__GUIDE__*/"";
 const DEFAULT_LOGO_SIZE = [__LOGO_W__, __LOGO_H__];
 let FONT_R = "__FONT_R__";
 let FONT_B = "__FONT_B__";
