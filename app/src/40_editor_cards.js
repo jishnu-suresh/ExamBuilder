@@ -33,7 +33,30 @@ function updateLogoUI(){
   $("#logoThumb").classList.toggle("hidden", !src);
 }
 
+// Exam details and the rubric fold to one line once filled in; the teacher's own choice is remembered
+const FOLD = (() => { try{ return JSON.parse(localStorage.getItem("bee.fold") || "{}"); }catch(_){ return {}; } })();
+function setFold(id, on, remember){
+  const p = document.getElementById(id); if(!p) return;
+  p.classList.toggle("folded", !!on); const b = p.querySelector(".fold-btn"); if(b) b.textContent = on ? "▾ Open" : "▴ Fold";
+  if(remember){ FOLD[id] = !!on; try{ localStorage.setItem("bee.fold", JSON.stringify(FOLD)); }catch(_){} }
+}
+function updateFolds(){
+  const d = S.d, bits = [d.title, d.subject, d.className, d.duration].filter(x => x && String(x).trim());
+  $("#detSum").textContent = bits.length ? bits.join(" · ") : "not filled in yet";
+  const rb = $("#rbPanel"); rb.classList.toggle("rb-on", !!d.rubricOn);
+  $("#rbSum").textContent = d.rubricOn ? (rubric().title || "on") : "off";
+  if(!S.items.length && !(d.title || "").trim()){ setFold("detPanel", false); window.__folded = 0; window.__rbInit = 0; }
+  if(!window.__folded && S.items.length && (d.title || "").trim()){ window.__folded = 1; setFold("detPanel", FOLD.detPanel != null ? FOLD.detPanel : true); }
+  if(!d.rubricOn) setFold("rbPanel", false);
+  else if(!window.__rbInit && S.items.length){ window.__rbInit = 1; setFold("rbPanel", FOLD.rbPanel != null ? FOLD.rbPanel : true); }
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-fold]");
+  if(b){ e.stopPropagation(); const p = document.getElementById(b.dataset.fold); setFold(p.id, !p.classList.contains("folded"), true); return; }
+  const f = e.target.closest(".foldable.folded"); if(f && !e.target.closest(".switch")) setFold(f.id, false, true);
+}, true);
 function render(){
+  updateFolds();
   const { meta, auto, total, qCount, secs } = computeMeta();
   $("#autoTotalHint").textContent = "auto: " + fmt(auto);
   $("#summary").innerHTML = S.items.length
@@ -82,24 +105,23 @@ function render(){
     }
     if(it.type === "note" && it.heading){
       return `<div class="card note subpart" data-id="${it.id}"><div class="badge">A</div><div class="body">
-        <div class="row"><span class="kind">Sub-part heading</span>${tools}</div>
+        <div class="row"><span class="kind">Sub-heading (inside a part)</span>${tools}</div>
         <input type="text" data-f="text" value="${esc(it.text)}" placeholder="e.g. A. Definitions (18 points)">
         <div class="row"><label>Points shown on the right <input type="number" min="0" step="0.5" data-f="marks" value="${esc(it.marks || "")}" placeholder="—"></label><span class="hint">optional · for show only, the total comes from the questions</span><span class="grow"></span><button class="btn sm ${it.newPage ? "on-t" : ""}" data-act="newpage" title="Start this sub-part on a new page">⤓ New page</button></div>
       </div></div>`;
     }
     if(it.type === "note"){
       return `<div class="card note" data-id="${it.id}"><div class="badge">¶</div><div class="body">
-        <div class="row"><span class="kind">Text / passage (not numbered)</span>${tools}</div>
+        <div class="row hdr"><span class="kind">Text / passage (not numbered)</span><span class="grow"></span>${insertMenu(it)}${moreMenu(it)}${tools}</div>
         ${fmtBar(it)}
       <textarea data-f="text" placeholder="Instructions, a reading passage, a diagram caption…">${esc(it.text)}</textarea>
         <div class="miss hidden" data-miss></div><div class="picstrip hidden" data-pics></div>
         <div class="rich hidden" data-rich></div>
-        ${imgBlock}<div class="row">${insertMenu(it)}
-        <span class="grow"></span>${moreMenu(it)}</div>${moreChips(it)}
+        ${imgBlock}${moreChips(it)}
       </div></div>`;
     }
     return `<div class="card" data-id="${it.id}"><div class="badge">${it.nonum ? "–" : meta[it.id]}</div><div class="body">
-      <div class="row"><span class="kind">${it.nonum ? "Question (no number)" : "Question " + meta[it.id]}</span>${tools}</div>
+      <div class="row hdr"><span class="kind">${it.nonum ? "Question (no number)" : "Question " + meta[it.id]}</span><span class="grow"></span>${it.mcq ? "" : `<button class="btn sm" data-act="subadd" title="Add sub-questions (a), (b), (c)… with their own marks">＋ (a)</button>`}${it.mcq || (it.answer || "").trim() || it._ans ? "" : `<button class="btn sm" data-act="showans" title="Model answer for the answer key (teacher copy)">✎ Answer</button>`}${insertMenu(it)}${moreMenu(it)}${tools}</div>
       ${fmtBar(it)}
       <textarea data-f="text" placeholder="${it.img ? "Optional text above the image…" : "Type the question… maths: $x^2+1$ · or use ∑ Equation"}">${esc(it.text)}</textarea>
       <div class="miss hidden" data-miss></div><div class="picstrip hidden" data-pics></div>
@@ -109,21 +131,16 @@ function render(){
       ${imgBlock}
       ${subsBlock(it)}
       ${it.mcq ? "" : ansBlock(it, null)}
-      <div class="row">
+      <div class="row qctl">
         ${(it.subs || []).some(sb => num(sb.marks) > 0) ? `<label title="The sum of the sub-question marks">Marks <input type="number" disabled value="${fmt(qMarks(it))}" style="opacity:.7"></label>` : `<label>Marks <input type="number" min="0" step="0.5" data-f="marks" value="${esc(it.marks)}"></label>`}
         ${it.mcq ? "" : spaceCtl(it, "data-f")}
         <label>Part <select data-part>${partOpts(it.id)}</select></label>
-        <label>Type <select data-f="mcq">${opt("", "Written", it.mcq)}${opt("single", "MCQ · one answer", it.mcq)}${opt("multi", "MCQ · multiple answers", it.mcq)}</select></label>
+        <label title="Written answer or multiple choice"><select data-f="mcq">${opt("", "Written", it.mcq)}${opt("single", "MCQ · one", it.mcq)}${opt("multi", "MCQ · several", it.mcq)}</select></label>
         ${it.mcq || /^\s*\(?[a-hA-H][\).]/m.test(qText(it)) ? `<label>Options <select data-f="optCols">${opt("", "1 per line", it.optCols)}${opt("2", "2 columns", it.optCols)}${opt("4", "4 columns", it.optCols)}</select></label>` : ""}
-        <span class="grow"></span>
-        ${it.mcq ? "" : `<button class="btn sm" data-act="subadd" title="Add (a), (b), (c)… parts with their own marks">＋ Sub-question</button>`}
-        ${it.mcq || (it.answer || "").trim() || it._ans ? "" : `<button class="btn sm" data-act="showans" title="Model answer for the answer key (teacher copy)">✎ Model answer</button>`}
-        ${insertMenu(it)}
-        ${moreMenu(it)}
-      </div>
-      ${moreChips(it)}
+      ${moreChips(it)}</div>
     </div></div>`;
   }).join("");
+  if(window.editingId){ const ec = list.querySelector(`.card[data-id="${window.editingId}"]`); if(ec) ec.classList.add("editing"); }
   list.querySelectorAll("textarea").forEach(autoGrow);
   list.querySelectorAll(".card").forEach(c => { const it = S.items.find(x => x.id === c.dataset.id); if(it && it.type !== "section") updateRich(c, it); });
   if(S.d.rubricOn && !document.activeElement.closest?.("#rubricBox")) renderRubric();
@@ -142,7 +159,7 @@ function ansBlock(it, sb){
   const o = sb || it, show = (o.answer || "").trim() || o._ans;
   if(!show) return "";
   const a = sb ? `data-sub="${sb.id}" data-sf="answer"` : `data-f="answer"`;
-  return `<div class="ansbox"><span class="kind" style="color:#B03A2E">✎ Model answer · only on the answer key</span><textarea ${a} placeholder="Model answer or marking points — shown in red on the answer key">${esc(o.answer || "")}</textarea></div>`;
+  return `<div class="ansbox"><span class="kind" style="color:#B03A2E">✎ Model answer · only on the answer key</span><textarea rows="1" ${a} placeholder="Model answer or marking points — shown in red on the answer key">${esc(o.answer || "")}</textarea></div>`;
 }
 function subsBlock(it){
   const subs = it.subs || [];

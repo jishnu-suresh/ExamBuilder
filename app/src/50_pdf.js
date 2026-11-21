@@ -1130,7 +1130,7 @@ async function preview(){
     lastBytes = doc.output("arraybuffer"); pvMap = { regions: doc.__regions || [], size: doc.__size };
     const pg = (lastEdited && doc.__pageOf && doc.__pageOf[lastEdited]) || (lastEdited === null ? 1 : 0);
     await showPreview(lastBytes, pg);
-    $("#status").textContent = doc.getNumberOfPages() + " page" + (doc.getNumberOfPages() > 1 ? "s" : "") + " · updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    $("#status").title = "Updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); $("#status").textContent = doc.getNumberOfPages() + " page" + (doc.getNumberOfPages() > 1 ? "s" : "");
   }catch(e){ console.error(e); $("#status").textContent = "Preview error: " + e.message; }
   finally{ pvBusy = false; if(pvAgain){ pvAgain = false; preview(); } }
 }

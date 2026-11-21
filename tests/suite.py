@@ -262,11 +262,11 @@ async def switch_files(b):
     for n in "ABCACB":
         await op(n); await pg.wait_for_timeout(500); seq.append(await pg.evaluate("S.d.title") == "T" + n)
     ok("switching files: each file opens, back to back", all(seq), seq)
-    await op("A"); await pg.wait_for_timeout(500); await pg.fill("[data-k=title]", "A edited"); await pg.wait_for_timeout(500)
+    await op("A"); await pg.wait_for_timeout(500); await pg.evaluate("setFold('detPanel', false)"); await pg.fill("[data-k=title]", "A edited"); await pg.wait_for_timeout(500)
     await op("B", 2000); await pg.wait_for_timeout(600); await pg.evaluate("writeProject(true)"); await pg.wait_for_timeout(2000)
     d = await pg.evaluate("Promise.all([S.d.title, __disk('A'), __disk('B'), proj.name])")
     ok("switching files: the old file keeps its own edits, never the next exam", d == ["TB", "A edited", "TB", "B.exam.json"], d)
-    await pg.fill("[data-k=title]", "B edited"); await pg.wait_for_timeout(500)
+    await pg.evaluate("setFold('detPanel', false)"); await pg.fill("[data-k=title]", "B edited"); await pg.wait_for_timeout(500)
     await pg.evaluate("""() => { const o = FileSystemFileHandle.prototype.createWritable; FileSystemFileHandle.prototype.createWritable = async function(){ await new Promise(r => setTimeout(r, 1000)); return o.call(this); }; writeProject(); }""")
     await pg.wait_for_timeout(100); await op("C"); await pg.wait_for_timeout(2500)
     d = await pg.evaluate("Promise.all([S.d.title, __disk('B'), __disk('C')])")
@@ -372,4 +372,6 @@ async def main():
     bad = [n for n, good in R if not good]
     print(f"\n{len(R) - len(bad)}/{len(R)} passed"); sys.exit(1 if bad else 0)
 
-asyncio.run(main())
+if __name__ == "__main__":
+    if len(sys.argv) > 1: CHECKS = [globals()[n] for n in sys.argv[1:]]
+    asyncio.run(main())

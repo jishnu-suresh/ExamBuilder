@@ -58,7 +58,7 @@ function frFields(){
   // every editable text in the exam: [item, label, getter, setter]
   const out = [], { meta } = computeMeta();
   S.items.forEach(it => {
-    const tag = it.type === "section" ? "Part" : it.pagebreak ? "Page break" : it.heading ? "Sub-part" : it.type === "note" ? "Text" : it.nonum ? "Q –" : "Q" + meta[it.id];
+    const tag = it.type === "section" ? "Part" : it.pagebreak ? "Page break" : it.heading ? "Sub-heading" : it.type === "note" ? "Text" : it.nonum ? "Q –" : "Q" + meta[it.id];
     out.push([it, tag, () => it.text || "", v => { it.text = v; }]);
     (it.options || []).forEach((o, i) => out.push([it, tag + " · option " + LETTERS[i].toUpperCase(), () => it.options[i] || "", v => { it.options[i] = v; }]));
     if(it.answer) out.push([it, tag + " · model answer", () => it.answer || "", v => { it.answer = v; }]);

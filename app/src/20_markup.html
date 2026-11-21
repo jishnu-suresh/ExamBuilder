@@ -38,8 +38,8 @@
 <main class="grid">
   <div>
     <!-- STEP 1 -->
-    <section class="panel">
-      <h2><span class="step">1</span>Exam details</h2>
+    <section class="panel foldable" id="detPanel">
+      <h2><span class="step">1</span>Exam details<span class="fold-sum" id="detSum"></span><button type="button" class="btn sm fold-btn" data-fold="detPanel" title="Fold this section away (click again to open it)">▴ Fold</button></h2>
       <div class="tabs" role="tablist" id="setTabs">
         <button type="button" role="tab" data-tab="exam" class="on">📝 Exam</button>
         <button type="button" role="tab" data-tab="look">🎨 Look</button>
@@ -105,8 +105,9 @@
     </section>
 
     <!-- RUBRIC -->
-    <section class="panel rubric-panel">
-      <h2 style="margin-bottom:6px"><span class="step">R</span>Rubric page <span class="hint" style="font:400 12.5px system-ui;margin-left:4px">for the teacher, after the cover</span>
+    <section class="panel rubric-panel foldable" id="rbPanel">
+      <h2 style="margin-bottom:6px"><span class="step">R</span>Rubric page <span class="hint rb-hint" style="font:400 12.5px system-ui;margin-left:4px">for the teacher, after the cover</span><span class="fold-sum" id="rbSum"></span>
+        <button type="button" class="btn sm fold-btn" data-fold="rbPanel" title="Fold this section away (click again to open it)">▴ Fold</button>
         <label class="switch" title="Add a rubric page after the cover"><input type="checkbox" id="rbOn"><span></span></label></h2>
       <div id="rubricBox" class="hidden"></div>
     </section>
@@ -137,7 +138,7 @@
         <button class="btn sm" id="addQ">＋ Question</button>
         <button class="btn sm" id="addS">＋ Part / section</button>
         <button class="btn sm" id="addN">＋ Text / passage</button>
-        <button class="btn sm" id="addSub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-part</button>
+        <button class="btn sm" id="addSub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-heading</button>
         <button class="btn sm" id="addBreak" title="Everything after this starts on a new page">＋ Page break</button>
         <button class="btn sm" id="addMCQ">＋ MCQ</button>
         <button class="btn sm" id="arrangeBtn" title="See all questions as small tiles and drag them into a new order">⇅ Arrange</button>
@@ -156,8 +157,8 @@
         <button class="btn sm" data-add="q">＋ Question</button>
         <button class="btn sm" data-add="mcq">＋ MCQ</button>
         <button class="btn sm" data-add="s">＋ Part</button>
-        <button class="btn sm" data-add="n">＋ Text / passage</button>
-        <button class="btn sm" data-add="sub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-part</button>
+        <button class="btn sm" data-add="n" title="Text or a reading passage (not numbered)">＋ Text</button>
+        <button class="btn sm" data-add="sub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-heading</button>
         <button class="btn sm" data-add="brk" title="Everything after this starts on a new page">＋ Page break</button>
         <span style="flex:1"></span>
         <button class="btn sm" data-add="arrange">⇅ Arrange</button>
@@ -167,17 +168,20 @@
 
   <!-- STEP 3 -->
   <aside class="preview">
+    <div class="pv-resize" id="pvResize" title="Drag to make the preview wider or narrower (double-click: back to normal)"></div>
     <div class="bar">
       <span class="step">3</span><h2>Preview</h2>
       <span class="status" id="status"></span>
       <span class="zoom"><button class="btn icon" id="zoomOut" title="Zoom out">−</button><span id="zoomLbl">Fit</span><button class="btn icon" id="zoomIn" title="Zoom in">+</button></span>
       <label class="keytog" title="Preview the answer key (teacher copy)"><input type="checkbox" id="pvKey"> Key</label>
       <button class="btn sm" id="btnOpenTab" title="Open the PDF in a new tab">⤢</button>
-      <button class="btn sm" id="btnRefresh">↻ Refresh</button>
+      <button class="btn sm" id="btnRefresh" title="Refresh the preview">↻</button>
+      <button class="btn sm" id="pvHide" title="Hide the preview (more room for typing)">⇥</button>
     </div>
     <div id="pv" class="pv" aria-label="PDF preview"><div class="pv-empty">Preparing preview…</div></div>
   </aside>
 </main>
+<button type="button" class="btn pv-show" id="pvShow" title="Show the preview again">◧ Preview</button>
 
 <input type="file" id="fileIn" multiple accept=".txt,.text,.md,.markdown,.tex,text/plain,text/markdown,image/*" class="hidden">
 <input type="file" id="logoIn" accept="image/*" class="hidden">

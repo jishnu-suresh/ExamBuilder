@@ -35,10 +35,20 @@ button,input,select,textarea{font:inherit;color:inherit}
 .btn.sm{padding:4px 9px;font-size:13px;border-radius:7px}
 .btn.icon{padding:4px 7px;font-size:13px;border-radius:7px;min-width:30px;justify-content:center}
 .btn.danger:hover{border-color:var(--danger);color:var(--danger);background:#fdf1ee}
-.grid{display:grid;grid-template-columns:minmax(420px,1fr) minmax(380px,46%);gap:22px;padding:22px;max-width:1600px;margin:0 auto}
+.grid{display:grid;grid-template-columns:minmax(420px,1fr) minmax(380px,var(--pvw,46%));gap:22px;padding:22px;max-width:1600px;margin:0 auto}
 @media (max-width:980px){.grid{grid-template-columns:1fr}.preview{position:static!important;height:80vh!important}}
 .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:18px 20px;margin-bottom:20px}
 .panel>h2{font-size:18px;display:flex;align-items:center;gap:10px;margin-bottom:14px}
+/* sections that fold to one line once filled in */
+.foldable .fold-btn{margin-left:auto;font:500 12px system-ui,sans-serif;padding:3px 9px}
+.foldable .fold-sum{display:none;font:400 13px system-ui,sans-serif;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.foldable.folded{padding-top:12px;padding-bottom:12px;cursor:pointer}
+.foldable.folded>h2{margin-bottom:0!important}
+.foldable.folded>:not(h2){display:none!important}
+.foldable.folded .fold-sum{display:block}
+.foldable.folded .rb-hint{display:none}
+.rubric-panel .fold-btn{margin-left:auto}.rubric-panel h2 .switch{margin-left:6px}
+.rubric-panel:not(.rb-on) .fold-btn{display:none}
 .step{display:inline-grid;place-items:center;width:26px;height:26px;background:var(--gold);color:#fff;font:600 13px system-ui;clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%)}
 .fields{display:grid;grid-template-columns:1fr 1fr;gap:12px 14px}
 .fields .full{grid-column:1/-1}
@@ -82,6 +92,15 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .preview{position:sticky;top:76px;height:calc(100vh - 98px);display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
 .preview .bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line)}
 .preview .bar h2{font-size:16px;flex:1}
+.preview .status{white-space:nowrap}
+/* the preview: drag its left edge to resize, or hide it while typing */
+.pv-resize{position:absolute;left:0;top:0;bottom:0;width:7px;cursor:col-resize;z-index:5}
+.pv-resize:hover,.pv-resize.drag{background:linear-gradient(90deg,var(--gold) 0 3px,transparent 3px)}
+.grid.pv-off{grid-template-columns:minmax(420px,1fr);max-width:1000px}
+.grid.pv-off .preview{display:none}
+.pv-show{display:none;position:fixed;right:14px;top:72px;z-index:40;box-shadow:var(--shadow)}
+.grid.pv-off~.pv-show{display:inline-flex}
+@media (max-width:980px){.pv-resize,#pvHide{display:none}}
 .pv{flex:1;overflow:auto;background:#E4E0D6;padding:12px;display:block}
 .pv-pages{display:flex;flex-direction:column;align-items:center;gap:12px}
 .pv canvas{display:block;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.18),0 6px 18px rgba(0,0,0,.06);max-width:none}
@@ -232,7 +251,6 @@ label.f .sv-name input,.sv-name input{flex:1;border:0!important;outline:0;box-sh
   .card .tools{margin-left:0;width:100%;justify-content:flex-end}
   .card .row label{flex-wrap:wrap}
   .card select[data-f],.card select[data-part]{max-width:100%}
-  .fmtbar .fhint{display:none}
   .subs{padding-left:7px}
   .sub-row{flex-direction:column;gap:4px}.sub-row b{padding-top:0}
   .rb-top{grid-template-columns:1fr}
@@ -373,7 +391,22 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .fmtbar .sw.custom input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;border:0;padding:0}
 .fmtbar .fsep{width:1px;height:18px;background:var(--line);margin:0 3px}
 .fmtbar button[data-fmt=clear]{font:12px system-ui,sans-serif;color:var(--muted)}
-.fmtbar .fhint{font-size:11.5px;color:var(--muted);margin-left:4px}
+#list .card:not(.editing) .fmtbar{display:none}
+.fmtbar .swdd{position:relative;display:inline-flex}
+.fmtbar .swbtn{display:inline-flex;align-items:center;gap:3px;font:11px system-ui,sans-serif;color:var(--muted)}
+.fmtbar .swbtn .dot{width:14px;height:14px;border-radius:50%;background:var(--c);box-shadow:0 0 0 1px var(--line)}
+.fmtbar .swpop{display:none;position:absolute;top:30px;left:0;z-index:30;background:#fff;border:1px solid var(--line);border-radius:10px;padding:7px;gap:6px;box-shadow:0 8px 24px rgba(0,0,0,.12);white-space:nowrap}
+.fmtbar .swdd.open .swpop{display:flex}
+.card .hdr{gap:5px}.card .hdr .kind{white-space:nowrap;margin-right:4px}
+.card .hdr>.btn.sm,.card .hdr .ins-wrap .btn{padding:3px 8px;font-size:12px}
+.card .hdr .ins-menu{left:auto;right:0}
+.card .qctl{gap:6px 10px}
+.card .qctl input[type=number]{width:58px;padding:4px 6px}
+.card .qctl select[data-f]{max-width:104px}.card .qctl select[data-part]{max-width:122px}
+.card .qctl .flags{display:contents}
+.card .qctl label{gap:4px}
+.card .ansbox textarea{min-height:32px}
+.card textarea[data-f=text]{min-height:46px}
 .keytog{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;color:#B03A2E;border:1px solid #EBCFC9;border-radius:7px;padding:3px 7px;cursor:pointer;background:#FDF5F3}
 .fr-list{max-height:40vh;overflow:auto;display:flex;flex-direction:column;gap:4px;margin-top:6px}
 .fr-list button{text-align:left;border:1px solid var(--line);background:#fff;border-radius:7px;padding:5px 9px;cursor:pointer;font-size:13px}
@@ -402,7 +435,8 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .card select[data-part]{border:1px solid var(--line);border-radius:8px;padding:4px 6px;background:#fff;font-size:13px;max-width:190px}
 .seg.algn button{padding:4px 9px;font-size:12.5px}
 .wrapchk{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:3px 9px;background:#fff;cursor:pointer}
-.bottom-bar{position:sticky;bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(4px);border-top:1px solid var(--line);margin:12px -20px -18px;padding:10px 20px;border-radius:0 0 var(--radius) var(--radius);z-index:5}
+.bottom-bar{position:sticky;bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(4px);border-top:1px solid var(--line);margin:12px -20px -18px;padding:10px 20px;border-radius:0 0 var(--radius) var(--radius);z-index:5;flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:thin}
+.bottom-bar .btn.sm{padding:5px 8px;font-size:12.5px;white-space:nowrap;flex:none}
 .arr-grid{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;max-height:62vh;overflow:auto;padding:4px}
 .tile{width:150px;min-height:74px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:7px 8px;cursor:grab;display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--muted);user-select:none;position:relative}
 .tile:hover{border-color:var(--gold)}
@@ -464,8 +498,8 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 <main class="grid">
   <div>
     <!-- STEP 1 -->
-    <section class="panel">
-      <h2><span class="step">1</span>Exam details</h2>
+    <section class="panel foldable" id="detPanel">
+      <h2><span class="step">1</span>Exam details<span class="fold-sum" id="detSum"></span><button type="button" class="btn sm fold-btn" data-fold="detPanel" title="Fold this section away (click again to open it)">▴ Fold</button></h2>
       <div class="tabs" role="tablist" id="setTabs">
         <button type="button" role="tab" data-tab="exam" class="on">📝 Exam</button>
         <button type="button" role="tab" data-tab="look">🎨 Look</button>
@@ -531,8 +565,9 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
     </section>
 
     <!-- RUBRIC -->
-    <section class="panel rubric-panel">
-      <h2 style="margin-bottom:6px"><span class="step">R</span>Rubric page <span class="hint" style="font:400 12.5px system-ui;margin-left:4px">for the teacher, after the cover</span>
+    <section class="panel rubric-panel foldable" id="rbPanel">
+      <h2 style="margin-bottom:6px"><span class="step">R</span>Rubric page <span class="hint rb-hint" style="font:400 12.5px system-ui;margin-left:4px">for the teacher, after the cover</span><span class="fold-sum" id="rbSum"></span>
+        <button type="button" class="btn sm fold-btn" data-fold="rbPanel" title="Fold this section away (click again to open it)">▴ Fold</button>
         <label class="switch" title="Add a rubric page after the cover"><input type="checkbox" id="rbOn"><span></span></label></h2>
       <div id="rubricBox" class="hidden"></div>
     </section>
@@ -563,7 +598,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
         <button class="btn sm" id="addQ">＋ Question</button>
         <button class="btn sm" id="addS">＋ Part / section</button>
         <button class="btn sm" id="addN">＋ Text / passage</button>
-        <button class="btn sm" id="addSub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-part</button>
+        <button class="btn sm" id="addSub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-heading</button>
         <button class="btn sm" id="addBreak" title="Everything after this starts on a new page">＋ Page break</button>
         <button class="btn sm" id="addMCQ">＋ MCQ</button>
         <button class="btn sm" id="arrangeBtn" title="See all questions as small tiles and drag them into a new order">⇅ Arrange</button>
@@ -582,8 +617,8 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
         <button class="btn sm" data-add="q">＋ Question</button>
         <button class="btn sm" data-add="mcq">＋ MCQ</button>
         <button class="btn sm" data-add="s">＋ Part</button>
-        <button class="btn sm" data-add="n">＋ Text / passage</button>
-        <button class="btn sm" data-add="sub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-part</button>
+        <button class="btn sm" data-add="n" title="Text or a reading passage (not numbered)">＋ Text</button>
+        <button class="btn sm" data-add="sub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-heading</button>
         <button class="btn sm" data-add="brk" title="Everything after this starts on a new page">＋ Page break</button>
         <span style="flex:1"></span>
         <button class="btn sm" data-add="arrange">⇅ Arrange</button>
@@ -593,17 +628,20 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 
   <!-- STEP 3 -->
   <aside class="preview">
+    <div class="pv-resize" id="pvResize" title="Drag to make the preview wider or narrower (double-click: back to normal)"></div>
     <div class="bar">
       <span class="step">3</span><h2>Preview</h2>
       <span class="status" id="status"></span>
       <span class="zoom"><button class="btn icon" id="zoomOut" title="Zoom out">−</button><span id="zoomLbl">Fit</span><button class="btn icon" id="zoomIn" title="Zoom in">+</button></span>
       <label class="keytog" title="Preview the answer key (teacher copy)"><input type="checkbox" id="pvKey"> Key</label>
       <button class="btn sm" id="btnOpenTab" title="Open the PDF in a new tab">⤢</button>
-      <button class="btn sm" id="btnRefresh">↻ Refresh</button>
+      <button class="btn sm" id="btnRefresh" title="Refresh the preview">↻</button>
+      <button class="btn sm" id="pvHide" title="Hide the preview (more room for typing)">⇥</button>
     </div>
     <div id="pv" class="pv" aria-label="PDF preview"><div class="pv-empty">Preparing preview…</div></div>
   </aside>
 </main>
+<button type="button" class="btn pv-show" id="pvShow" title="Show the preview again">◧ Preview</button>
 
 <input type="file" id="fileIn" multiple accept=".txt,.text,.md,.markdown,.tex,text/plain,text/markdown,image/*" class="hidden">
 <input type="file" id="logoIn" accept="image/*" class="hidden">
@@ -5917,7 +5955,30 @@ function updateLogoUI(){
   $("#logoThumb").classList.toggle("hidden", !src);
 }
 
+// Exam details and the rubric fold to one line once filled in; the teacher's own choice is remembered
+const FOLD = (() => { try{ return JSON.parse(localStorage.getItem("bee.fold") || "{}"); }catch(_){ return {}; } })();
+function setFold(id, on, remember){
+  const p = document.getElementById(id); if(!p) return;
+  p.classList.toggle("folded", !!on); const b = p.querySelector(".fold-btn"); if(b) b.textContent = on ? "▾ Open" : "▴ Fold";
+  if(remember){ FOLD[id] = !!on; try{ localStorage.setItem("bee.fold", JSON.stringify(FOLD)); }catch(_){} }
+}
+function updateFolds(){
+  const d = S.d, bits = [d.title, d.subject, d.className, d.duration].filter(x => x && String(x).trim());
+  $("#detSum").textContent = bits.length ? bits.join(" · ") : "not filled in yet";
+  const rb = $("#rbPanel"); rb.classList.toggle("rb-on", !!d.rubricOn);
+  $("#rbSum").textContent = d.rubricOn ? (rubric().title || "on") : "off";
+  if(!S.items.length && !(d.title || "").trim()){ setFold("detPanel", false); window.__folded = 0; window.__rbInit = 0; }
+  if(!window.__folded && S.items.length && (d.title || "").trim()){ window.__folded = 1; setFold("detPanel", FOLD.detPanel != null ? FOLD.detPanel : true); }
+  if(!d.rubricOn) setFold("rbPanel", false);
+  else if(!window.__rbInit && S.items.length){ window.__rbInit = 1; setFold("rbPanel", FOLD.rbPanel != null ? FOLD.rbPanel : true); }
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-fold]");
+  if(b){ e.stopPropagation(); const p = document.getElementById(b.dataset.fold); setFold(p.id, !p.classList.contains("folded"), true); return; }
+  const f = e.target.closest(".foldable.folded"); if(f && !e.target.closest(".switch")) setFold(f.id, false, true);
+}, true);
 function render(){
+  updateFolds();
   const { meta, auto, total, qCount, secs } = computeMeta();
   $("#autoTotalHint").textContent = "auto: " + fmt(auto);
   $("#summary").innerHTML = S.items.length
@@ -5966,24 +6027,23 @@ function render(){
     }
     if(it.type === "note" && it.heading){
       return `<div class="card note subpart" data-id="${it.id}"><div class="badge">A</div><div class="body">
-        <div class="row"><span class="kind">Sub-part heading</span>${tools}</div>
+        <div class="row"><span class="kind">Sub-heading (inside a part)</span>${tools}</div>
         <input type="text" data-f="text" value="${esc(it.text)}" placeholder="e.g. A. Definitions (18 points)">
         <div class="row"><label>Points shown on the right <input type="number" min="0" step="0.5" data-f="marks" value="${esc(it.marks || "")}" placeholder="—"></label><span class="hint">optional · for show only, the total comes from the questions</span><span class="grow"></span><button class="btn sm ${it.newPage ? "on-t" : ""}" data-act="newpage" title="Start this sub-part on a new page">⤓ New page</button></div>
       </div></div>`;
     }
     if(it.type === "note"){
       return `<div class="card note" data-id="${it.id}"><div class="badge">¶</div><div class="body">
-        <div class="row"><span class="kind">Text / passage (not numbered)</span>${tools}</div>
+        <div class="row hdr"><span class="kind">Text / passage (not numbered)</span><span class="grow"></span>${insertMenu(it)}${moreMenu(it)}${tools}</div>
         ${fmtBar(it)}
       <textarea data-f="text" placeholder="Instructions, a reading passage, a diagram caption…">${esc(it.text)}</textarea>
         <div class="miss hidden" data-miss></div><div class="picstrip hidden" data-pics></div>
         <div class="rich hidden" data-rich></div>
-        ${imgBlock}<div class="row">${insertMenu(it)}
-        <span class="grow"></span>${moreMenu(it)}</div>${moreChips(it)}
+        ${imgBlock}${moreChips(it)}
       </div></div>`;
     }
     return `<div class="card" data-id="${it.id}"><div class="badge">${it.nonum ? "–" : meta[it.id]}</div><div class="body">
-      <div class="row"><span class="kind">${it.nonum ? "Question (no number)" : "Question " + meta[it.id]}</span>${tools}</div>
+      <div class="row hdr"><span class="kind">${it.nonum ? "Question (no number)" : "Question " + meta[it.id]}</span><span class="grow"></span>${it.mcq ? "" : `<button class="btn sm" data-act="subadd" title="Add sub-questions (a), (b), (c)… with their own marks">＋ (a)</button>`}${it.mcq || (it.answer || "").trim() || it._ans ? "" : `<button class="btn sm" data-act="showans" title="Model answer for the answer key (teacher copy)">✎ Answer</button>`}${insertMenu(it)}${moreMenu(it)}${tools}</div>
       ${fmtBar(it)}
       <textarea data-f="text" placeholder="${it.img ? "Optional text above the image…" : "Type the question… maths: $x^2+1$ · or use ∑ Equation"}">${esc(it.text)}</textarea>
       <div class="miss hidden" data-miss></div><div class="picstrip hidden" data-pics></div>
@@ -5993,21 +6053,16 @@ function render(){
       ${imgBlock}
       ${subsBlock(it)}
       ${it.mcq ? "" : ansBlock(it, null)}
-      <div class="row">
+      <div class="row qctl">
         ${(it.subs || []).some(sb => num(sb.marks) > 0) ? `<label title="The sum of the sub-question marks">Marks <input type="number" disabled value="${fmt(qMarks(it))}" style="opacity:.7"></label>` : `<label>Marks <input type="number" min="0" step="0.5" data-f="marks" value="${esc(it.marks)}"></label>`}
         ${it.mcq ? "" : spaceCtl(it, "data-f")}
         <label>Part <select data-part>${partOpts(it.id)}</select></label>
-        <label>Type <select data-f="mcq">${opt("", "Written", it.mcq)}${opt("single", "MCQ · one answer", it.mcq)}${opt("multi", "MCQ · multiple answers", it.mcq)}</select></label>
+        <label title="Written answer or multiple choice"><select data-f="mcq">${opt("", "Written", it.mcq)}${opt("single", "MCQ · one", it.mcq)}${opt("multi", "MCQ · several", it.mcq)}</select></label>
         ${it.mcq || /^\s*\(?[a-hA-H][\).]/m.test(qText(it)) ? `<label>Options <select data-f="optCols">${opt("", "1 per line", it.optCols)}${opt("2", "2 columns", it.optCols)}${opt("4", "4 columns", it.optCols)}</select></label>` : ""}
-        <span class="grow"></span>
-        ${it.mcq ? "" : `<button class="btn sm" data-act="subadd" title="Add (a), (b), (c)… parts with their own marks">＋ Sub-question</button>`}
-        ${it.mcq || (it.answer || "").trim() || it._ans ? "" : `<button class="btn sm" data-act="showans" title="Model answer for the answer key (teacher copy)">✎ Model answer</button>`}
-        ${insertMenu(it)}
-        ${moreMenu(it)}
-      </div>
-      ${moreChips(it)}
+      ${moreChips(it)}</div>
     </div></div>`;
   }).join("");
+  if(window.editingId){ const ec = list.querySelector(`.card[data-id="${window.editingId}"]`); if(ec) ec.classList.add("editing"); }
   list.querySelectorAll("textarea").forEach(autoGrow);
   list.querySelectorAll(".card").forEach(c => { const it = S.items.find(x => x.id === c.dataset.id); if(it && it.type !== "section") updateRich(c, it); });
   if(S.d.rubricOn && !document.activeElement.closest?.("#rubricBox")) renderRubric();
@@ -6026,7 +6081,7 @@ function ansBlock(it, sb){
   const o = sb || it, show = (o.answer || "").trim() || o._ans;
   if(!show) return "";
   const a = sb ? `data-sub="${sb.id}" data-sf="answer"` : `data-f="answer"`;
-  return `<div class="ansbox"><span class="kind" style="color:#B03A2E">✎ Model answer · only on the answer key</span><textarea ${a} placeholder="Model answer or marking points — shown in red on the answer key">${esc(o.answer || "")}</textarea></div>`;
+  return `<div class="ansbox"><span class="kind" style="color:#B03A2E">✎ Model answer · only on the answer key</span><textarea rows="1" ${a} placeholder="Model answer or marking points — shown in red on the answer key">${esc(o.answer || "")}</textarea></div>`;
 }
 function subsBlock(it){
   const subs = it.subs || [];
@@ -7894,7 +7949,7 @@ async function preview(){
     lastBytes = doc.output("arraybuffer"); pvMap = { regions: doc.__regions || [], size: doc.__size };
     const pg = (lastEdited && doc.__pageOf && doc.__pageOf[lastEdited]) || (lastEdited === null ? 1 : 0);
     await showPreview(lastBytes, pg);
-    $("#status").textContent = doc.getNumberOfPages() + " page" + (doc.getNumberOfPages() > 1 ? "s" : "") + " · updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    $("#status").title = "Updated " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); $("#status").textContent = doc.getNumberOfPages() + " page" + (doc.getNumberOfPages() > 1 ? "s" : "");
   }catch(e){ console.error(e); $("#status").textContent = "Preview error: " + e.message; }
   finally{ pvBusy = false; if(pvAgain){ pvAgain = false; preview(); } }
 }
@@ -8609,11 +8664,11 @@ function fmtBar(it){
     <button type="button" data-fmt="al" data-a="right" class="al ${(f.align || alDef()) === "right" ? "on" : ""}" title="Align right — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M6 6.5h8M2 10h12M6 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
     <button type="button" data-fmt="al" data-a="justify" class="al ${(f.align || alDef()) === "justify" ? "on" : ""}" title="Justify (straight right edge) — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M2 6.5h12M2 10h12M2 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
     <span class="fsep"></span>
+    <span class="swdd"><button type="button" class="swbtn" data-swtoggle title="Text colour" style="--c:${f.c || "#24211C"}"><span class="dot"></span>▾</button><span class="swpop">
     ${SWATCHES.map(([c, n]) => `<button type="button" data-fmt="color" data-c="${c}" class="sw ${f.c === c ? "on" : ""}" title="${n} text" style="--c:${c}"></button>`).join("")}
-    <label class="sw custom ${f.c && !SWATCHES.some(x => x[0] === f.c) ? "on" : ""}" title="Other colour…" style="--c:${f.c && !SWATCHES.some(x => x[0] === f.c) ? f.c : "#fff"}"><input type="color" data-fmt="colorpick" value="${f.c || "#1F5FBF"}"></label>
+    <label class="sw custom ${f.c && !SWATCHES.some(x => x[0] === f.c) ? "on" : ""}" title="Other colour…" style="--c:${f.c && !SWATCHES.some(x => x[0] === f.c) ? f.c : "#fff"}"><input type="color" data-fmt="colorpick" value="${f.c || "#1F5FBF"}"></label></span></span>
     <span class="fsep"></span>
     <button type="button" data-fmt="clear" title="Remove formatting">⌫ Clear</button>
-    <span class="fhint">select words, or nothing = whole question</span>
   </div>`;
 }
 let fmtSel = null; // selection saved before a colour picker steals focus
@@ -8685,6 +8740,7 @@ function refreshFmtBar(card, it){
     bar.querySelectorAll("button[data-fmt=al]").forEach(x => x.classList.toggle("on", x.dataset.a === al)); }
   // (al: "" from a line means the exam default)
   bar.querySelectorAll("button[data-fmt=color]").forEach(x => x.classList.toggle("on", !!f.c && f.c.toLowerCase() === x.dataset.c.toLowerCase()));
+  const sb = bar.querySelector(".swbtn"); if(sb) sb.style.setProperty("--c", f.c || "#24211C");
   const cu = bar.querySelector(".custom"); if(cu){ const custom = f.c && !SWATCHES.some(x => x[0].toLowerCase() === f.c.toLowerCase()); cu.classList.toggle("on", !!custom); cu.style.setProperty("--c", custom ? cssHex(f.c) : "#fff"); }
 }
 ["select", "keyup", "mouseup", "focusin", "focusout"].forEach(ev => $("#list").addEventListener(ev, e => {
@@ -8693,6 +8749,21 @@ function refreshFmtBar(card, it){
   if(it) setTimeout(() => refreshFmtBar(card, it), 0);
 }));
 $("#list").addEventListener("mousedown", e => { if(e.target.closest(".fmtbar button")) e.preventDefault(); });
+// the colour button opens the colours; picking one (or clicking anywhere else) closes them
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-swtoggle]"), inPop = e.target.closest(".swpop");
+  document.querySelectorAll(".swdd.open").forEach(d => { if((!t || d !== t.parentElement) && !(inPop && inPop.parentElement === d && e.target.closest(".custom"))) d.classList.remove("open"); });
+  if(t) t.parentElement.classList.toggle("open");
+});
+// the formatting bar shows only on the card being edited
+// (only typing places count, not buttons; the page scrolls so that what was clicked stays under the pointer)
+document.addEventListener("focusin", e => {
+  const t = e.target; if(!t.matches || !t.matches("textarea, input[type=text], math-field")) return;
+  const c = t.closest("#list .card"); if(!c || c.classList.contains("editing")) return;
+  const before = t.getBoundingClientRect().top;
+  document.querySelectorAll("#list .card.editing").forEach(x => x.classList.remove("editing")); c.classList.add("editing"); window.editingId = c.dataset.id;
+  const d = t.getBoundingClientRect().top - before; if(Math.abs(d) > 1) window.scrollBy(0, d);
+});
 $("#list").addEventListener("pointerdown", e => {
   const lab = e.target.closest(".fmtbar .custom"); if(!lab) return;
   const card = lab.closest(".card"), ta = card.querySelector("textarea[data-f=text]");
@@ -8769,7 +8840,7 @@ function renderRubric(){
     <div class="rb-sum" style="margin-top:8px">${R.showParts && M.secs.length ? `TOTAL on the rubric = exam total <b>${fmt(M.total)}</b> (from the parts)` : `TOTAL on the rubric = sum of the criteria <b>${fmt(rbSum(R))}</b>`}</div>`;
 }
 function rbChanged(rerender){ lastEdited = "__rubric"; if(rerender) renderRubric(); changed(); }
-$("#rbOn").addEventListener("change", e => { S.d.rubricOn = e.target.checked; if(S.d.rubricOn) rubric(); lastEdited = "__rubric"; renderRubric(); changed(); });
+$("#rbOn").addEventListener("change", e => { S.d.rubricOn = e.target.checked; if(S.d.rubricOn) rubric(); lastEdited = "__rubric"; renderRubric(); window.__rbInit = 1; updateFolds(); changed(); });
 $("#rubricBox").addEventListener("input", e => {
   const R = rubric(), k = e.target.dataset.rb; if(!k) return;
   const g = e.target.closest(".rb-group"), r = e.target.closest(".rb-row");
@@ -8860,7 +8931,7 @@ function frFields(){
   // every editable text in the exam: [item, label, getter, setter]
   const out = [], { meta } = computeMeta();
   S.items.forEach(it => {
-    const tag = it.type === "section" ? "Part" : it.pagebreak ? "Page break" : it.heading ? "Sub-part" : it.type === "note" ? "Text" : it.nonum ? "Q –" : "Q" + meta[it.id];
+    const tag = it.type === "section" ? "Part" : it.pagebreak ? "Page break" : it.heading ? "Sub-heading" : it.type === "note" ? "Text" : it.nonum ? "Q –" : "Q" + meta[it.id];
     out.push([it, tag, () => it.text || "", v => { it.text = v; }]);
     (it.options || []).forEach((o, i) => out.push([it, tag + " · option " + LETTERS[i].toUpperCase(), () => it.options[i] || "", v => { it.options[i] = v; }]));
     if(it.answer) out.push([it, tag + " · model answer", () => it.answer || "", v => { it.answer = v; }]);
@@ -10027,6 +10098,26 @@ $("#dlMenu").addEventListener("click", e => {
   ({ full: () => download(), large: () => download({ large: true }), cover: () => download({ coverOnly: true }), rubric: () => download({ rubricOnly: true }), questions: () => download({ noCover: true }), key: () => download({ key: true }), versions: () => openModal("#verModal"), dys: () => openModal("#dysModal"), student: () => openStudentDialog(), answers: () => pickAnswers() })[b.dataset.dl]();
 });
 $("#btnRefresh").onclick = preview;
+// the preview: drag its left edge to resize; ⇥ hides it while typing (both remembered in this browser)
+(() => {
+  const grid = $("main.grid"), get = k => { try{ return localStorage.getItem(k); }catch(_){ return null; } }, put = (k, v) => { try{ v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); }catch(_){} };
+  const setW = px => { if(px) grid.style.setProperty("--pvw", Math.round(px) + "px"); else grid.style.removeProperty("--pvw"); };
+  setW(+get("bee.pvw") || 0);
+  const hide = on => { grid.classList.toggle("pv-off", on); put("bee.pvOff", on ? "1" : null); if(!on) setTimeout(() => { try{ preview(); }catch(_){} }, 50); };
+  if(get("bee.pvOff")) grid.classList.add("pv-off");
+  $("#pvHide").onclick = () => hide(true);
+  $("#pvShow").onclick = () => hide(false);
+  const h = $("#pvResize");
+  h.addEventListener("pointerdown", e => {
+    e.preventDefault(); h.setPointerCapture(e.pointerId); h.classList.add("drag");
+    const right = grid.getBoundingClientRect().right - 22;          // the grid's right padding
+    const move = ev => setW(Math.max(380, Math.min(right - ev.clientX, grid.clientWidth - 420 - 66)));
+    const up = () => { h.classList.remove("drag"); h.removeEventListener("pointermove", move); h.removeEventListener("pointerup", up);
+      const v = parseInt(grid.style.getPropertyValue("--pvw")) || 0; put("bee.pvw", v || null); clearTimeout(window.__pvRs); window.__pvRs = setTimeout(() => { try{ preview(); }catch(_){} }, 150); };
+    h.addEventListener("pointermove", move); h.addEventListener("pointerup", up);
+  });
+  h.addEventListener("dblclick", () => { setW(0); put("bee.pvw", null); setTimeout(() => { try{ preview(); }catch(_){} }, 50); });
+})();
 // dyslexia-friendly download (choices remembered)
 try{ const p = JSON.parse(localStorage.getItem("bee.dys") || "{}"); if(p.font) document.querySelector(`input[name=dysFont][value=${p.font}]`).checked = true; if(p.cream != null) $("#dysCream").checked = p.cream; }catch(_){}
 const dysOpts = () => ({ dys: (document.querySelector("input[name=dysFont]:checked") || {}).value || "atk", cream: $("#dysCream").checked });
@@ -10138,7 +10229,7 @@ const TOUR = [
   { el: "#dlMenuBtn", t: "Download", p: "Choose what you need: the student paper, large print, the answer key, versions… Your work saves itself every minute, and <b>🕰️</b> keeps earlier versions in case you want to go back." }
 ];
 let tourAt = -1;
-function startTour(){ tourAt = 0; showTourStep(); }
+function startTour(){ setFold("detPanel", false); tourAt = 0; showTourStep(); }
 function endTour(){ tourAt = -1; $("#tourTip").classList.add("hidden"); $("#tourRing").classList.add("hidden"); try{ localStorage.setItem("bee.toured", "1"); }catch(_){} }
 function placeTour(){
   if(tourAt < 0) return;

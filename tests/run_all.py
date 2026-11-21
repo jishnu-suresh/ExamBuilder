@@ -4,7 +4,7 @@
 import os, subprocess, sys, time, http.server, threading, functools, re
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.dirname(HERE)
 OUT = os.path.join(HERE, "out"); os.makedirs(OUT, exist_ok=True)
-TESTS = ["dry.py", "t11.py", "tfeat.py", "tpwa.py", "trubric.py", "twrap.py", "tcover.py", "tsplit.py", "suite.py", "tstudent.py"]
+TESTS = ["dry.py", "t11.py", "tfeat.py", "tpwa.py", "trubric.py", "twrap.py", "tcover.py", "tsplit.py", "tlayout.py", "suite.py", "tstudent.py"]
 
 # tpwa.py tests the installable app, so serve docs/ on localhost:8765
 class Quiet(http.server.SimpleHTTPRequestHandler):

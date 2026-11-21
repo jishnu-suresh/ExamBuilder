@@ -12,18 +12,20 @@ async def main():
         card='.card:last-child'; ta=card+' textarea[data-f=text]'
         async def sel(word):
             await pg.evaluate(f"(()=>{{const t=document.querySelector('{ta}'); const i=t.value.indexOf('{word}'); t.focus(); t.setSelectionRange(i,i+{len(word)});}})()")
+        async def colour(c):   # colours sit behind the 🎨 button
+            await pg.click(card+' [data-swtoggle]'); await pg.click(card+f' [data-fmt=color][data-c="{c}"]')
         async def txt(): return await pg.evaluate("__exam.S().items.at(-1).text")
         # user's messy example: clicking blue on the selected word removes the colour (and the duplicates)
         await pg.fill(ta, "{color:#1F5FBF}{color:#1F5FBF}{color:#1F5FBF}Hello {/color}{/color}{/color} $\\frac{a}{b}\\cdot\\frac12\\left(x^2+3y^3\\right)$")
-        await sel('Hello'); await pg.click(card+' [data-fmt=color][data-c="#1F5FBF"]')
+        await sel('Hello'); await colour('#1F5FBF')
         t=await txt(); ok("1a messy repeated colour cleaned/toggled off", t=="Hello  $\\frac{a}{b}\\cdot\\frac12\\left(x^2+3y^3\\right)$", t)
-        await pg.click(card+' [data-fmt=color][data-c="#1F5FBF"]'); t=await txt()
+        await colour('#1F5FBF'); t=await txt()
         ok("1b click again → blue on (once)", t.startswith("{color:#1F5FBF}Hello{/color} "), t)
-        await pg.click(card+' [data-fmt=color][data-c="#1F5FBF"]'); t=await txt()
+        await colour('#1F5FBF'); t=await txt()
         ok("1c click again → off", t.startswith("Hello  $"), t)
         await pg.click(card+' [data-fmt=b]'); t1=await txt(); await pg.click(card+' [data-fmt=b]'); t2=await txt()
         ok("1d bold on then off", t1.startswith("**Hello**") and t2.startswith("Hello  $"), f"{t1[:12]} | {t2[:12]}")
-        await pg.click(card+' [data-fmt=b]'); await pg.click(card+' [data-fmt=i]'); await pg.click(card+' [data-fmt=u]'); await pg.click(card+' [data-fmt=color][data-c="#C0392B"]')
+        await pg.click(card+' [data-fmt=b]'); await pg.click(card+' [data-fmt=i]'); await pg.click(card+' [data-fmt=u]'); await colour('#C0392B')
         t=await txt(); ok("1e bold+italic+underline+red stack once", t.startswith("{color:#C0392B}++***Hello***++{/color}"), t[:45])
         on = await pg.evaluate(f"[...document.querySelectorAll('{card} .fmtbar .on')].map(x=>x.dataset.fmt+(x.dataset.c||''))")
         ok("1f buttons light up for the selection", set(on)>={'b','i','u','color#C0392B'}, on)
@@ -58,6 +60,7 @@ async def main():
         async def pages(large=False):
             return await pg.evaluate(f"(async()=>{{await prepareMath(); const d=__exam.buildPDF({{large:{str(large).lower()}}}); return [d.getNumberOfPages(), d.output('datauristring')]}})()")
         p1=(await pages())[0]
+        await pg.evaluate("setFold('detPanel', false)")   # Exam details fold once an exam is open
         await pg.click('#setTabs [data-tab=print]'); await pg.select_option('[data-k=answerMode]','sheet'); await pg.wait_for_timeout(300)
         dis = await pg.evaluate("[...document.querySelectorAll('.card input[placeholder=sheet]')].length")
         nonmcq = await pg.evaluate("__exam.S().items.filter(x=>x.type=='q' && !x.mcq).length")

@@ -52,11 +52,11 @@ function fmtBar(it){
     <button type="button" data-fmt="al" data-a="right" class="al ${(f.align || alDef()) === "right" ? "on" : ""}" title="Align right — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M6 6.5h8M2 10h12M6 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
     <button type="button" data-fmt="al" data-a="justify" class="al ${(f.align || alDef()) === "justify" ? "on" : ""}" title="Justify (straight right edge) — select lines, or nothing = whole question"><svg viewBox="0 0 16 16" width="15" height="15"><path d="M2 3h12M2 6.5h12M2 10h12M2 13.5h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
     <span class="fsep"></span>
+    <span class="swdd"><button type="button" class="swbtn" data-swtoggle title="Text colour" style="--c:${f.c || "#24211C"}"><span class="dot"></span>▾</button><span class="swpop">
     ${SWATCHES.map(([c, n]) => `<button type="button" data-fmt="color" data-c="${c}" class="sw ${f.c === c ? "on" : ""}" title="${n} text" style="--c:${c}"></button>`).join("")}
-    <label class="sw custom ${f.c && !SWATCHES.some(x => x[0] === f.c) ? "on" : ""}" title="Other colour…" style="--c:${f.c && !SWATCHES.some(x => x[0] === f.c) ? f.c : "#fff"}"><input type="color" data-fmt="colorpick" value="${f.c || "#1F5FBF"}"></label>
+    <label class="sw custom ${f.c && !SWATCHES.some(x => x[0] === f.c) ? "on" : ""}" title="Other colour…" style="--c:${f.c && !SWATCHES.some(x => x[0] === f.c) ? f.c : "#fff"}"><input type="color" data-fmt="colorpick" value="${f.c || "#1F5FBF"}"></label></span></span>
     <span class="fsep"></span>
     <button type="button" data-fmt="clear" title="Remove formatting">⌫ Clear</button>
-    <span class="fhint">select words, or nothing = whole question</span>
   </div>`;
 }
 let fmtSel = null; // selection saved before a colour picker steals focus
@@ -128,6 +128,7 @@ function refreshFmtBar(card, it){
     bar.querySelectorAll("button[data-fmt=al]").forEach(x => x.classList.toggle("on", x.dataset.a === al)); }
   // (al: "" from a line means the exam default)
   bar.querySelectorAll("button[data-fmt=color]").forEach(x => x.classList.toggle("on", !!f.c && f.c.toLowerCase() === x.dataset.c.toLowerCase()));
+  const sb = bar.querySelector(".swbtn"); if(sb) sb.style.setProperty("--c", f.c || "#24211C");
   const cu = bar.querySelector(".custom"); if(cu){ const custom = f.c && !SWATCHES.some(x => x[0].toLowerCase() === f.c.toLowerCase()); cu.classList.toggle("on", !!custom); cu.style.setProperty("--c", custom ? cssHex(f.c) : "#fff"); }
 }
 ["select", "keyup", "mouseup", "focusin", "focusout"].forEach(ev => $("#list").addEventListener(ev, e => {
@@ -136,6 +137,21 @@ function refreshFmtBar(card, it){
   if(it) setTimeout(() => refreshFmtBar(card, it), 0);
 }));
 $("#list").addEventListener("mousedown", e => { if(e.target.closest(".fmtbar button")) e.preventDefault(); });
+// the colour button opens the colours; picking one (or clicking anywhere else) closes them
+document.addEventListener("click", e => {
+  const t = e.target.closest("[data-swtoggle]"), inPop = e.target.closest(".swpop");
+  document.querySelectorAll(".swdd.open").forEach(d => { if((!t || d !== t.parentElement) && !(inPop && inPop.parentElement === d && e.target.closest(".custom"))) d.classList.remove("open"); });
+  if(t) t.parentElement.classList.toggle("open");
+});
+// the formatting bar shows only on the card being edited
+// (only typing places count, not buttons; the page scrolls so that what was clicked stays under the pointer)
+document.addEventListener("focusin", e => {
+  const t = e.target; if(!t.matches || !t.matches("textarea, input[type=text], math-field")) return;
+  const c = t.closest("#list .card"); if(!c || c.classList.contains("editing")) return;
+  const before = t.getBoundingClientRect().top;
+  document.querySelectorAll("#list .card.editing").forEach(x => x.classList.remove("editing")); c.classList.add("editing"); window.editingId = c.dataset.id;
+  const d = t.getBoundingClientRect().top - before; if(Math.abs(d) > 1) window.scrollBy(0, d);
+});
 $("#list").addEventListener("pointerdown", e => {
   const lab = e.target.closest(".fmtbar .custom"); if(!lab) return;
   const card = lab.closest(".card"), ta = card.querySelector("textarea[data-f=text]");
@@ -212,7 +228,7 @@ function renderRubric(){
     <div class="rb-sum" style="margin-top:8px">${R.showParts && M.secs.length ? `TOTAL on the rubric = exam total <b>${fmt(M.total)}</b> (from the parts)` : `TOTAL on the rubric = sum of the criteria <b>${fmt(rbSum(R))}</b>`}</div>`;
 }
 function rbChanged(rerender){ lastEdited = "__rubric"; if(rerender) renderRubric(); changed(); }
-$("#rbOn").addEventListener("change", e => { S.d.rubricOn = e.target.checked; if(S.d.rubricOn) rubric(); lastEdited = "__rubric"; renderRubric(); changed(); });
+$("#rbOn").addEventListener("change", e => { S.d.rubricOn = e.target.checked; if(S.d.rubricOn) rubric(); lastEdited = "__rubric"; renderRubric(); window.__rbInit = 1; updateFolds(); changed(); });
 $("#rubricBox").addEventListener("input", e => {
   const R = rubric(), k = e.target.dataset.rb; if(!k) return;
   const g = e.target.closest(".rb-group"), r = e.target.closest(".rb-row");

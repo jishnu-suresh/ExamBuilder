@@ -29,6 +29,7 @@ No internet / no install? Download the single-file version: [`docs/download/Exam
 - **Answer key** (teacher copy): ✓ correct MCQ options and model answers in red
 - **Versions A, B, C…** at download time: shuffled questions and MCQ options, each with its own answer key
 - Bold / italic / underline / colour, find & replace, undo/redo, arrange view (drag & drop)
+- Compact editor: the formatting bar shows on the question you are typing in; Exam details and the rubric fold to one line; drag the preview's edge to resize it, or ⇥ hide it while typing
 - **⬇ Download menu** in three groups — 📄 Paper, 🌻 Accommodations, 👩‍🏫 Teacher — with short, tidy file names (`Subject_Title_Class.pdf`)
 - 🌻 Accommodations: large print (16 pt, double spacing); **easy-to-read PDF** (Atkinson Hyperlegible or OpenDyslexic font, optional cream paper); separate-answer-sheet mode (compact paper)
 - **Save light** in the top bar: 🟢 saved, 🟠 saving, 🔴 not saved yet — plus a warning before closing with unsaved changes

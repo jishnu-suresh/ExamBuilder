@@ -154,6 +154,26 @@ $("#dlMenu").addEventListener("click", e => {
   ({ full: () => download(), large: () => download({ large: true }), cover: () => download({ coverOnly: true }), rubric: () => download({ rubricOnly: true }), questions: () => download({ noCover: true }), key: () => download({ key: true }), versions: () => openModal("#verModal"), dys: () => openModal("#dysModal"), student: () => openStudentDialog(), answers: () => pickAnswers() })[b.dataset.dl]();
 });
 $("#btnRefresh").onclick = preview;
+// the preview: drag its left edge to resize; ⇥ hides it while typing (both remembered in this browser)
+(() => {
+  const grid = $("main.grid"), get = k => { try{ return localStorage.getItem(k); }catch(_){ return null; } }, put = (k, v) => { try{ v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); }catch(_){} };
+  const setW = px => { if(px) grid.style.setProperty("--pvw", Math.round(px) + "px"); else grid.style.removeProperty("--pvw"); };
+  setW(+get("bee.pvw") || 0);
+  const hide = on => { grid.classList.toggle("pv-off", on); put("bee.pvOff", on ? "1" : null); if(!on) setTimeout(() => { try{ preview(); }catch(_){} }, 50); };
+  if(get("bee.pvOff")) grid.classList.add("pv-off");
+  $("#pvHide").onclick = () => hide(true);
+  $("#pvShow").onclick = () => hide(false);
+  const h = $("#pvResize");
+  h.addEventListener("pointerdown", e => {
+    e.preventDefault(); h.setPointerCapture(e.pointerId); h.classList.add("drag");
+    const right = grid.getBoundingClientRect().right - 22;          // the grid's right padding
+    const move = ev => setW(Math.max(380, Math.min(right - ev.clientX, grid.clientWidth - 420 - 66)));
+    const up = () => { h.classList.remove("drag"); h.removeEventListener("pointermove", move); h.removeEventListener("pointerup", up);
+      const v = parseInt(grid.style.getPropertyValue("--pvw")) || 0; put("bee.pvw", v || null); clearTimeout(window.__pvRs); window.__pvRs = setTimeout(() => { try{ preview(); }catch(_){} }, 150); };
+    h.addEventListener("pointermove", move); h.addEventListener("pointerup", up);
+  });
+  h.addEventListener("dblclick", () => { setW(0); put("bee.pvw", null); setTimeout(() => { try{ preview(); }catch(_){} }, 50); });
+})();
 // dyslexia-friendly download (choices remembered)
 try{ const p = JSON.parse(localStorage.getItem("bee.dys") || "{}"); if(p.font) document.querySelector(`input[name=dysFont][value=${p.font}]`).checked = true; if(p.cream != null) $("#dysCream").checked = p.cream; }catch(_){}
 const dysOpts = () => ({ dys: (document.querySelector("input[name=dysFont]:checked") || {}).value || "atk", cream: $("#dysCream").checked });
@@ -265,7 +285,7 @@ const TOUR = [
   { el: "#dlMenuBtn", t: "Download", p: "Choose what you need: the student paper, large print, the answer key, versions… Your work saves itself every minute, and <b>🕰️</b> keeps earlier versions in case you want to go back." }
 ];
 let tourAt = -1;
-function startTour(){ tourAt = 0; showTourStep(); }
+function startTour(){ setFold("detPanel", false); tourAt = 0; showTourStep(); }
 function endTour(){ tourAt = -1; $("#tourTip").classList.add("hidden"); $("#tourRing").classList.add("hidden"); try{ localStorage.setItem("bee.toured", "1"); }catch(_){} }
 function placeTour(){
   if(tourAt < 0) return;
