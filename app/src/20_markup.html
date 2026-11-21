@@ -7,6 +7,7 @@
   <button class="savechip" id="saveChip" title="Your project is saved automatically every minute">…</button>
   <span class="sp"></span>
   <button class="btn sm hidden" id="btnInstall" title="Install BEE as an app on this computer">⤓ <span class="lbl">Install app</span></button>
+  <button class="btn sm mode-btn" id="btnMode" title="Basic mode shows only the everyday buttons; Full mode shows everything">🐝 <span class="lbl">Full</span></button>
   <button class="btn sm icon" id="btnUndo" title="Undo (Ctrl/⌘ + Z)" disabled>↩️</button>
   <button class="btn sm icon" id="btnRedo" title="Redo (Ctrl/⌘ + Shift + Z, or Ctrl + Y)" disabled>↪️</button>
   <button class="btn sm icon" id="btnHistory" title="🕰️ Earlier versions of your exam (kept in this browser)">🕰️</button>
@@ -18,17 +19,17 @@
     <div class="dl-menu hidden" id="dlMenu">
       <div class="dl-col"><div class="dl-h">📄 Paper</div>
         <button data-dl="full"><b>Full exam</b><span>Cover page + all questions</span></button>
-        <button data-dl="questions"><b>Questions only</b><span>Without the cover page</span></button>
-        <button data-dl="cover"><b>Cover page only</b><span>Just the front page</span></button>
-        <button data-dl="rubric" id="dlRubric" class="hidden"><b>Rubric page only</b><span>The teacher's scoring page</span></button></div>
+        <button data-dl="questions" class="adv"><b>Questions only</b><span>Without the cover page</span></button>
+        <button data-dl="cover" class="adv"><b>Cover page only</b><span>Just the front page</span></button>
+        <button data-dl="rubric" id="dlRubric" class="hidden adv"><b>Rubric page only</b><span>The teacher's scoring page</span></button></div>
       <div class="dl-col"><div class="dl-h">🌻 Accommodations</div>
         <button data-dl="large"><b>Large print</b><span>16 pt, double spacing</span></button>
         <button data-dl="dys"><b>Dyslexia-friendly</b><span>Easy-read font, 1.5 spacing, cream paper</span></button>
-        <button data-dl="student" class="beta-only"><b>💻 Computer version</b><span>Answer on a laptop, offline; or read aloud</span></button></div>
+        <button data-dl="student" class="beta-only adv"><b>💻 Computer version</b><span>Answer on a laptop, offline; or read aloud</span></button></div>
       <div class="dl-col"><div class="dl-h">👩‍🏫 Teacher</div>
         <button data-dl="key"><b>Answer key</b><span>Correct options ✓ and model answers in red</span></button>
-        <button data-dl="versions"><b>Versions A, B, C…</b><span>Shuffled copies, each with its key</span></button>
-        <button data-dl="answers" class="beta-only"><b>📥 Student answers</b><span>Sealed answer files → PDFs to mark</span></button></div>
+        <button data-dl="versions" class="adv"><b>Versions A, B, C…</b><span>Shuffled copies, each with its key</span></button>
+        <button data-dl="answers" class="beta-only adv"><b>📥 Student answers</b><span>Sealed answer files → PDFs to mark</span></button></div>
     </div>
   </span>
 </header>
@@ -43,8 +44,8 @@
       <h2><span class="step">1</span>Exam details<span class="fold-sum" id="detSum"></span><button type="button" class="btn sm fold-btn" data-fold="detPanel" title="Fold this section away (click again to open it)">▴ Fold</button></h2>
       <div class="tabs" role="tablist" id="setTabs">
         <button type="button" role="tab" data-tab="exam" class="on">📝 Exam</button>
-        <button type="button" role="tab" data-tab="look">🎨 Look</button>
-        <button type="button" role="tab" data-tab="print">🖨 Printing</button>
+        <button type="button" role="tab" data-tab="look" class="adv">🎨 Look</button>
+        <button type="button" role="tab" data-tab="print" class="adv">🖨 Printing</button>
       </div>
       <div class="tabpane" data-pane="exam">
         <div class="fields">
@@ -106,7 +107,7 @@
     </section>
 
     <!-- RUBRIC -->
-    <section class="panel rubric-panel foldable" id="rbPanel">
+    <section class="panel rubric-panel foldable adv" id="rbPanel">
       <h2 style="margin-bottom:6px"><span class="step">R</span>Rubric page <span class="hint rb-hint" style="font:400 12.5px system-ui;margin-left:4px">for the teacher, after the cover</span><span class="fold-sum" id="rbSum"></span>
         <button type="button" class="btn sm fold-btn" data-fold="rbPanel" title="Fold this section away (click again to open it)">▴ Fold</button>
         <label class="switch" title="Add a rubric page after the cover"><input type="checkbox" id="rbOn"><span></span></label></h2>
@@ -121,7 +122,7 @@
         <button class="tile-add" id="tilePhoto"><span class="ic">📷</span><b>Add photos</b><span class="hint">read the text offline, or insert as pictures</span></button>
         <button class="tile-add" id="tileFile"><span class="ic">📄</span><b>Open a .txt / .md file</b><span class="hint">or drag files onto this box</span></button>
       </div>
-      <div class="photo-mode">
+      <div class="photo-mode adv">
         <span class="lbl">When I add a photo:</span>
         <span class="seg" id="photoMode">
           <button data-m="image">Insert as picture</button>
@@ -139,18 +140,18 @@
         <button class="btn sm" id="addQ">＋ Question</button>
         <button class="btn sm" id="addS">＋ Part / section</button>
         <button class="btn sm" id="addN">＋ Text / passage</button>
-        <button class="btn sm" id="addSub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-heading</button>
-        <button class="btn sm" id="addBreak" title="Everything after this starts on a new page">＋ Page break</button>
+        <button class="btn sm adv" id="addSub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-heading</button>
+        <button class="btn sm adv" id="addBreak" title="Everything after this starts on a new page">＋ Page break</button>
         <button class="btn sm" id="addMCQ">＋ MCQ</button>
-        <button class="btn sm" id="arrangeBtn" title="See all questions as small tiles and drag them into a new order">⇅ Arrange</button>
+        <button class="btn sm adv" id="arrangeBtn" title="See all questions as small tiles and drag them into a new order">⇅ Arrange</button>
         <button class="btn sm hidden" id="eqGlobal">∑ Equation</button>
         <button class="btn sm hidden" id="graphGlobal">📈 Graph</button>
         <button class="btn sm" id="pasteText">📋 Paste questions</button>
         <button class="btn sm open-prompt">🤖 Prompt for your AI</button>
-        <button class="btn sm" id="frBtn" title="Find &amp; replace in all questions (Ctrl/⌘ + H)">🔎 Find &amp; replace</button>
+        <button class="btn sm adv" id="frBtn" title="Find &amp; replace in all questions (Ctrl/⌘ + H)">🔎 Find &amp; replace</button>
         <button class="btn sm" id="formatHelp">ⓘ Format &amp; maths help</button>
         <span class="sp" style="flex:1"></span>
-        <button class="btn sm danger" id="clearAll">Clear all</button>
+        <button class="btn sm danger adv" id="clearAll">Clear all</button>
       </div>
       <div class="summary" id="summary"></div>
       <div class="list" id="list"></div>
@@ -159,10 +160,10 @@
         <button class="btn sm" data-add="mcq">＋ MCQ</button>
         <button class="btn sm" data-add="s">＋ Part</button>
         <button class="btn sm" data-add="n" title="Text or a reading passage (not numbered)">＋ Text</button>
-        <button class="btn sm" data-add="sub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-heading</button>
-        <button class="btn sm" data-add="brk" title="Everything after this starts on a new page">＋ Page break</button>
+        <button class="btn sm adv" data-add="sub" title="A heading inside a part: A. Definitions, B. Using vocabulary…">＋ Sub-heading</button>
+        <button class="btn sm adv" data-add="brk" title="Everything after this starts on a new page">＋ Page break</button>
         <span style="flex:1"></span>
-        <button class="btn sm" data-add="arrange">⇅ Arrange</button>
+        <button class="btn sm adv" data-add="arrange">⇅ Arrange</button>
       </div>
     </section>
   </div>

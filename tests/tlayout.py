@@ -60,6 +60,20 @@ async def main():
         ok("BEE open in two tabs: both show the warning to save and close one", both == [True, True], both)
         await p2.close(); await pg.wait_for_timeout(500)
         ok("closing the other tab clears the warning", await pg.is_hidden("#tabsBanner"))
+        # 🌱 Basic mode: only the everyday buttons; Full mode brings everything back; remembered
+        await pg.click("#btnMode"); await pg.wait_for_timeout(200)
+        st = await pg.evaluate("""({ basic: document.body.classList.contains('basic'), rubric: !!$('#rbPanel').offsetParent, look: !!$('#setTabs [data-tab=look]').offsetParent,
+          sub: !!$('#bottomBar [data-add=sub]').offsetParent, q: !!$('#bottomBar [data-add=q]').offsetParent, more: [...document.querySelectorAll('#list [data-ins]')].filter(b => /More/.test(b.textContent) && b.offsetParent).length,
+          ins: [...document.querySelectorAll('#list [data-ins]')].filter(b => /Insert/.test(b.textContent) && b.offsetParent).length, saved: localStorage.getItem('bee.basic') })""")
+        ok("🌱 Basic: no rubric, Look tab, sub-headings or ⋯ More; questions, ＋ Insert stay; remembered", st == {"basic": True, "rubric": False, "look": False, "sub": False, "q": True, "more": 0, "ins": st["ins"], "saved": "1"} and st["ins"] > 0, st)
+        await pg.click("#dlMenuBtn"); await pg.wait_for_timeout(200)
+        dl = await pg.evaluate("[...document.querySelectorAll('#dlMenu [data-dl]')].filter(b => b.offsetParent).map(b => b.dataset.dl)")
+        ok("🌱 Basic download menu: full exam, large print, easy-read, answer key", dl == ["full", "large", "dys", "key"], dl)
+        await pg.click("#dlMenuBtn")
+        rb = await pg.evaluate("(() => { const d = buildPDF({}); return d.getNumberOfPages(); })()")
+        await pg.click("#btnMode"); await pg.wait_for_timeout(200)
+        rb2 = await pg.evaluate("(() => { const d = buildPDF({}); return d.getNumberOfPages(); })()")
+        ok("🐝 Full mode brings everything back; the PDF is the same in both modes", await pg.is_visible("#rbPanel") and rb == rb2, [rb, rb2])
         await pg.screenshot(path="layout.png")
         ok("no page errors", not errs, errs[:3])
         await b.close()

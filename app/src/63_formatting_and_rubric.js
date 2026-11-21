@@ -11,7 +11,7 @@ const MORE = {
 };
 function moreMenu(it){
   const keys = Object.keys(MORE).filter(k => it.type === "q" || !MORE[k].q);
-  return `<span class="ins-wrap"><button type="button" class="btn sm" data-ins title="More options for this ${it.type === "q" ? "question" : "text"}">⋯ More ▾</button><div class="ins-menu hidden">
+  return `<span class="ins-wrap adv"><button type="button" class="btn sm" data-ins title="More options for this ${it.type === "q" ? "question" : "text"}">⋯ More ▾</button><div class="ins-menu hidden">
     ${keys.map(k => { const m = MORE[k], on = !!m.on(it); return `<button type="button" class="ins-it ${on ? "is-on" : ""}" data-act="${k}"><span class="ic">${on ? "✓" : m.ic}</span><span><b>${m.label}</b>${m.sub ? `<small>${m.sub}</small>` : ""}</span></button>`; }).join("")}
   </div></span>`;
 }

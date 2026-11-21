@@ -451,3 +451,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .lab-row b{width:22px;text-align:center;color:var(--gold-d)}
 .lab-row input{flex:1;border:1px solid var(--line);border-radius:7px;padding:5px 8px;min-width:0}
 .lab-row select{border:1px solid var(--line);border-radius:7px;padding:4px}
+/* 🌱 Basic mode: only the everyday buttons (settings made in Full mode still apply) */
+body.basic .adv{display:none!important}
+.mode-btn{font-weight:600}
+body.basic .mode-btn{background:#EEF6E8;border-color:#B9D7A5;color:#2F5D1E}
