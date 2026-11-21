@@ -32,7 +32,7 @@ async function goFull(){
   try{ if(document.fullscreenElement && navigator.keyboard && navigator.keyboard.lock) await navigator.keyboard.lock(); }catch(_){}
 }
 function guardStart(){ running = true; soundOn(); goFull(); keepAwake(); }
-function guardStop(){ running = false; $("#scrFull").classList.add("hidden"); clearInterval(beepT); beepT = null; try{ navigator.keyboard && navigator.keyboard.unlock && navigator.keyboard.unlock(); }catch(_){} try{ wake && wake.release(); }catch(_){} if(document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
+function guardStop(){ running = false; clearInterval(beepT); beepT = null; try{ navigator.keyboard && navigator.keyboard.unlock && navigator.keyboard.unlock(); }catch(_){} try{ wake && wake.release(); }catch(_){} if(document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
 const away = () => document.visibilityState === "hidden" || !document.hasFocus();
 // every time the student leaves: beep, lock, record — and keep beeping until they come back
 function left(how){
@@ -52,18 +52,8 @@ function back(){
 document.addEventListener("visibilitychange", () => { if(document.visibilityState === "hidden") left("switched to another window or app, or minimised"); else { back(); keepAwake(); } });
 window.addEventListener("blur", () => setTimeout(() => { if(!document.hasFocus()) left("clicked outside the test"); }, 150));
 window.addEventListener("focus", back);
-// leaving full screen on its own (Esc in Firefox/Safari, the browser dropping it) is not leaving the test: the paper is
-// covered until the student clicks back into full screen. Going to another window or app is caught above (beep + lock).
-document.addEventListener("fullscreenchange", () => {
-  if(document.fullscreenElement){ $("#scrFull").classList.add("hidden"); return; }
-  if(!running || !ST || ST.endedAt || !document.documentElement.requestFullscreen) return;
-  setTimeout(() => {
-    if(document.fullscreenElement || !running || ST.endedAt) return;
-    if(away()) return left("left full screen");
-    logEv("left full screen"); $("#scrFull").classList.remove("hidden"); $("#fsGo").focus();
-  }, 250);
-});
-$("#fsGo").onclick = async () => { soundOn(); await goFull(); if(document.fullscreenElement || !document.fullscreenEnabled) $("#scrFull").classList.add("hidden"); };
+// leaving full screen counts as leaving the test: beep, lock, only the teacher can reopen it
+document.addEventListener("fullscreenchange", () => { if(!document.fullscreenElement && running && ST && !ST.endedAt) left("left full screen"); });
 // keys that try to leave, while the keyboard is captured
 document.addEventListener("keydown", e => {
   if(!running || !ST || ST.endedAt) return;
