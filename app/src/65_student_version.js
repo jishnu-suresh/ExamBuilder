@@ -47,7 +47,11 @@ function askPassword(mode, info){
 }
 ["#pw1", "#pw2"].forEach(s => $(s).addEventListener("keydown", e => { if(e.key === "Enter") $("#pwGo").click(); }));
 // the school key: one key for the whole school, made once by one person and loaded by every teacher (file + password)
-const SCHOOL_FILE = () => cleanFile((S.d.school || "School") + " - BEE school key") + ".beekey";
+// making or changing the school key is only offered with the admin link  …/?beta=bee&keyadmin=hive  (not remembered),
+// and replacing an existing key also needs the current school key password
+const KEYADMIN = (() => { try{ return new URLSearchParams(location.search).get("keyadmin") === "hive"; }catch(_){ return false; } })();
+document.querySelectorAll(".key-admin").forEach(el => el.classList.toggle("hidden", !KEYADMIN));
+const SCHOOL_FILE = () => fileStem(S.d.school || "School", "BEE school key") + ".beekey";
 async function currentKey(){ return (await teacherKeys())[0] || null; }
 async function needSchoolKey(){
   const k = await currentKey(); if(k) return k;
@@ -66,6 +70,9 @@ async function needSchoolKey(){
   });
 }
 async function makeSchoolKey(){
+  if(!KEYADMIN) return null;
+  const cur = await currentKey();
+  if(cur && !(await openKey(cur))) return null;        // replacing the school key: prove you know its password first
   const pw = await askPassword("set", "Choose the <b>school key password</b>. Every teacher will type it to open students' answers. Keep it away from students.");
   if(!pw) return null;
   const k = await BC.newTeacherKey();
@@ -120,6 +127,7 @@ $("#keyBackup").onclick = async () => {
   toast("School key file saved (locked with the school password). Share it only with teachers."); keyRow(); openKeyModal();
 };
 $("#keyPw").onclick = async () => {
+  if(!KEYADMIN) return;
   const k = await currentKey(); if(!k) return;
   const priv = await openKey(k); if(!priv) return;
   if(k.priv){ toast("Password saved."); keyRow(); return openKeyModal(); }
@@ -130,6 +138,7 @@ $("#keyPw").onclick = async () => {
   toast("Password changed. The new school key file is in your Downloads: share it, and delete the old one."); keyRow(); openKeyModal();
 };
 $("#keyMake").onclick = async () => {
+  if(!KEYADMIN) return;
   if(await currentKey() && !confirm("Make a NEW school key?\n\nEvery teacher will need to load the new school key file. Answers sealed with the current key still open on computers that have it.")) return;
   if(await makeSchoolKey()){ keyRow(); openKeyModal(); }
 };
@@ -297,7 +306,7 @@ $("#stuGo").onclick = async () => {
     };
     const tpl = await playerTemplate();
     const html = tpl.replace("/*__EXAM" + "__*/null", () => JSON.stringify(EXAM).replace(/<\//g, "<\\/").replace(/<!--/g, "<\\!--"));
-    const name = cleanFile((S.d.title || "Exam") + (ver ? " - Version " + ver : "") + (mode === "read" ? " - read-aloud version" : " - computer version")) + ".html";
+    const name = fileStem(S.d.title || "Exam", ver && "Version " + ver, mode === "read" ? "read-aloud" : "computer version") + ".html";
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([html], { type: "text/html" })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     lastExport = { mode, name, code, tcode, title: S.d.title || "Exam", subject: S.d.subject || "", ver, base, extraPct, timeMin: EXAM.timeMin, nq, kid: key.kid, readAloud: EXAM.readAloud };
     $("#stuFile").textContent = name; $("#stuShowCode").textContent = code; $("#stuShowTCode").textContent = tcode;
@@ -305,7 +314,6 @@ $("#stuGo").onclick = async () => {
   }catch(e){ console.error(e); toast("Couldn't make the student file: " + e.message); }
   finally{ btn.disabled = false; btn.textContent = lbl; }
 };
-const cleanFile = s => String(s || "").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 100) || "exam";
 
 /* ---- 🖨 invigilator sheet ---- */
 $("#stuSheet").onclick = () => {
@@ -340,7 +348,7 @@ $("#stuSheet").onclick = () => {
   }
   doc.setFont("helvetica", "italic"); doc.setFontSize(8.5); doc.setTextColor(118, 110, 98);
   doc.text("Keep this sheet away from students. Made with BEE - " + new Date().toLocaleDateString(), PW / 2, doc.internal.pageSize.getHeight() - 12, { align: "center" });
-  doc.save(cleanFile(X.title + (X.ver ? " - Version " + X.ver : "") + " - invigilator sheet") + ".pdf");
+  doc.save(fileStem(X.title, X.ver && "Version " + X.ver, X.mode === "read" ? "read-aloud" : "", "invigilator sheet") + ".pdf");
 };
 
 /* ---- 📥 open student answers ---- */
@@ -417,7 +425,7 @@ async function answerPDF(r){
   S = { d: snap.d, logo: snap.logo, items: snap.items };
   const key = $("#ansKey").checked;
   try{ doc = buildPDF({ final: true, resp, key, version: snap.version || undefined }); }finally{ S = saved; }
-  return { doc, name: cleanFile((snap.d.title || "Exam") + " - " + P.name + (key ? " (answers + key)" : " (answers)")) + ".pdf" };
+  return { doc, name: fileStem(snap.d.title || "Exam", P.name, key ? "answers and key" : "answers") + ".pdf" };
 }
 $("#ansZip").onclick = async () => {
   const btn = $("#ansZip"), lbl = btn.textContent; btn.disabled = true;
@@ -425,12 +433,12 @@ $("#ansZip").onclick = async () => {
     const files = [], used = {};
     for(const r of ANS.filter(r => r.P)){
       btn.textContent = "Making PDFs… " + (files.length + 1) + "/" + ANS.filter(r => r.P).length;
-      const x = await answerPDF(r); let n = x.name; if(used[n]){ n = n.replace(/\.pdf$/, " " + (++used[n]) + ".pdf"); } else used[n] = 1;
+      const x = await answerPDF(r); let n = x.name; if(used[n]){ n = n.replace(/\.pdf$/, "_" + (++used[n]) + ".pdf"); } else used[n] = 1;
       files.push({ name: n, data: new Uint8Array(x.doc.output("arraybuffer")) });
     }
     files.push({ name: "Summary.csv", data: new TextEncoder().encode(answersCSV()) });
     const title = (ANS.find(r => r.P) || {}).T.snap.d.title || "Exam";
-    const a = document.createElement("a"); a.href = URL.createObjectURL(zipStore(files)); a.download = cleanFile(title + " - student answers") + ".zip"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    const a = document.createElement("a"); a.href = URL.createObjectURL(zipStore(files)); a.download = fileStem(title, "student answers") + ".zip"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
   }catch(e){ console.error(e); toast("Couldn't make the ZIP: " + e.message); }
   btn.disabled = false; btn.textContent = lbl;
 };
@@ -440,7 +448,7 @@ function answersCSV(){
   ANS.filter(r => r.P).forEach(r => { const P = r.P; rows.push([P.name, P.cls, r.T.snap.d.title, r.T.snap.version || "", new Date(P.startedAt).toLocaleString(), new Date(P.endedAt).toLocaleString(), P.endedBy, minsOf(P.endedAt - P.startedAt), P.timeMin ? P.timeMin + (P.extraMin || 0) : "", leftCount(P), r.mcq.max ? r.mcq.got : "", r.mcq.max || ""]); });
   return "﻿" + rows.map(r => r.map(q).join(",")).join("\r\n");
 }
-$("#ansCsv").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([answersCSV()], { type: "text/csv" })); a.download = "Student answers - summary.csv"; a.click(); };
+$("#ansCsv").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([answersCSV()], { type: "text/csv" })); a.download = "Student-answers_summary.csv"; a.click(); };
 // a ZIP with no compression (PDFs are already compressed): enough for "all papers in one download"
 function zipStore(files){
   const crcT = zipStore.t || (zipStore.t = Array.from({ length: 256 }, (_, n) => { let c = n; for(let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; return c >>> 0; }));

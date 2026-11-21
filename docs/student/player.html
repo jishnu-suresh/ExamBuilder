@@ -4486,7 +4486,9 @@ document.addEventListener("keydown", e => {
 
 /* ---- start → test → end ---- */
 let RESUME = null, saveDir = null, lastBackup = 0, picking = false;
-const safeName = s => String(s || "").replace(/[\\/:*?"<>|]+/g, " ").replace(/\s+/g, " ").trim().slice(0, 80) || "exam";
+const fileStem = (...parts) => parts.flat().filter(Boolean).map(p => String(p).normalize("NFC")
+  .replace(/[\\/:*?"<>|()\[\]{}#%&+,;=@!$'`~^]+/g, " ").trim().replace(/\s*[-–—]\s*/g, "-").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^[-.]+|[-.]+$/g, ""))
+  .filter(Boolean).join("_").slice(0, 110) || "exam";
 function saveFile(text, name, type){
   const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([text], { type: type || "application/json" })); a.download = name;
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
@@ -4586,7 +4588,7 @@ window.backupTick = async box => {
   if(!saveDir || now() - lastBackup < 60000 && !ST.endedAt) return;
   lastBackup = now();
   try{
-    const f = await saveDir.getFileHandle(safeName(EXAM.title + " - " + ST.name) + " (backup).bee-backup", { create: true });
+    const f = await saveDir.getFileHandle(fileStem(EXAM.title, ST.name, "backup") + ".bee-backup", { create: true });
     const w = await f.createWritable(); await w.write(JSON.stringify({ bee: "backup", v: 1, examId: EXAM.examId, name: ST.name, savedAt: now(), box })); await w.close();
     window.lastFolderSave = now();
   }catch(e){ console.warn("backup", e); }
@@ -4639,7 +4641,7 @@ async function endTest(by){
     timeMin: EXAM.timeMin, baseMin: EXAM.baseMin, extraPct: EXAM.extraPct, extraMin: ST.extraMin || 0, log: ST.log, answers: ST.answers, flags: ST.flags, prefs: ST.prefs, ua: ST.ua,
     paused: ST.paused || 0, breaks: ST.breaks || 0, hlCount: ST.hlCount || 0, acc: EXAM.acc || {} };
   const file = { bee: "answers", v: 1, kid: EXAM.kid, examId: EXAM.examId, title: EXAM.title, created: now(), sealed: await BC.seal(payload, EXAM.pub), teacher: EXAM.teacher };
-  const name = safeName(EXAM.title + " - " + ST.name) + ".bee-answers", text = JSON.stringify(file);
+  const name = fileStem(EXAM.title, ST.name) + ".bee-answers", text = JSON.stringify(file);
   const done = { name, text, who: ST.name, at: ST.endedAt, by, folder: "" };
   // into the chosen folder; if there is none (or it was unplugged), into Downloads
   if(saveDir){ try{ const f = await saveDir.getFileHandle(name, { create: true }); const w = await f.createWritable(); await w.write(text); await w.close(); done.folder = saveDir.name; }catch(e){ console.warn(e); } }

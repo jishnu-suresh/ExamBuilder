@@ -1018,8 +1018,7 @@ function buildPDF(opt){
 }
 
 function fileName(){
-  const base = [S.d.subject, S.d.title, S.d.className].filter(Boolean).join(" - ") || "exam";
-  return base.replace(/[\\/:*?"<>|]+/g, "").replace(/\s+/g, " ").trim().slice(0, 90) + ".pdf";
+  return fileStem(S.d.subject, S.d.title, S.d.className) + ".pdf";
 }
 let lastBytes = null, pvT = null, pvZoom = 1, pvRun = 0, pvShownPages = 0;
 let pvBusy = false, pvAgain = false;
@@ -1158,7 +1157,8 @@ function changed(){
   histSchedule(); saveLocal(); clearTimeout(pvT); $("#status").textContent = "updating…"; pvT = setTimeout(preview, 400); }
 async function download(opt){
   opt = opt || {};
-  const name = (opt.name || fileName().replace(/\.pdf$/, "")) + (opt.version ? " - Version " + opt.version : "") + (opt.dys ? " (dyslexia-friendly)" : "") + (opt.key ? " (answer key)" : "") + (opt.coverOnly ? " (cover page)" : opt.rubricOnly ? " (rubric)" : opt.noCover ? " (questions)" : "") + ((opt.large || S.d.largePrint) ? " (large print)" : "") + ".pdf";
+  const name = fileStem(opt.name || fileName().replace(/\.pdf$/, ""), opt.version && "Version " + opt.version, opt.dys && "dyslexia-friendly", opt.key && "answer key",
+    opt.coverOnly ? "cover page" : opt.rubricOnly ? "rubric" : opt.noCover ? "questions" : "", (opt.large || S.d.largePrint) && "large print") + ".pdf";
   const miss = missingPics();
   if(miss && !confirm(`${miss === 1 ? "1 picture is" : miss + " pictures are"} still missing (the red boxes in the preview).\n\nDownload anyway? They will print as an empty frame with the description.`)) return;
   try{ await prepareMath(); if(opt.dys) await ensureEasyFonts(); buildPDF(Object.assign({ final: true }, opt)).save(name); toast("Saved " + name); }

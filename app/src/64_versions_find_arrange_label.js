@@ -35,7 +35,7 @@ $("#verGo").onclick = async () => {
   $("#verModal").classList.remove("open");
   try{
     await prepareMath(); if(dy.dys) await ensureEasyFonts();
-    const base = fileName().replace(/\.pdf$/, "") + (large ? " (large print)" : dy.dys ? " (dyslexia-friendly)" : "");
+    const base = fileStem(fileName().replace(/\.pdf$/, ""), large ? "large print" : dy.dys ? "dyslexia-friendly" : "");
     for(let v = 0; v < n; v++){
       const L = "ABCD"[v];
       // the shuffled copy is in place only while the PDFs are drawn (no waiting), so an autosave can never store it
@@ -45,8 +45,8 @@ $("#verGo").onclick = async () => {
         paper = buildPDF(Object.assign({ version: L, large, final: true }, dy));
         if(keys) key = buildPDF(Object.assign({ version: L, key: true, large, final: true }, dy));
       }finally{ S.items = saved; }
-      paper.save(base + " - Version " + L + ".pdf");
-      if(key){ await new Promise(r => setTimeout(r, 350)); key.save(base + " - Version " + L + " (answer key).pdf"); }
+      paper.save(fileStem(base, "Version " + L) + ".pdf");
+      if(key){ await new Promise(r => setTimeout(r, 350)); key.save(fileStem(base, "Version " + L, "answer key") + ".pdf"); }
       await new Promise(r => setTimeout(r, 450));
     }
     toast("Downloaded " + n + " versions" + (keys ? " with answer keys" : ""));

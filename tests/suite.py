@@ -343,7 +343,7 @@ async def dyslexia_pdf(b):
     await pg.click("#dlMenu [data-dl=dys]")
     async with pg.expect_download(timeout=60000) as dl: await pg.click("#dysGo")
     d = await dl.value
-    ok("dyslexia-friendly PDF downloads", d.suggested_filename.endswith("(dyslexia-friendly).pdf"), d.suggested_filename)
+    ok("dyslexia-friendly PDF downloads", d.suggested_filename == "Integrated-Studies_End-of-Term-Examination_dyslexia-friendly.pdf", d.suggested_filename)
     r = await pg.evaluate("""(async () => { await ensureEasyFonts(); const a = buildPDF({ final: true, dys: 'atk', cream: true }), o = buildPDF({ final: true, dys: 'ody' }), n = buildPDF({ final: true });
       return { atk: Object.keys(a.getFontList()).includes('EasyRead'), ody: Object.keys(o.getFontList()).includes('EasyRead'), pa: a.getNumberOfPages(), pn: n.getNumberOfPages(), cream: a.output().includes('1. 0.973 0.894 rg') || /1(\.0*)? 0\.97\d* 0\.89\d* rg/.test(a.output()) }; })()""")
     ok("dyslexia-friendly PDF: easy-read font (both choices), cream paper, more room", r["atk"] and r["ody"] and r["cream"] and r["pa"] >= r["pn"], r)
@@ -353,7 +353,7 @@ async def dyslexia_pdf(b):
     await pg.click("#dlMenuBtn"); await pg.click("#dlMenu [data-dl=versions]"); await pg.select_option("#verN", "2"); await pg.uncheck("#verK"); await pg.check("#verD")
     names = []; pg.on("download", lambda x: names.append(x.suggested_filename))
     await pg.click("#verGo"); await pg.wait_for_timeout(5000)
-    ok("versions A, B can be dyslexia-friendly too", len(names) == 2 and all("(dyslexia-friendly) - Version" in n for n in names), names)
+    ok("versions A, B can be dyslexia-friendly too", len(names) == 2 and sorted(names) == ["Integrated-Studies_End-of-Term-Examination_dyslexia-friendly_Version-A.pdf", "Integrated-Studies_End-of-Term-Examination_dyslexia-friendly_Version-B.pdf"], names)
     await c.close()
 
 CHECKS = [phones, sticky_preview, paste_details_rubric, formatting, pdf_guard, cut_from_pdf, drawings, mcq_ends_after_options,

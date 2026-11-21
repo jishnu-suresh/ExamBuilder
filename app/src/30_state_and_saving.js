@@ -62,7 +62,7 @@ document.getElementById("histList").addEventListener("click", async e => {
   const o = JSON.parse(json);
   if(e.target.closest("[data-hdl]")){
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([json], { type: "application/json" }));
-    const t = new Date(+row.dataset.at); a.download = cleanName(o.d && o.d.title || "exam") + " - " + t.toISOString().slice(0, 10) + " " + String(t.getHours()).padStart(2, "0") + "h" + String(t.getMinutes()).padStart(2, "0") + ".exam.json"; a.click(); return;
+    const t = new Date(+row.dataset.at); a.download = fileStem(o.d && o.d.title || "exam", t.toISOString().slice(0, 10), String(t.getHours()).padStart(2, "0") + "h" + String(t.getMinutes()).padStart(2, "0")) + ".exam.json"; a.click(); return;
   }
   if(e.target.closest("[data-hrestore]")){
     await keepVersion("Before restoring an earlier version");
@@ -203,6 +203,11 @@ function downloadProject(name){
 // Save as: first BEE's own little dialog (name the file), then the computer's folder picker where the browser has one
 let svResolve = null, svOpts = {};
 // file names: "/" "\\" "|" ":" become " - ", other characters computers refuse are dropped
+// compact file names: words joined with "-", parts with "_", no brackets or spaces
+// fileStem("Integrated Studies", "End-of-Term Examination", "Version A") → "Integrated-Studies_End-of-Term-Examination_Version-A"
+const fileStem = (...parts) => parts.flat().filter(Boolean).map(p => String(p).normalize("NFC")
+  .replace(/[\\/:*?"<>|()\[\]{}#%&+,;=@!$'`~^]+/g, " ").trim().replace(/\s*[-–—]\s*/g, "-").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^[-.]+|[-.]+$/g, ""))
+  .filter(Boolean).join("_").slice(0, 110) || "exam";
 const cleanName = t => String(t || "").replace(/\.exam\.json$|\.json$|\.pdf$/i, "")
   .replace(/\s*[\\/|:]+\s*/g, " - ").replace(/[*?"<>]+/g, "").replace(/(\s-\s*)+(?=-|$)/g, "").replace(/(\s-\s)+/g, " - ")
   .replace(/\s+/g, " ").replace(/^[\s.-]+|[\s.-]+$/g, "").slice(0, 120);
@@ -212,7 +217,7 @@ function saveAs(opts){
     if(svResolve) svResolve(false);
     svResolve = res; svOpts = opts;
     const SD = (opts.state || S).d;
-    const base = opts.isNew ? "" : (cleanName(proj.name || "") || cleanName(fileName()) || "exam");
+    const base = opts.isNew ? "" : (cleanName(proj.name || "") || fileName().replace(/\.pdf$/, ""));
     $("#svTitle").textContent = opts.isNew ? "🐝 Name your new exam" : "💾 Save exam as";
     $("#svHint").innerHTML = FS_OK
       ? "Next, choose the folder. BEE then keeps this file up to date by itself every minute."

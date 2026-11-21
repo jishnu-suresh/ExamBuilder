@@ -164,6 +164,7 @@ Every change calls `changed()`, which updates totals and undo history and schedu
   * Font size at least 12 pt, 1.5 spacing, no justification, bigger gaps between questions, and an optional cream tint on every page.
   * Text with characters outside the easy-read font keeps DejaVu.
   * The fonts are built into the offline file, and loaded on demand on the website (`vendor/easyfonts.js`, via `ensureEasyFonts()`).
+* **File names:** `fileStem(...parts)` joins words with "-" and parts with "_", for example `Integrated-Studies_End-of-Term-Examination_Version-A_answer-key.pdf`. Use it for every download.
 * **Never swap `S` across a wait.** If you must draw another exam (versions, student answers), swap `S` only around the synchronous `buildPDF()` call. Prepare with `prepareMath(otherExam)` beforehand. A save that runs while `S` is swapped would store the wrong exam in the teacher's file.
 * **Pictures are kept small:** `fitCanvas()` limits the size (photos 1600 px, PDF cuts 2000 px) and `encodeBest()` keeps PNG unless JPEG is far smaller.
 
@@ -175,6 +176,8 @@ Every change calls `changed()`, which updates totals and undo history and schedu
 A new version shows the "Fresh honey in the hive!" bar. The page only reloads after the teacher clicks *Update*.
 
 ## 6b. 💻 The computer version for students
+
+> 🔑 **Key admin:** making the school key and changing its password are only offered with `…/?beta=bee&keyadmin=hive` (`KEYADMIN`, not remembered). Replacing an existing key also needs its current password.
 
 > 🧪 **Not launched yet.** The menu items are hidden (`.beta-only`) unless a browser was switched on with `?beta=bee` (`?beta=off` switches it off; it's remembered in `localStorage`). To launch, make `BETA` always true in `65_student_version.js`.
 

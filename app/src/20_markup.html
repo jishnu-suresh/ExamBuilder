@@ -582,7 +582,7 @@ x = 3
     <p>Every computer version is sealed with <b>the school key</b>. Any teacher whose BEE has the school key, and who knows its password, can open any student's answers, for every exam.</p>
     <p class="hint" id="keyInfo"></p>
     <div class="actions" style="justify-content:flex-end;flex-wrap:wrap"><button class="btn" id="keyLock">🔒 Lock now</button><button class="btn" id="keyImport">📂 Load the school key file</button><button class="btn primary" id="keyBackup">⬇ Save the school key file (to share)</button></div>
-    <details class="hint" style="margin-top:12px"><summary style="cursor:pointer">For the person in charge of the school key</summary>
+    <details class="hint key-admin hidden" style="margin-top:12px"><summary style="cursor:pointer">For the person in charge of the school key</summary>
       <div class="actions" style="justify-content:flex-start;flex-wrap:wrap;margin-top:8px"><button class="btn sm" id="keyPw">🔐 Change the password</button><button class="btn sm" id="keyMake">✨ Make a new school key</button></div>
       <p style="margin:6px 0 0">After either one, share the new school key file with every teacher. Answers sealed earlier still open with the old key, which BEE keeps.</p>
     </details>
@@ -595,7 +595,8 @@ x = 3
     <p>Students' answers are sealed with <b>the school key</b>, so that only teachers can open them.</p>
     <p>Load the <b>school key file</b> (it's on the staff drive, or ask the person in charge of BEE). You will need the school key password. You only do this once on this computer.</p>
     <div class="actions" style="justify-content:flex-end"><button class="btn" data-needkey="cancel">Cancel</button><button class="btn primary" data-needkey="load">📂 Load the school key file</button></div>
-    <details class="hint" style="margin-top:12px"><summary style="cursor:pointer">There is no school key yet</summary>
+    <p class="hint" style="margin-top:10px">No school key file? Ask the person in charge of BEE: there is one key for the whole school.</p>
+    <details class="hint key-admin hidden" style="margin-top:8px"><summary style="cursor:pointer">There is no school key yet</summary>
       <p style="margin:6px 0">Only <b>one person</b> makes the school key, <b>once</b>. Everyone else loads the file that person shares.</p>
       <button class="btn sm" data-needkey="make">✨ Make the school key</button></details>
   </div>
