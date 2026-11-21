@@ -457,3 +457,6 @@ body.basic .adv{display:none!important}
 .mode-btn .bees{font-size:14px;letter-spacing:-1px;line-height:1}
 body.basic .mode-btn{background:#EEF6E8;border-color:#B9D7A5;color:#2F5D1E}
 #wipeModal{z-index:60}
+
+.fb-link{pointer-events:auto;text-decoration:none;font-style:normal;cursor:pointer;margin-left:2px}
+.fb-link:hover{filter:brightness(1.1);text-decoration:none}

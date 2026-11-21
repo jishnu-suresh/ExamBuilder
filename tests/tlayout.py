@@ -74,6 +74,8 @@ async def main():
         await pg.click("#btnMode"); await pg.wait_for_timeout(200)
         rb2 = await pg.evaluate("(() => { const d = buildPDF({}); return d.getNumberOfPages(); })()")
         ok("🐝 Full mode brings everything back; the PDF is the same in both modes", await pg.is_visible("#rbPanel") and rb == rb2, [rb, rb2])
+        fb = await pg.evaluate("(() => { const a = document.querySelector('.wm .fb-link'), r = a.getBoundingClientRect(); return { href: a.href, text: a.textContent, target: a.target, hit: document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === a }; })()")
+        ok("💬 after © Jishnu opens the feedback form in a new tab", fb == {"href": "https://forms.gle/jjTwf6GYrujcHdgE6", "text": "💬", "target": "_blank", "hit": True}, fb)
         await pg.screenshot(path="layout.png")
         # 🧹 shared computers: remove my exams from this browser (the school key stays)
         await pg.evaluate("IDB.set('teacherKeys', [{kid: 'k1'}])"); await pg.wait_for_timeout(1500)
