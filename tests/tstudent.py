@@ -342,7 +342,7 @@ async def main():
             await px.keyboard.down("Alt"); await px.keyboard.press("Tab"); await px.keyboard.up("Alt"); await px.wait_for_timeout(200)
             ok(f"{kind}: Alt+Tab is caught and recorded", await px.evaluate("ST.log.some(l => l.kind === 'tried to leave with the keyboard') && beeps > " + str(n3)))
             await cx.close()
-        # ♿ accommodations: the teacher chooses what is allowed; the student switches them on
+        # 🌻 accommodations: the teacher chooses what is allowed; the student switches them on
         c7, p7, e7, d7 = await make_student_file(b, code="ACCS-2345", tcode="8642", key_mode="load", keyfile=P("teacher.beekey"),
             setup="$('#accSpacing').checked = false; $('#accClock').value = 'hide'")
         await d7.save_as(P("acc.html"))
