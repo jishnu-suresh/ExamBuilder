@@ -3442,6 +3442,9 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
 
 @media print{body *{display:none!important}}
 
+.saveto.nudge{outline:3px solid #E8A33B;outline-offset:3px;border-radius:10px;animation:nudge 1s ease 2}
+@keyframes nudge{50%{outline-color:transparent}}
+
 </style>
 </head>
 <body>
@@ -3467,6 +3470,7 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
     <label for="stCode">Start code <span class="muted">— your teacher types this</span></label>
     <input type="password" id="stCode" class="code" autocomplete="off" spellcheck="false" placeholder="••••-••••">
     <div class="err" id="stErr"></div>
+    <div class="row hidden" id="stDevRow"><input type="password" id="stDevCode" class="code" autocomplete="off" placeholder="Teacher code" style="max-width:180px"><button class="btn" id="stDevGo">Start anyway</button></div>
     <div class="row">
       <button class="btn primary big" id="stGo">Start the test</button>
       <span style="flex:1"></span>
@@ -4181,7 +4185,15 @@ async function goFull(){
   try{ if(!document.fullscreenElement && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen({ navigationUI: "hide" }); }catch(_){}
   try{ if(document.fullscreenElement && navigator.keyboard && navigator.keyboard.lock) await navigator.keyboard.lock(); }catch(_){}
 }
-function guardStart(){ running = true; soundOn(); goFull(); keepAwake(); }
+function guardStart(){ running = true; soundOn(); goFull(); keepAwake(); devBase = null; }
+// developer tools opened during the test (docked in the window): written in the log once (no alarm: zooming looks the same)
+let devBase = null, devSeen = false;
+setInterval(() => {
+  if(!running || !ST || ST.endedAt || outerWidth <= 0) return;
+  const d = Math.max(outerWidth - innerWidth, outerHeight - innerHeight);
+  if(devBase == null){ devBase = d; return; }
+  if(!devSeen && d - devBase > 200){ devSeen = true; logEv("the window's page area shrank a lot (developer tools may have been opened)"); saveNow(); }
+}, 2000);
 function guardStop(){ running = false; clearInterval(beepT); beepT = null; try{ navigator.keyboard && navigator.keyboard.unlock && navigator.keyboard.unlock(); }catch(_){} try{ wake && wake.release(); }catch(_){} if(document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
 const away = () => document.visibilityState === "hidden" || !document.hasFocus();
 // every time the student leaves: beep, lock, record — and keep beeping until they come back
@@ -4207,6 +4219,10 @@ document.addEventListener("fullscreenchange", () => { if(!document.fullscreenEle
 // keys that try to leave, while the keyboard is captured
 document.addEventListener("keydown", e => {
   if(!running || !ST || ST.endedAt) return;
+  const k = (e.key || "").toLowerCase();
+  if(e.key === "F12" || ((e.ctrlKey || e.metaKey) && (e.shiftKey || e.altKey) && ["i", "j", "c", "ˆ", "∆", "ç"].includes(k)) || ((e.ctrlKey || e.metaKey) && k === "u")){
+    e.preventDefault(); e.stopPropagation(); logEv("tried to open the developer tools", { key: e.key }); beep(); toast("Developer tools are switched off during the test."); return;
+  }
   if((e.altKey && (e.key === "Tab" || e.key === "F4")) || e.key === "Meta" || e.key === "OS" || (e.metaKey && /^(tab|h|m|q|w)$/i.test(e.key))){
     e.preventDefault(); logEv("tried to leave with the keyboard", { key: (e.altKey ? "Alt+" : e.metaKey ? "Cmd+" : "") + e.key }); beep(); toast("Stay on the test, please.");
   }
@@ -4559,8 +4575,27 @@ $("#stCode").addEventListener("keydown", e => { if(e.key === "Enter") $("#stGo")
 $("#stName").addEventListener("keydown", e => { if(e.key === "Enter") $("#stClass").focus(); });
 $("#stClass").addEventListener("keydown", e => { if(e.key === "Enter") $("#stCode").focus(); });
 
+// developer tools docked in the window make the page much smaller than the window (browser zoom can look the same,
+// so the teacher code lets the test start anyway — and the log says so)
+const devtoolsLikely = () => outerWidth > 0 && (outerWidth - innerWidth > 200 || outerHeight - innerHeight > 260);
+let devOK = false, devOverride = false;
+$("#stDevGo").onclick = async () => {
+  if(!(await teacherOK($("#stDevCode").value))){ $("#stErr").textContent = "That's not the teacher code."; return; }
+  devOK = devOverride = true; $("#stDevRow").classList.add("hidden"); $("#stErr").textContent = ""; toast("OK — now press Start the test.", 4000); $("#stGo").focus();
+};
+$("#stDevCode").addEventListener("keydown", e => { if(e.key === "Enter") $("#stDevGo").click(); });
 $("#stGo").onclick = async () => {
   const err = $("#stErr"); err.textContent = "";
+  if(!devOK && devtoolsLikely()){
+    err.textContent = "The browser's developer tools look open (F12). Close them, then press Start again. If they aren't open (for example the page is zoomed), the teacher can type the teacher code to start anyway.";
+    $("#stDevRow").classList.remove("hidden"); return;
+  }
+  // Chrome / Edge: a backup copy in a folder (a USB stick…) is rewritten every minute — ask once before starting without one
+  if("showDirectoryPicker" in window && !saveDir && !READ_ONLY() && !window.__noFolderOK && !navigator.webdriver){
+    window.__noFolderOK = true;
+    err.textContent = "No backup folder yet. Choose a folder or USB stick (button below): a backup copy is rewritten there every minute, so nothing is lost if this laptop stops. Or press Start again to go without.";
+    $("#stSaveRow").classList.add("nudge"); $("#stSaveBtn").focus(); return;
+  }
   const name = $("#stName").value.trim();
   if(!RESUME && !READ_ONLY() && name.length < 2){ err.textContent = "Please type your name first."; $("#stName").focus(); return; }
   const code = $("#stCode").value;
@@ -4580,6 +4615,7 @@ $("#stGo").onclick = async () => {
     }else{
       ST = { v: 1, examId: EXAM.examId, name, cls: $("#stClass").value.trim(), startedAt: now(), extraMin: 0, answers: {}, flags: {}, log: [], prefs: { size: 17, rate: 1, mathKb: true, accents: false }, ua: navigator.userAgent };
       logEv("started");
+      if(devOverride) logEv("started with the teacher code although the developer tools looked open");
     }
     startExam();
   }catch(e){
@@ -4614,7 +4650,7 @@ async function chooseFolder(){
   finally{ setTimeout(() => { picking = false; }, 600); }
 }
 const saveWhere = () => saveDir ? saveDir.name : "this computer's Downloads folder";
-$("#stSaveBtn").onclick = async () => { if(await chooseFolder()) $("#stSaveName").textContent = saveDir.name + " ✓"; };
+$("#stSaveBtn").onclick = async () => { if(await chooseFolder()){ $("#stSaveName").textContent = saveDir.name + " ✓"; $("#stSaveRow").classList.remove("nudge"); if(/backup folder/.test($("#stErr").textContent)) $("#stErr").textContent = ""; } };
 window.backupTick = async box => {
   if(!saveDir || now() - lastBackup < 60000 && !ST.endedAt) return;
   lastBackup = now();

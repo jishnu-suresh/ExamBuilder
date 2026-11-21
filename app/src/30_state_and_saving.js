@@ -92,6 +92,25 @@ function mergeState(o){
   return out;
 }
 let saveT;
+// BEE open twice (two tabs, or a tab and the installed app): both copies are told, so one can be saved and closed
+(() => {
+  if(!("BroadcastChannel" in window)) return;
+  const ch = new BroadcastChannel("bee-tabs"), me = Math.random().toString(36).slice(2), others = new Set();
+  let dismissed = false;
+  const show = () => { const b = document.getElementById("tabsBanner"); if(b) b.classList.toggle("hidden", !others.size || dismissed); };
+  ch.onmessage = e => {
+    const m = e.data || {}; if(m.id === me) return;
+    if(m.t === "hello"){ others.add(m.id); ch.postMessage({ t: "here", id: me }); dismissed = false; }
+    else if(m.t === "here"){ others.add(m.id); }
+    else if(m.t === "bye"){ others.delete(m.id); }
+    show();
+  };
+  ch.postMessage({ t: "hello", id: me });
+  addEventListener("pagehide", () => ch.postMessage({ t: "bye", id: me }));
+  const wire = () => { const ok = document.getElementById("tabsBannerOk"); if(ok) ok.onclick = () => { dismissed = true; show(); }; show(); };
+  if(document.readyState === "loading") addEventListener("DOMContentLoaded", wire); else wire();
+  window.__otherTabs = () => others.size;
+})();
 function saveLocal(clean){
   S.savedAt = Date.now(); if(!clean) proj.dirty = true; updateChip();
   clearTimeout(saveT);

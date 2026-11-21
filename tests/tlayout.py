@@ -53,6 +53,13 @@ async def main():
         ok("⇥ hides the preview; ◧ Preview brings it back", st == {"pv": False, "show": True}, st)
         await pg.click("#pvShow"); await pg.wait_for_timeout(300)
         ok("…the preview is back", await pg.is_visible(".preview"))
+        # BEE open twice: both copies say so; closing one clears it
+        ok("one copy of BEE: no warning", await pg.is_hidden("#tabsBanner"))
+        p2 = await ctx.new_page(); await p2.goto("http://127.0.0.1:8765/"); await p2.wait_for_timeout(1500)
+        both = [await pg.is_visible("#tabsBanner"), await p2.is_visible("#tabsBanner")]
+        ok("BEE open in two tabs: both show the warning to save and close one", both == [True, True], both)
+        await p2.close(); await pg.wait_for_timeout(500)
+        ok("closing the other tab clears the warning", await pg.is_hidden("#tabsBanner"))
         await pg.screenshot(path="layout.png")
         ok("no page errors", not errs, errs[:3])
         await b.close()

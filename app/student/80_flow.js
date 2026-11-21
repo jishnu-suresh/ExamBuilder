@@ -42,8 +42,27 @@ $("#stCode").addEventListener("keydown", e => { if(e.key === "Enter") $("#stGo")
 $("#stName").addEventListener("keydown", e => { if(e.key === "Enter") $("#stClass").focus(); });
 $("#stClass").addEventListener("keydown", e => { if(e.key === "Enter") $("#stCode").focus(); });
 
+// developer tools docked in the window make the page much smaller than the window (browser zoom can look the same,
+// so the teacher code lets the test start anyway — and the log says so)
+const devtoolsLikely = () => outerWidth > 0 && (outerWidth - innerWidth > 200 || outerHeight - innerHeight > 260);
+let devOK = false, devOverride = false;
+$("#stDevGo").onclick = async () => {
+  if(!(await teacherOK($("#stDevCode").value))){ $("#stErr").textContent = "That's not the teacher code."; return; }
+  devOK = devOverride = true; $("#stDevRow").classList.add("hidden"); $("#stErr").textContent = ""; toast("OK — now press Start the test.", 4000); $("#stGo").focus();
+};
+$("#stDevCode").addEventListener("keydown", e => { if(e.key === "Enter") $("#stDevGo").click(); });
 $("#stGo").onclick = async () => {
   const err = $("#stErr"); err.textContent = "";
+  if(!devOK && devtoolsLikely()){
+    err.textContent = "The browser's developer tools look open (F12). Close them, then press Start again. If they aren't open (for example the page is zoomed), the teacher can type the teacher code to start anyway.";
+    $("#stDevRow").classList.remove("hidden"); return;
+  }
+  // Chrome / Edge: a backup copy in a folder (a USB stick…) is rewritten every minute — ask once before starting without one
+  if("showDirectoryPicker" in window && !saveDir && !READ_ONLY() && !window.__noFolderOK && !navigator.webdriver){
+    window.__noFolderOK = true;
+    err.textContent = "No backup folder yet. Choose a folder or USB stick (button below): a backup copy is rewritten there every minute, so nothing is lost if this laptop stops. Or press Start again to go without.";
+    $("#stSaveRow").classList.add("nudge"); $("#stSaveBtn").focus(); return;
+  }
   const name = $("#stName").value.trim();
   if(!RESUME && !READ_ONLY() && name.length < 2){ err.textContent = "Please type your name first."; $("#stName").focus(); return; }
   const code = $("#stCode").value;
@@ -63,6 +82,7 @@ $("#stGo").onclick = async () => {
     }else{
       ST = { v: 1, examId: EXAM.examId, name, cls: $("#stClass").value.trim(), startedAt: now(), extraMin: 0, answers: {}, flags: {}, log: [], prefs: { size: 17, rate: 1, mathKb: true, accents: false }, ua: navigator.userAgent };
       logEv("started");
+      if(devOverride) logEv("started with the teacher code although the developer tools looked open");
     }
     startExam();
   }catch(e){
@@ -97,7 +117,7 @@ async function chooseFolder(){
   finally{ setTimeout(() => { picking = false; }, 600); }
 }
 const saveWhere = () => saveDir ? saveDir.name : "this computer's Downloads folder";
-$("#stSaveBtn").onclick = async () => { if(await chooseFolder()) $("#stSaveName").textContent = saveDir.name + " ✓"; };
+$("#stSaveBtn").onclick = async () => { if(await chooseFolder()){ $("#stSaveName").textContent = saveDir.name + " ✓"; $("#stSaveRow").classList.remove("nudge"); if(/backup folder/.test($("#stErr").textContent)) $("#stErr").textContent = ""; } };
 window.backupTick = async box => {
   if(!saveDir || now() - lastBackup < 60000 && !ST.endedAt) return;
   lastBackup = now();

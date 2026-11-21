@@ -367,6 +367,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .savechip.ok{color:#3C6E3C;border-color:#BFD8BF;background:#F4FAF4}
 .savechip.warn{color:#9A5B12;border-color:#E9C98F;background:#FFF8EA}
 .savechip.bad{color:#fff;border-color:#B4452F;background:#B4452F;font-weight:600}
+.tabs-banner{background:#FFF6E0!important;border-color:#E8C77A!important;color:#6B4A0E!important}
 .save-banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;margin:10px auto 0;max-width:1400px;padding:10px 16px;border-radius:12px;background:#FDECEA;border:1.5px solid #E9B4AD;color:#7A2A1E;font-size:14px}
 .save-banner.hidden{display:none}
 .add-tiles{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:10px;padding:10px;cursor:default}
@@ -500,6 +501,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
   </span>
 </header>
 
+<div class="save-banner tabs-banner hidden" id="tabsBanner" role="alert"><span>⚠️ <b>BEE is open in another tab or window too.</b> Two open copies can overwrite each other's work: save there, then close one of them.</span><button class="btn sm" id="tabsBannerOk">Got it</button></div>
 <div class="save-banner hidden" id="saveBanner" role="alert"><span id="saveBannerText"></span><button class="btn sm primary" id="saveBannerGo">💾 Save to a file</button></div>
 
 <main class="grid">
@@ -958,7 +960,6 @@ x = 3
 <!-- START / PROJECT FILE -->
 <div class="modal" id="startModal" data-sticky>
   <div class="box start-box">
-    <img id="startLogo" alt="" style="height:30px;display:block;margin:0 auto 10px;opacity:.9">
     <div class="start-brand"><span class="bee">🐝</span><span class="bee-name">BEE</span></div>
     <div class="start-tag">Build&nbsp;•&nbsp;Edit&nbsp;•&nbsp;Evaluate</div>
     <p class="hint" style="text-align:center;margin:4px 0 14px">Each exam is a project file. It's saved automatically every minute, so your work is never lost.</p>
@@ -1286,6 +1287,25 @@ function mergeState(o){
   return out;
 }
 let saveT;
+// BEE open twice (two tabs, or a tab and the installed app): both copies are told, so one can be saved and closed
+(() => {
+  if(!("BroadcastChannel" in window)) return;
+  const ch = new BroadcastChannel("bee-tabs"), me = Math.random().toString(36).slice(2), others = new Set();
+  let dismissed = false;
+  const show = () => { const b = document.getElementById("tabsBanner"); if(b) b.classList.toggle("hidden", !others.size || dismissed); };
+  ch.onmessage = e => {
+    const m = e.data || {}; if(m.id === me) return;
+    if(m.t === "hello"){ others.add(m.id); ch.postMessage({ t: "here", id: me }); dismissed = false; }
+    else if(m.t === "here"){ others.add(m.id); }
+    else if(m.t === "bye"){ others.delete(m.id); }
+    show();
+  };
+  ch.postMessage({ t: "hello", id: me });
+  addEventListener("pagehide", () => ch.postMessage({ t: "bye", id: me }));
+  const wire = () => { const ok = document.getElementById("tabsBannerOk"); if(ok) ok.onclick = () => { dismissed = true; show(); }; show(); };
+  if(document.readyState === "loading") addEventListener("DOMContentLoaded", wire); else wire();
+  window.__otherTabs = () => others.size;
+})();
 function saveLocal(clean){
   S.savedAt = Date.now(); if(!clean) proj.dirty = true; updateChip();
   clearTimeout(saveT);
@@ -6229,7 +6249,7 @@ $("#projIn").addEventListener("change", async e => {
 /* start screen */
 let storedHandle = null, storedLocal = null;
 function openStart(isNew){
-  $("#startLogo").src = (S.logo && S.logo.src) || DEFAULT_LOGO;
+
   const fileBtn = $("#stContinueFile"), locBtn = $("#stContinueLocal");
   fileBtn.classList.toggle("hidden", !!isNew || !storedHandle);
   if(storedHandle) $("#stFileName").textContent = "Continue “" + storedHandle.name + "”";

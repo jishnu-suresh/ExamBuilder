@@ -352,6 +352,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .savechip.ok{color:#3C6E3C;border-color:#BFD8BF;background:#F4FAF4}
 .savechip.warn{color:#9A5B12;border-color:#E9C98F;background:#FFF8EA}
 .savechip.bad{color:#fff;border-color:#B4452F;background:#B4452F;font-weight:600}
+.tabs-banner{background:#FFF6E0!important;border-color:#E8C77A!important;color:#6B4A0E!important}
 .save-banner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;margin:10px auto 0;max-width:1400px;padding:10px 16px;border-radius:12px;background:#FDECEA;border:1.5px solid #E9B4AD;color:#7A2A1E;font-size:14px}
 .save-banner.hidden{display:none}
 .add-tiles{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:10px;padding:10px;cursor:default}

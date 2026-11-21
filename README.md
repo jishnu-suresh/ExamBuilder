@@ -52,4 +52,4 @@ python3 build/build.py     # builds docs/ (the web app) and docs/download/Exam_B
 
 Libraries: jsPDF, MathJax, MathLive, pdf.js, Tesseract.js, SortableJS, DejaVu fonts (subset).
 
-© Jishnu
+© 2026 Jishnu Suresh. All rights reserved — see [LICENSE](LICENSE). The app is free to use; the code may not be copied, reused or redistributed without permission.

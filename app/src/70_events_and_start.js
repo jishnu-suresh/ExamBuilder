@@ -229,7 +229,7 @@ $("#projIn").addEventListener("change", async e => {
 /* start screen */
 let storedHandle = null, storedLocal = null;
 function openStart(isNew){
-  $("#startLogo").src = (S.logo && S.logo.src) || DEFAULT_LOGO;
+
   const fileBtn = $("#stContinueFile"), locBtn = $("#stContinueLocal");
   fileBtn.classList.toggle("hidden", !!isNew || !storedHandle);
   if(storedHandle) $("#stFileName").textContent = "Continue “" + storedHandle.name + "”";

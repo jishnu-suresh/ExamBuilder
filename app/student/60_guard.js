@@ -31,7 +31,15 @@ async function goFull(){
   try{ if(!document.fullscreenElement && document.documentElement.requestFullscreen) await document.documentElement.requestFullscreen({ navigationUI: "hide" }); }catch(_){}
   try{ if(document.fullscreenElement && navigator.keyboard && navigator.keyboard.lock) await navigator.keyboard.lock(); }catch(_){}
 }
-function guardStart(){ running = true; soundOn(); goFull(); keepAwake(); }
+function guardStart(){ running = true; soundOn(); goFull(); keepAwake(); devBase = null; }
+// developer tools opened during the test (docked in the window): written in the log once (no alarm: zooming looks the same)
+let devBase = null, devSeen = false;
+setInterval(() => {
+  if(!running || !ST || ST.endedAt || outerWidth <= 0) return;
+  const d = Math.max(outerWidth - innerWidth, outerHeight - innerHeight);
+  if(devBase == null){ devBase = d; return; }
+  if(!devSeen && d - devBase > 200){ devSeen = true; logEv("the window's page area shrank a lot (developer tools may have been opened)"); saveNow(); }
+}, 2000);
 function guardStop(){ running = false; clearInterval(beepT); beepT = null; try{ navigator.keyboard && navigator.keyboard.unlock && navigator.keyboard.unlock(); }catch(_){} try{ wake && wake.release(); }catch(_){} if(document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
 const away = () => document.visibilityState === "hidden" || !document.hasFocus();
 // every time the student leaves: beep, lock, record — and keep beeping until they come back
@@ -57,6 +65,10 @@ document.addEventListener("fullscreenchange", () => { if(!document.fullscreenEle
 // keys that try to leave, while the keyboard is captured
 document.addEventListener("keydown", e => {
   if(!running || !ST || ST.endedAt) return;
+  const k = (e.key || "").toLowerCase();
+  if(e.key === "F12" || ((e.ctrlKey || e.metaKey) && (e.shiftKey || e.altKey) && ["i", "j", "c", "ˆ", "∆", "ç"].includes(k)) || ((e.ctrlKey || e.metaKey) && k === "u")){
+    e.preventDefault(); e.stopPropagation(); logEv("tried to open the developer tools", { key: e.key }); beep(); toast("Developer tools are switched off during the test."); return;
+  }
   if((e.altKey && (e.key === "Tab" || e.key === "F4")) || e.key === "Meta" || e.key === "OS" || (e.metaKey && /^(tab|h|m|q|w)$/i.test(e.key))){
     e.preventDefault(); logEv("tried to leave with the keyboard", { key: (e.altKey ? "Alt+" : e.metaKey ? "Cmd+" : "") + e.key }); beep(); toast("Stay on the test, please.");
   }
