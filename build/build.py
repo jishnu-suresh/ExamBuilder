@@ -160,11 +160,11 @@ def bee_icon(size, pad, name, rounded=True, hexagon=True):
     if b: im.alpha_composite(b, ((size - b.width) // 2, (size - b.height) // 2 + int(size * .01)))
     im.save(os.path.join(OUT, "icons", name))
 bee_icon(192, .08, "icon-192.png"); bee_icon(512, .08, "icon-512.png")
-bee_icon(512, .2, "maskable-512.png", rounded=False); bee_icon(180, .08, "apple-touch-icon.png")
-bee_icon(32, .02, "favicon-32.png", rounded=False, hexagon=False)
-fav = Image.open(os.path.join(OUT, "icons", "favicon-32.png")).convert("RGBA")
+bee_icon(512, .2, "maskable-512.png", rounded=False); bee_icon(180, .08, "bee-apple-touch-icon.png")
+bee_icon(32, .02, "bee-favicon-32.png", rounded=False, hexagon=False)
+fav = Image.open(os.path.join(OUT, "icons", "bee-favicon-32.png")).convert("RGBA")
 fav2 = Image.new("RGBA", fav.size, (0, 0, 0, 0)); b = bee_img(30)
-if b: fav2.alpha_composite(b, ((32 - b.width) // 2, (32 - b.height) // 2)); fav2.save(os.path.join(OUT, "icons", "favicon-32.png"))
+if b: fav2.alpha_composite(b, ((32 - b.width) // 2, (32 - b.height) // 2)); fav2.save(os.path.join(OUT, "icons", "bee-favicon-32.png"))
 import io
 for n, old in OLD_ICONS.items():
     p = os.path.join(OUT, "icons", n)
@@ -192,8 +192,8 @@ head = """<link rel="manifest" href="manifest.webmanifest">
 <meta name="application-name" content="BEE">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="BEE">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/bee-favicon-32.png">
+<link rel="apple-touch-icon" href="icons/bee-apple-touch-icon.png">
 <script>window.__PWA__ = true;</script>"""
 pwa = dict(common)
 pwa.update({
@@ -215,6 +215,10 @@ pwa.update({
 index_html = fill(src, pwa)
 open(os.path.join(OUT, "index.html"), "w").write(index_html)
 os.makedirs(os.path.join(OUT, "download"))
+# the offline file carries its own bee tab icon (no icons folder next to it)
+import base64
+_fav = base64.b64encode(open(os.path.join(OUT, "icons", "bee-favicon-32.png"), "rb").read()).decode()
+if 'rel="icon"' not in single_html: single_html = single_html.replace("</title>", '</title>\n<link rel="icon" type="image/png" href="data:image/png;base64,' + _fav + '">', 1)
 open(os.path.join(OUT, "download", "Exam_Builder_offline.html"), "w").write(single_html)
 open(os.path.join(OUT, ".nojekyll"), "w").write("")
 os.makedirs(os.path.join(OUT, "student"))
@@ -227,7 +231,7 @@ def h(paths):
     return m.hexdigest()[:12]
 CORE = ["./", "index.html", "manifest.webmanifest", "vendor/jspdf.umd.min.js", "vendor/mathjax/tex-svg-full.js", "vendor/mathlive/mathlive.min.js",
         "vendor/mathlive/fonts.css", "vendor/sortable.min.js", "vendor/smiles-drawer.min.js", "vendor/pdfjs/pdf.min.js", "vendor/pdfjs/pdf.worker.min.js",
-        "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/apple-touch-icon.png", "icons/favicon-32.png"]
+        "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/bee-apple-touch-icon.png", "icons/bee-favicon-32.png"]
 LAZY = ["student/player.html", "vendor/fonts.js", "vendor/easyfonts.js", "vendor/ocr/tesseract.min.js", "vendor/ocr/worker.min.js", "vendor/ocr/tesseract-core-simd-lstm.wasm.js", "vendor/ocr/lang/eng.traineddata.gz"]
 sw = rd(os.path.join(ROOT, "build", "sw.template.js"))
 sw = sw.replace("__CORE_VERSION__", h([p for p in CORE if p != "./"])).replace("__LAZY_VERSION__", h(LAZY))
