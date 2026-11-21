@@ -35,7 +35,7 @@ No internet / no install? Download the single-file version: [`docs/download/Exam
 - **Save light** in the top bar: 🟢 saved, 🟠 saving, 🔴 not saved yet — plus a warning before closing with unsaved changes
 - Auto-saves to a project file every minute (Chrome/Edge); double-click `.exam.json` files to open them in the app
 - **🕰️ Version history:** earlier copies of the exam kept in the browser, one click to restore or download
-- **🌱 Basic / 🐝 Full mode** (button in the top bar): Basic shows only the everyday buttons; settings made in Full mode still apply
+- **🌱 Basic mode** (the 🍯🐝 button in the top bar): shows only the everyday buttons; click again for all options. Settings made with all options still apply
 - A 1-minute welcome tour for first-time users
 
 ## For developers

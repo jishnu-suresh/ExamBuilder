@@ -157,12 +157,12 @@ $("#btnRefresh").onclick = preview;
 // 🌱 Basic / 🐝 Full mode (remembered in this browser)
 function setMode(basic){
   document.body.classList.toggle("basic", !!basic);
-  $("#btnMode").innerHTML = basic ? '🌱 <span class="lbl">Basic</span>' : '🐝 <span class="lbl">Full</span>';
-  $("#btnMode").title = basic ? "Basic mode: only the everyday buttons. Click for Full mode (everything)." : "Full mode: every option. Click for Basic mode (only the everyday buttons).";
+  $("#btnMode").innerHTML = basic ? '🌱 <span class="lbl">Basic</span>' : '<span class="bees">🍯🐝</span>';
+  $("#btnMode").title = basic ? "Basic mode: only the everyday buttons. Click to show all options again." : "All options are shown. Click for Basic mode (only the everyday buttons).";
   if(basic){ const t = document.querySelector('#setTabs [data-tab="exam"]'); if(t && !t.classList.contains("on")) t.click(); }
   try{ basic ? localStorage.setItem("bee.basic", "1") : localStorage.removeItem("bee.basic"); }catch(_){}
 }
-$("#btnMode").onclick = () => { const b = !document.body.classList.contains("basic"); setMode(b); toast(b ? "🌱 Basic mode: only the everyday buttons. Everything you set before still applies." : "🐝 Full mode: every option is back.", 4000); };
+$("#btnMode").onclick = () => { const b = !document.body.classList.contains("basic"); setMode(b); toast(b ? "🌱 Basic mode: only the everyday buttons. Everything you set before still applies." : "🍯🐝 All options are back.", 4000); };
 try{ setMode(localStorage.getItem("bee.basic") === "1"); }catch(_){}
 // the preview: drag its left edge to resize; ⇥ hides it while typing (both remembered in this browser)
 (() => {
