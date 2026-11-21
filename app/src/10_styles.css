@@ -209,7 +209,7 @@ label.f .sv-name input,.sv-name input{flex:1;border:0!important;outline:0;box-sh
   .topbar .lbl-m{display:inline}
   .topbar>.btn{padding:6px 10px;min-width:38px;justify-content:center}
   .topbar .dl-wrap{margin-left:auto}
-  .topbar #btnDownload{padding:7px 12px}
+  .topbar #dlMenuBtn{padding:7px 12px}
   .grid{padding:10px;gap:14px;display:block}
   .panel{padding:14px 12px;margin-bottom:14px;border-radius:10px}
   .panel>h2{font-size:17px;flex-wrap:wrap}
@@ -301,8 +301,6 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .card .graphbtn{font-size:12.5px}
 .wm{position:fixed;right:14px;bottom:3px;font:500 11.5px/1.4 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:#2B2B2B;opacity:.72;pointer-events:none;user-select:none;z-index:45;letter-spacing:.2px}
 .dl-wrap{position:relative;display:inline-flex}
-.dl-wrap #btnDownload{border-top-right-radius:0;border-bottom-right-radius:0}
-.dl-caret{border-top-left-radius:0!important;border-bottom-left-radius:0!important;border-left:1px solid rgba(255,255,255,.35)!important;padding:7px 9px!important}
 .dl-menu{position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(60,45,10,.16);padding:8px;z-index:30;display:grid;grid-template-columns:repeat(3,minmax(190px,1fr));gap:4px 6px;width:min(680px,94vw)}
 .dl-menu.hidden{display:none}
 .dl-col{display:flex;flex-direction:column;min-width:0}

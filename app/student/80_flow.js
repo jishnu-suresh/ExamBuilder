@@ -108,7 +108,10 @@ window.backupTick = async box => {
   }catch(e){ console.warn("backup", e); }
 };
 $("#stBackup").onclick = () => {
-  const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".bee-backup";
+  const old = document.getElementById("stFilePick"); if(old) old.remove();   // kept on the page until used (see BEE's fileChooser)
+  const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".bee-backup"; inp.id = "stFilePick";
+  inp.style.cssText = "position:fixed;left:-9999px;width:1px;height:1px;opacity:0"; document.body.appendChild(inp);
+  inp.addEventListener("cancel", () => inp.remove());
   inp.onchange = async () => {
     try{
       const o = JSON.parse(await inp.files[0].text());
@@ -117,6 +120,7 @@ $("#stBackup").onclick = () => {
       setResume({ name: o.name, box: o.box }, "backup"); $("#stErr").textContent = "";
       toast("Backup found for " + o.name + ". Your teacher types the start code to carry on.", 5000);
     }catch(e){ $("#stErr").textContent = e.message; }
+    inp.remove();
   };
   inp.click();
 };

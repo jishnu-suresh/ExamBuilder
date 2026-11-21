@@ -144,12 +144,21 @@ $("#keyMake").onclick = async () => {
 };
 $("#keyLock").onclick = () => { Object.keys(OPEN_KEYS).forEach(k => delete OPEN_KEYS[k]); toast("🔒 Locked. The school password is needed again to open answers."); openKeyModal(); };
 $("#keyImport").onclick = async () => { if(await loadKeyFile()){ openKeyModal(); keyRow(); } };
+// a file chooser kept on the page until it is used: a detached one can be thrown away by the browser while the
+// file window is open, and then the chosen file is silently ignored
+function fileChooser(accept, multiple, onFiles){
+  const old = document.getElementById("beeFilePick"); if(old) old.remove();
+  const inp = document.createElement("input"); inp.type = "file"; inp.id = "beeFilePick"; inp.accept = accept; inp.multiple = !!multiple;
+  inp.style.cssText = "position:fixed;left:-9999px;width:1px;height:1px;opacity:0";
+  inp.addEventListener("change", () => { const fs = [...inp.files]; inp.remove(); if(fs.length) onFiles(fs); });
+  inp.addEventListener("cancel", () => inp.remove());
+  document.body.appendChild(inp); inp.click();
+}
 function loadKeyFile(){
   return new Promise(resolve => {
-    const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".beekey,.json";
-    inp.onchange = async () => {
+    const picked = async files => {
       try{
-        const o = JSON.parse(await inp.files[0].text());
+        const o = JSON.parse(await files[0].text());
         if(o.bee !== "teacher-key" || !o.pub || !(o.privBox || o.priv)) throw new Error("This isn't a BEE school key file.");
         const kid = await BC.kidOf(o.pub);
         const rec = { pub: o.pub, kid, created: o.created || Date.now() };
@@ -166,8 +175,8 @@ function loadKeyFile(){
         toast("🐝 The school key is ready on this computer."); resolve(rec);
       }catch(e){ toast("Couldn't load the school key: " + e.message); resolve(null); }
     };
-    inp.addEventListener("cancel", () => resolve(null));
-    inp.click();
+    fileChooser(".beekey,.json", false, picked);
+    const pick = document.getElementById("beeFilePick"); pick.addEventListener("cancel", () => resolve(null));
   });
 }
 
@@ -357,9 +366,7 @@ $("#stuSheet").onclick = () => {
 /* ---- 📥 open student answers ---- */
 const ANS = [];
 function pickAnswers(){
-  const inp = document.createElement("input"); inp.type = "file"; inp.multiple = true; inp.accept = ".bee-answers";
-  inp.onchange = () => loadAnswers([...inp.files]);
-  inp.click();
+  fileChooser(".bee-answers", true, files => { toast("Opening " + (files.length === 1 ? files[0].name : files.length + " answer files") + "…", 2500); loadAnswers(files); });
 }
 $("#ansMore").onclick = pickAnswers;
 async function loadAnswers(files){

@@ -279,6 +279,12 @@ async def main():
         async with pg.expect_file_chooser() as fc: await pg.click("#ansMore")
         await (await fc.value).set_files(P("tom.bee-answers")); await pg.wait_for_timeout(1500)
         rows = await pg.evaluate("ANS.map(r => r.P && r.P.name)")
+        # the same file again, after closing the window: the window comes back
+        for _ in range(2):
+            await pg.click("#ansModal [data-close]")
+            async with pg.expect_file_chooser() as fc: await pg.evaluate("pickAnswers()")
+            await (await fc.value).set_files(P("tom.bee-answers")); await pg.wait_for_timeout(1500)
+        ok("opening the same answers again: the window shows, no duplicate", await pg.is_visible("#ansModal") and await pg.evaluate("ANS.map(r => r.P && r.P.name)") == ["Léa Martin", "Tom Dupont"], await pg.evaluate("ANS.length"))
         ok("a whole class: several files in one list, with ⬇ All PDFs (ZIP)", rows == ["Léa Martin", "Tom Dupont"] and await pg.is_visible("#ansZip"), rows)
         await pg.screenshot(path=P("teacher_list.png"))
         async with pg.expect_download(timeout=180000) as dl: await pg.click("#ansZip")

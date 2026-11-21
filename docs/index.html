@@ -224,7 +224,7 @@ label.f .sv-name input,.sv-name input{flex:1;border:0!important;outline:0;box-sh
   .topbar .lbl-m{display:inline}
   .topbar>.btn{padding:6px 10px;min-width:38px;justify-content:center}
   .topbar .dl-wrap{margin-left:auto}
-  .topbar #btnDownload{padding:7px 12px}
+  .topbar #dlMenuBtn{padding:7px 12px}
   .grid{padding:10px;gap:14px;display:block}
   .panel{padding:14px 12px;margin-bottom:14px;border-radius:10px}
   .panel>h2{font-size:17px;flex-wrap:wrap}
@@ -316,8 +316,6 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .card .graphbtn{font-size:12.5px}
 .wm{position:fixed;right:14px;bottom:3px;font:500 11.5px/1.4 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:#2B2B2B;opacity:.72;pointer-events:none;user-select:none;z-index:45;letter-spacing:.2px}
 .dl-wrap{position:relative;display:inline-flex}
-.dl-wrap #btnDownload{border-top-right-radius:0;border-bottom-right-radius:0}
-.dl-caret{border-top-left-radius:0!important;border-bottom-left-radius:0!important;border-left:1px solid rgba(255,255,255,.35)!important;padding:7px 9px!important}
 .dl-menu{position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(60,45,10,.16);padding:8px;z-index:30;display:grid;grid-template-columns:repeat(3,minmax(190px,1fr));gap:4px 6px;width:min(680px,94vw)}
 .dl-menu.hidden{display:none}
 .dl-col{display:flex;flex-direction:column;min-width:0}
@@ -449,7 +447,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
   <button class="btn sm" id="btnOpen" title="Open a saved .exam.json project">📂 <span class="lbl">Open</span></button>
   <button class="btn sm" id="btnSave" title="Save the project to a (new) file">💾 <span class="lbl">Save as…</span></button>
   <span class="dl-wrap">
-    <button class="btn primary" id="btnDownload">⬇ <span class="lbl-m">PDF</span><span class="lbl">Download PDF</span></button><button class="btn primary dl-caret" id="dlMenuBtn" title="More download options">▾</button>
+    <button class="btn primary" id="dlMenuBtn" title="Choose what to download" aria-haspopup="menu">⬇ <span class="lbl">Download</span> ▾</button>
     <div class="dl-menu hidden" id="dlMenu">
       <div class="dl-col"><div class="dl-h">📄 Paper</div>
         <button data-dl="full"><b>Full exam</b><span>Cover page + all questions</span></button>
@@ -5278,12 +5276,21 @@ $("#keyMake").onclick = async () => {
 };
 $("#keyLock").onclick = () => { Object.keys(OPEN_KEYS).forEach(k => delete OPEN_KEYS[k]); toast("🔒 Locked. The school password is needed again to open answers."); openKeyModal(); };
 $("#keyImport").onclick = async () => { if(await loadKeyFile()){ openKeyModal(); keyRow(); } };
+// a file chooser kept on the page until it is used: a detached one can be thrown away by the browser while the
+// file window is open, and then the chosen file is silently ignored
+function fileChooser(accept, multiple, onFiles){
+  const old = document.getElementById("beeFilePick"); if(old) old.remove();
+  const inp = document.createElement("input"); inp.type = "file"; inp.id = "beeFilePick"; inp.accept = accept; inp.multiple = !!multiple;
+  inp.style.cssText = "position:fixed;left:-9999px;width:1px;height:1px;opacity:0";
+  inp.addEventListener("change", () => { const fs = [...inp.files]; inp.remove(); if(fs.length) onFiles(fs); });
+  inp.addEventListener("cancel", () => inp.remove());
+  document.body.appendChild(inp); inp.click();
+}
 function loadKeyFile(){
   return new Promise(resolve => {
-    const inp = document.createElement("input"); inp.type = "file"; inp.accept = ".beekey,.json";
-    inp.onchange = async () => {
+    const picked = async files => {
       try{
-        const o = JSON.parse(await inp.files[0].text());
+        const o = JSON.parse(await files[0].text());
         if(o.bee !== "teacher-key" || !o.pub || !(o.privBox || o.priv)) throw new Error("This isn't a BEE school key file.");
         const kid = await BC.kidOf(o.pub);
         const rec = { pub: o.pub, kid, created: o.created || Date.now() };
@@ -5300,8 +5307,8 @@ function loadKeyFile(){
         toast("🐝 The school key is ready on this computer."); resolve(rec);
       }catch(e){ toast("Couldn't load the school key: " + e.message); resolve(null); }
     };
-    inp.addEventListener("cancel", () => resolve(null));
-    inp.click();
+    fileChooser(".beekey,.json", false, picked);
+    const pick = document.getElementById("beeFilePick"); pick.addEventListener("cancel", () => resolve(null));
   });
 }
 
@@ -5491,9 +5498,7 @@ $("#stuSheet").onclick = () => {
 /* ---- 📥 open student answers ---- */
 const ANS = [];
 function pickAnswers(){
-  const inp = document.createElement("input"); inp.type = "file"; inp.multiple = true; inp.accept = ".bee-answers";
-  inp.onchange = () => loadAnswers([...inp.files]);
-  inp.click();
+  fileChooser(".bee-answers", true, files => { toast("Opening " + (files.length === 1 ? files[0].name : files.length + " answer files") + "…", 2500); loadAnswers(files); });
 }
 $("#ansMore").onclick = pickAnswers;
 async function loadAnswers(files){
@@ -6070,7 +6075,6 @@ function setTab(t){
 $("#setTabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if(b) setTab(b.dataset.tab); });
 try{ setTab(localStorage.getItem("bee.tab") || "exam"); }catch(_){}
 $("#clearAll").onclick = () => { if(!S.items.length) return; keepVersion("Before Clear all"); if(confirm("Remove all questions? (Exam details are kept.)")){ S.items = []; render(); changed(); } };
-$("#btnDownload").onclick = () => download();
 $("#dlMenuBtn").onclick = e => { e.stopPropagation(); $("#dlMenu").classList.toggle("hidden"); };
 document.addEventListener("click", e => { if(!e.target.closest(".dl-wrap")) $("#dlMenu").classList.add("hidden"); });
 $("#dlMenu").addEventListener("click", e => {
@@ -6187,7 +6191,7 @@ const TOUR = [
   { el: "#setTabs", t: "Exam details", p: "Title, subject and teacher go in <b>📝 Exam</b>. <b>🎨 Look</b> changes the font, colours and logo; <b>🖨 Printing</b> sets the paper and answer lines." },
   { el: "#drop", t: "Add your questions", p: "Paste what ChatGPT, Claude or Gemini wrote, add photos of a worksheet, or type your own with <b>＋ Question</b>. Each question gets its own card you can edit." },
   { el: ".preview", t: "Check the preview", p: "This is the real PDF, updated as you type. Click any question in it to jump straight to its card." },
-  { el: "#btnDownload", t: "Download the PDF", p: "Get the student paper, the answer key or both. Your work saves itself every minute, and <b>🕰️</b> keeps earlier versions in case you want to go back." }
+  { el: "#dlMenuBtn", t: "Download", p: "Choose what you need: the student paper, large print, the answer key, versions… Your work saves itself every minute, and <b>🕰️</b> keeps earlier versions in case you want to go back." }
 ];
 let tourAt = -1;
 function startTour(){ tourAt = 0; showTourStep(); }
