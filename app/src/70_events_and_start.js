@@ -153,7 +153,7 @@ $("#dlMenu").addEventListener("click", e => {
   const b = e.target.closest("[data-dl]"); if(!b) return;
   $("#dlMenu").classList.add("hidden");
   ({ full: () => download(), large: () => download({ large: true }), cover: () => download({ coverOnly: true }), rubric: () => download({ rubricOnly: true }), questions: () => download({ noCover: true }), key: () => download({ key: true }), versions: () => openModal("#verModal"), dys: () => openModal("#dysModal"), student: () => openStudentDialog(), answers: () => pickAnswers() })[b.dataset.dl]();
-}); $("#btnDownload2").onclick = () => download();
+});
 $("#btnRefresh").onclick = preview;
 // dyslexia-friendly download (choices remembered)
 try{ const p = JSON.parse(localStorage.getItem("bee.dys") || "{}"); if(p.font) document.querySelector(`input[name=dysFont][value=${p.font}]`).checked = true; if(p.cream != null) $("#dysCream").checked = p.cream; }catch(_){}
