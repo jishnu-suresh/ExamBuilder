@@ -94,6 +94,13 @@ function isAnswered(it){
   if(Object.values(A.cells || {}).some(v => String(v || "").trim())) return true;
   return Object.values(A.areas || {}).some(bl => bl.some(b => b.t === "draw" ? (b.ops || []).length : String(b.v || "").trim()));
 }
+document.addEventListener("click", e => {
+  const a = e.target.closest && e.target.closest('a[href^="#"]'); if(!a) return;
+  e.preventDefault();
+  const t = document.getElementById(a.getAttribute("href").slice(1)); if(!t) return;
+  t.scrollIntoView({ block: "start", behavior: "smooth" });
+  const f = t.querySelector("textarea, math-field, input"); if(f) setTimeout(() => { try{ f.focus({ preventScroll: true }); }catch(_){} }, 350);
+});
 function renderNav(){
   const qs = PAPER.items.filter(it => it.k === "q");
   const RO = READ_ONLY();

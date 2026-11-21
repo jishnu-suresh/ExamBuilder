@@ -47,7 +47,8 @@ async def main():
         ok("ending the test gives the sealed answers file", os.path.getsize(P("lea.bee-answers")) > 1000)
         # ---------- teacher: opens the answers → PDF
         async with pg.expect_file_chooser() as fc: await pg.evaluate("pickAnswers()")
-        async with pg.expect_download(timeout=120000) as dl: await (await fc.value).set_files(P("lea.bee-answers"))
+        await (await fc.value).set_files(P("lea.bee-answers")); await pg.wait_for_selector("[data-anspdf]")
+        async with pg.expect_download(timeout=120000) as dl: await pg.click("[data-anspdf]")
         await (await dl.value).save_as(P("lea.pdf"))
         ok("BEE opens the answers as a PDF", open(P("lea.pdf"), "rb").read(4) == b"%PDF")
         ok("no page errors", not errs and not serrs, (errs + serrs)[:3])

@@ -363,7 +363,7 @@ function pickAnswers(){
 }
 $("#ansMore").onclick = pickAnswers;
 async function loadAnswers(files){
-  const ks = await teacherKeys(), first = !ANS.length && files.length === 1;
+  const ks = await teacherKeys();
   for(const f of files){
     const row = { file: f.name };
     try{
@@ -379,7 +379,6 @@ async function loadAnswers(files){
     ANS.push(row);
   }
   renderAnswers(); openModal("#ansModal");
-  if(first && ANS[0] && ANS[0].P) answerPDF(ANS[0]).then(r => r.doc.save(r.name)).catch(e => toast("Couldn't make the PDF: " + e.message));
 }
 const minsOf = ms => Math.round(ms / 60000);
 function renderAnswers(){
@@ -390,7 +389,7 @@ function renderAnswers(){
     <td class="${leftCount(r.P) ? "bad" : ""}">${leftCount(r.P) ? leftCount(r.P) + "×" : "never"}</td>
     <td><button class="btn sm primary" data-anspdf="${i}">⬇ PDF</button></td></tr>`).join("")}</table>
     <p class="hint">Blue in the PDF = what the student typed or chose. Mark it like any paper.</p>` : "<p>No files yet.</p>";
-  $("#ansZip").disabled = !ANS.some(r => r.P);
+  $("#ansZip").classList.toggle("hidden", ANS.filter(r => r.P).length < 2);   // one student: their own ⬇ PDF is enough
 }
 const leftCount = P => (P.log || []).filter(l => l.kind === "left").length;
 $("#ansList").addEventListener("click", async e => {

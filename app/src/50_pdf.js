@@ -580,7 +580,8 @@ function buildPDF(opt){
     const out = []; let acc = 0;
     const isNarrow = () => !!narrow && acc < narrow.h;
     const curW = () => isNarrow() ? narrow.w : width;
-    const add = ls => { const n = isNarrow(); ls.forEach(l => { if(l.dx === undefined) l.dx = n ? narrow.dx : 0; out.push(l); acc += l.h; }); };
+    let bkN = 0;   // every paragraph / option row is one block: a page may break between blocks, never inside one
+    const add = ls => { const n = isNarrow(), bk = bkN++; ls.forEach(l => { if(l.dx === undefined) l.dx = n ? narrow.dx : 0; l.bk = bk; out.push(l); acc += l.h; }); };
     const mark = q && q.mcq ? q.mcq : "";
     const cols = q ? Math.max(1, +q.optCols || 1) : 1;
     const grouped = !!(mark || cols > 1);
@@ -798,7 +799,7 @@ function buildPDF(opt){
       lines.forEach(l => {
         const showNo = it.lineNums && l.txt && (++lineNo % 5 === 0);
         const no = lineNo;
-        parts.push({ h: l.h, opt: l.opt, draw: yy => {
+        parts.push({ h: l.h, opt: l.opt, bk: l.bk, draw: yy => {
           if(l.draw){ font(SANS, "normal", fs, INK); l.draw(tx + (l.dx || 0), yy); }
           if(showNo){ font(SANS, "normal", Math.max(7, fs - 3.5), MUTED); doc.text(String(no), X - 2.4, yy + (l.asc || TASC), { align: "right" }); }
         } });
@@ -961,6 +962,31 @@ function buildPDF(opt){
         const y2 = y + blk.h + NGAP;
         return blk.h + need <= pageAvail * .9 && y2 + need > BOTTOM;
       })();
+      // a question that fits on a page but not in the space left: rather than leave a big gap, it may start here and
+      // carry on over the page — only between paragraphs or answer options (never inside one, never before its answer
+      // space), with the whole question text and at least one more block here, and at least one block over the page
+      const cut = (() => {
+        if(it.type !== "q" || leadIn || splitSubs || blk.h > pageAvail || y <= TOP + 1 || y + blk.h <= BOTTOM) return 0;
+        const room = BOTTOM - y; if(room < pageAvail * .15) return 0;
+        const P = blk.parts, stemEnd = P.findIndex(p => p.bk !== P[0].bk);
+        let best = 0, acc = 0;
+        for(let k = 1; k < P.length; k++){
+          acc += P[k - 1].h; if(acc > room) break;
+          if(P[k].bk == null || P[k - 1].bk == null || P[k].bk === P[k - 1].bk || P[k].g !== P[k - 1].g) continue;   // inside a block, or text → answer space
+          if(stemEnd < 0 || k <= stemEnd) continue;
+          const rest = P.slice(k); if(!rest.some(p => p.bk != null)) continue;
+          best = k;
+        }
+        return best;
+      })();
+      if(cut){
+        pageOf[it.id] = doc.getNumberOfPages();
+        blk.parts.forEach((p, k) => {
+          if(k === cut){ newPage(); if(!it.nonum){ font(SANS, "italic", fs - 2, MUTED); doc.text(M.meta[it.id] + ". " + PT("(continued)"), ML, y + fs * mmPt * .8); y += fs * mmPt * 1.25 + 1; } }
+          if(y + p.h > BOTTOM && y > TOP + 1) newPage(); mark(it.id, y, y + p.h); p.draw(y); y += p.h;
+        });
+        y += QGAP; continue;
+      }
       if(leadIn) newPage();
       else if(splitSubs){ if(y + blk.groupH[0] + blk.groupH[1] > BOTTOM) newPage(); }
       else if(flowNote){ if(y + blk.first > BOTTOM) newPage(); }

@@ -1,6 +1,6 @@
 // Exam Builder service worker — makes the app work offline and update itself.
-const CORE_CACHE = "eb-core-5fe67f029a9b";
-const LAZY_CACHE = "eb-lazy-3c2dbd5b88a3";
+const CORE_CACHE = "eb-core-5845746d6ba0";
+const LAZY_CACHE = "eb-lazy-f332a459fcc8";
 const CORE = ["./", "index.html", "manifest.webmanifest", "vendor/jspdf.umd.min.js", "vendor/mathjax/tex-svg-full.js", "vendor/mathlive/mathlive.min.js", "vendor/mathlive/fonts.css", "vendor/sortable.min.js", "vendor/smiles-drawer.min.js", "vendor/pdfjs/pdf.min.js", "vendor/pdfjs/pdf.worker.min.js", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/apple-touch-icon.png", "icons/favicon-32.png"];
 const LAZY = ["student/player.html", "vendor/fonts.js", "vendor/easyfonts.js", "vendor/ocr/tesseract.min.js", "vendor/ocr/worker.min.js", "vendor/ocr/tesseract-core-simd-lstm.wasm.js", "vendor/ocr/lang/eng.traineddata.gz"];   // photo reader + extra fonts: fetched in the background after install
 
