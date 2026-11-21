@@ -26,7 +26,7 @@ function renderPaper(){
         <div class="body"><div data-u="${u}"><div class="rich">${it.html}</div>
           ${it.mcq ? (RO ? `<div class="ro-opts">${it.opts.map(o => `<div><b>${esc(o.L)}.</b><span class="rich">${o.html}</span></div>`).join("")}</div>` : optsHTML(it)) : ""}</div>
           ${it.ans && !RO ? `<div data-area="${it.id}|main"></div>` : ""}
-          ${(it.subs || []).map(sb => { const su = unit(qn + " " + sb.L, "Part " + sb.L.replace(/[()]/g, "") + ". " + sb.plain + (sb.marks ? ". " + sb.marks + (sb.marks === "1" ? " mark." : " marks.") : "")); return `<div class="sub"><div class="sl" data-u="${su}"><b>${esc(sb.L)}</b><div class="rich" style="flex:1">${sb.html}</div>
+          ${(it.subs || []).map(sb => { const su = unit(qn + " " + sb.L, "Part " + sb.L.replace(/[()]/g, "") + ". " + sb.plain + (sb.marks ? ". " + sb.marks + (sb.marks === "1" ? " mark." : " marks.") : "")); return `<div class="sub" data-sk="${esc(sb.key)}"><div class="sl" data-u="${su}"><b>${esc(sb.L)}</b><div class="rich" style="flex:1">${sb.html}</div>
               ${sb.marks ? `<span class="mk">[${esc(sb.marks)}]</span>` : ""}${sayBtn(su, "Read " + sb.L + " aloud")}</div>
               ${RO ? "" : `<div data-area="${it.id}|s:${sb.key}"></div>`}</div>`; }).join("")}
         </div>
@@ -43,6 +43,16 @@ function renderPaper(){
     if(it.ans) mountArea(it, "main", it.ans);
     (it.subs || []).forEach(sb => mountArea(it, "s:" + sb.key, sb.ans || { kind: "lines", lines: 3 }));
   }
+  // tables to fill in: a small box in every empty cell of a question's table
+  if(!RO) $$("#paper .q td.blank[data-cell]").forEach(td => {
+    const q = td.closest(".q"), sub = td.closest(".sub"), id = q.dataset.q, key = (sub ? "s:" + sub.dataset.sk : "main") + "|" + td.dataset.cell;
+    const inp = document.createElement("input"); inp.type = "text"; inp.className = "cell-in"; inp.setAttribute("aria-label", "Table cell");
+    ["spellcheck", "autocorrect", "autocomplete", "autocapitalize"].forEach(a => inp.setAttribute(a, "off")); inp.spellcheck = false;
+    inp.value = ((ST.answers[id] || {}).cells || {})[key] || "";
+    inp.addEventListener("input", () => { const A = ST.answers[id] || (ST.answers[id] = {}); A.cells = A.cells || {}; A.cells[key] = inp.value; changed(); });
+    inp.addEventListener("blur", renderNav);
+    td.appendChild(inp);
+  });
   // "draw on this picture" under every picture of a question that has somewhere to answer
   if(EXAM.drawing && !RO) $$("#paper .q img.pic[data-pic]").forEach(img => {
     const q = img.closest(".q"), sub = img.closest(".sub");
@@ -81,6 +91,7 @@ document.addEventListener("click", e => {
 function isAnswered(it){
   const A = ST.answers[it.id]; if(!A) return false;
   if((A.choice || []).length) return true;
+  if(Object.values(A.cells || {}).some(v => String(v || "").trim())) return true;
   return Object.values(A.areas || {}).some(bl => bl.some(b => b.t === "draw" ? (b.ops || []).length : String(b.v || "").trim()));
 }
 function renderNav(){

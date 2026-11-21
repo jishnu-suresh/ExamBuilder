@@ -212,8 +212,10 @@ async function openStudentDialog(){
 let SAY = { lang: "en", us: false };
 const speakTex = t => " " + SPEECH.tex(t, SAY.lang, SAY) + " ";
 const speakText = t => SPEECH.text(t, SAY.lang);
+// a table cell counts as "to fill in" when it is empty (or only ___ … ?) and is not a header cell
+const blankCell = runs => !runs.length || /^[\s_.…?-]*$/.test(runs.map(r => r.t === "math" ? "x" : r.s).join(""));
 function studentRich(text, q, pics){
-  const plain = [];
+  const plain = []; let ti = -1;
   const runsH = rs => rs.map(r => {
     if(r.t === "math"){ const m = texSVG(r.tex, !!r.display); plain.push(speakTex(r.tex)); return m.err || !m.svg ? esc(r.tex) : `<span class="math" role="img" aria-label="${esc(speakTex(r.tex).trim())}">${m.svg}</span>`; }
     plain.push(speakText(r.s));
@@ -226,7 +228,8 @@ function studentRich(text, q, pics){
     if(b.type === "pic"){ plain.push(" (picture: " + b.desc + ") "); return `<div class="picmiss">Picture: ${esc(b.desc)}</div>`; }
     if(b.type === "mol"){ const m = MOLS[b.smi]; plain.push(" (molecule " + (b.cap || "") + ") "); return m && m.png ? `<div class="molbox"><img src="${m.png}" alt="Molecule ${esc(b.cap || b.smi)}">${b.cap ? `<div>${esc(b.cap)}</div>` : ""}</div>` : esc(b.smi); }
     if(b.type === "display"){ const m = texSVG(b.tex, true); plain.push(speakTex(b.tex)); return `<div class="disp"><span class="math" role="img" aria-label="${esc(speakTex(b.tex).trim())}">${m.err || !m.svg ? esc(b.tex) : m.svg}</span></div>`; }
-    if(b.type === "table"){ const h = "<table>" + b.rows.map((r, i) => "<tr>" + r.map(c => { const t = b.header && i === 0 ? "th" : "td"; const x = `<${t}>` + runsH(c) + `</${t}>`; plain.push(", "); return x; }).join("") + "</tr>").join("") + "</table>"; plain.push(". "); return h; }
+    if(b.type === "table"){ ti++; const h = "<table>" + b.rows.map((r, i) => "<tr>" + r.map((c, k) => { const head = b.header && i === 0, t = head ? "th" : "td";
+      const x = !head && blankCell(c) ? `<td class="blank" data-cell="${ti}:${i}:${k}"></td>` : `<${t}>` + runsH(c) + `</${t}>`; plain.push(", "); return x; }).join("") + "</tr>").join("") + "</table>"; plain.push(". "); return h; }
     const x = `<div style="padding-left:${b.ind ? 1.2 : 0}em${b.align ? ";text-align:" + b.align : ""}${b.scale && b.scale !== 1 ? ";font-size:" + b.scale + "em" : ""}">${b.bullet ? "• " : ""}${runsH(b.runs) || "&nbsp;"}</div>`;
     plain.push(". "); return x;
   }).join("");
@@ -396,6 +399,35 @@ $("#ansList").addEventListener("click", async e => {
   try{ const r = await answerPDF(ANS[+b.dataset.anspdf]); r.doc.save(r.name); }catch(err){ console.error(err); toast("Couldn't make the PDF: " + err.message); }
   b.disabled = false;
 });
+// write a student's table entries into the question's own table text (same counting as studentRich)
+function fillTables(text, cells){
+  if(!text || !cells || !Object.keys(cells).length) return text;
+  const lines = String(text).split("\n"); let ti = -1;
+  for(let i = 0; i < lines.length; i++){
+    if(!/^\|.*\|$/.test(lines[i].trim())) continue;
+    ti++; let r = -1, j = i;
+    for(; j < lines.length && /^\|.*\|$/.test(lines[j].trim()); j++){
+      const cs = splitRow(lines[j].trim());
+      if(cs.every(c => /^\s*:?-{2,}:?\s*$/.test(c))) continue;
+      r++;
+      let hit = false;
+      cs.forEach((c, k) => { const v = cells[ti + ":" + r + ":" + k]; if(v && String(v).trim()){ cs[k] = " {color:" + BLUE_HEX + "}**" + String(v).replace(/[*_$`{}|\\]/g, " ").trim() + "**{/color} "; hit = true; } });
+      if(hit) lines[j] = "|" + cs.join("|") + "|";
+    }
+    i = j - 1;
+  }
+  return lines.join("\n");
+}
+function withTables(snap, P){
+  return snap.items.map(it0 => {
+    const A = P.answers[it0.id]; if(!A || !A.cells) return it0;
+    const pick = src => { const o = {}; Object.entries(A.cells).forEach(([k, v]) => { const [s, c] = k.split("|"); if(s === src) o[c] = v; }); return o; };
+    const it = JSON.parse(JSON.stringify(it0));
+    it.text = fillTables(it.text, pick("main"));
+    (it.subs || []).forEach((sb, k) => { sb.text = fillTables(sb.text, pick("s:" + (sb.id || String(k)))); });
+    return it;
+  });
+}
 async function answerPDF(r){
   const snap = r.T.snap, P = r.P;
   await prepareMath(snap);
@@ -406,7 +438,7 @@ async function answerPDF(r){
   const resp = Object.assign({}, P, { title: snap.d.title, version: snap.version });
   // the student's exam is in place only while the PDF is drawn — no waiting, so nothing can save it over yours
   const saved = S; let doc;
-  S = { d: snap.d, logo: snap.logo, items: snap.items };
+  S = { d: snap.d, logo: snap.logo, items: withTables(snap, P) };
   const key = $("#ansKey").checked;
   try{ doc = buildPDF({ final: true, resp, key, version: snap.version || undefined }); }finally{ S = saved; }
   return { doc, name: fileStem(snap.d.title || "Exam", P.name, key ? "answers and key" : "answers") + ".pdf" };
