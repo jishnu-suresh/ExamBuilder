@@ -30,7 +30,7 @@ async def export_student(pg, key_mode="make", keyfile=None):
             async with pg.expect_file_chooser() as fc: await pg.click("[data-needkey=load]")
             await (await fc.value).set_files(keyfile)
             await pg.wait_for_selector("#pwModal.open"); await pg.fill("#pw1", TEACHER_PW); await pg.click("#pwGo")
-    for _ in range(400):
+    for _ in range(900):                          # up to 7½ minutes: the sealing is slow on purpose, and slower still in WebKit on GitHub's machines
         h = [d for d in downs if d.suggested_filename.endswith(".html")]
         if h: return h[0], [d for d in downs if d.suggested_filename.endswith(".beekey")]
         await pg.wait_for_timeout(500)
