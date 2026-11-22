@@ -46,7 +46,7 @@ function buildPDF(opt){
   const INK = [38, 34, 28], MUTED = [118, 110, 98], RULE = [196, 190, 178];
 
   // fonts
-  const allText = [D.title, D.subtitle, D.year, D.subject, D.duration, D.teacher, D.className, D.date, D.instructions, D.school, ...S.items.map(i => qText(i).replace(/\$\$[\s\S]*?\$\$|\$[^$\n]*\$/g, ""))].join("\n");
+  const allText = [D.title, D.subtitle, D.year, D.subject, D.subjectSub, D.duration, D.teacher, D.className, D.date, D.instructions, D.school, ...S.items.map(i => qText(i).replace(/\$\$[\s\S]*?\$\$|\$[^$\n]*\$/g, ""))].join("\n");
   let SANS = "helvetica", SERIF = "times";
   const uni = needsUnicode(allText) || !!opt.resp;     // a student's typing can hold any character
   let HAS_DJV = false;
@@ -158,6 +158,11 @@ function buildPDF(opt){
       while(doc.getTextWidth(subj) + cs * subj.length > CW && doc.getFontSize() > 10) doc.setFontSize(doc.getFontSize() - 1);
       if(draw) spaced(subj, PW / 2, y, cs);
       y += 4;
+      if((D.subjectSub || "").trim()){                       // optional subject subtitle, e.g. "Higher Level · Paper 2"
+        font(SANS, "normal", Math.max(9, P.subj * .62), MUTED);
+        doc.splitTextToSize(D.subjectSub.trim(), CW - 20).slice(0, 2).forEach(l => { y += 1.2 * g + 3.2; if(draw) doc.text(l, PW / 2, y, { align: "center" }); });
+        y += 2;
+      }
     }
     // pills — wrap onto extra rows instead of running off the page
     if(pills.length){

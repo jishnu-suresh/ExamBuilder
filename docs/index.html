@@ -531,6 +531,7 @@ body.basic .mode-btn{background:#EEF6E8;border-color:#B9D7A5;color:#2F5D1E}
         <label class="f"><span>Subtitle <span class="hint">· optional, under the title</span></span><input data-k="subtitle" placeholder="e.g. Unit 3 — Fractions &amp; Percentages"></label>
         <label class="f">Academic year<input data-k="year" placeholder="2025-2026"></label>
         <label class="f">Subject<input data-k="subject" placeholder="e.g. English Language"></label>
+        <label class="f"><span>Subject subtitle <span class="hint">· optional, under the subject</span></span><input data-k="subjectSub" placeholder="e.g. Higher Level · Paper 2"></label>
         <label class="f">Duration<input data-k="duration" placeholder="2 hrs"></label>
         <label class="f">Teacher name<input data-k="teacher" placeholder="e.g. Jenifer Clark"></label>
         <label class="f"><span>Class / Grade <span class="hint">· leave blank → students fill in</span></span><input data-k="className" placeholder="e.g. Grade 8B"></label>
@@ -1219,7 +1220,7 @@ const STORE_KEY = "examBuilder.v1";
 /* ---------------- state ---------------- */
 const defaults = () => ({
   d: {
-    title: "Semester 1 Exam", subtitle: "", year: "", subject: "", duration: "2 hrs",
+    title: "Semester 1 Exam", subtitle: "", year: "", subject: "", subjectSub: "", duration: "2 hrs",
     teacher: "", className: "", date: "", totalOverride: "",
     instructions: "Write all answers clearly, legibly and neatly using a blue or black ink pen.\nYou may use pencils for drawing if needed.\nWrite your answers on the lined paper provided.\nFor multiple-choice questions, you may highlight the chosen answer directly on the exam paper.",
     school: "The Hive Academy", paper: "a4", fontSize: "11", accent: "#2E2E2E",
@@ -2982,7 +2983,7 @@ function buildPDF(opt){
   const INK = [38, 34, 28], MUTED = [118, 110, 98], RULE = [196, 190, 178];
 
   // fonts
-  const allText = [D.title, D.subtitle, D.year, D.subject, D.duration, D.teacher, D.className, D.date, D.instructions, D.school, ...S.items.map(i => qText(i).replace(/\$\$[\s\S]*?\$\$|\$[^$\n]*\$/g, ""))].join("\n");
+  const allText = [D.title, D.subtitle, D.year, D.subject, D.subjectSub, D.duration, D.teacher, D.className, D.date, D.instructions, D.school, ...S.items.map(i => qText(i).replace(/\$\$[\s\S]*?\$\$|\$[^$\n]*\$/g, ""))].join("\n");
   let SANS = "helvetica", SERIF = "times";
   const uni = needsUnicode(allText) || !!opt.resp;     // a student's typing can hold any character
   let HAS_DJV = false;
@@ -3094,6 +3095,11 @@ function buildPDF(opt){
       while(doc.getTextWidth(subj) + cs * subj.length > CW && doc.getFontSize() > 10) doc.setFontSize(doc.getFontSize() - 1);
       if(draw) spaced(subj, PW / 2, y, cs);
       y += 4;
+      if((D.subjectSub || "").trim()){                       // optional subject subtitle, e.g. "Higher Level · Paper 2"
+        font(SANS, "normal", Math.max(9, P.subj * .62), MUTED);
+        doc.splitTextToSize(D.subjectSub.trim(), CW - 20).slice(0, 2).forEach(l => { y += 1.2 * g + 3.2; if(draw) doc.text(l, PW / 2, y, { align: "center" }); });
+        y += 2;
+      }
     }
     // pills — wrap onto extra rows instead of running off the page
     if(pills.length){

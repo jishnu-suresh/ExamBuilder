@@ -40,7 +40,7 @@ setInterval(() => {
   if(devBase == null){ devBase = d; return; }
   if(!devSeen && d - devBase > 200){ devSeen = true; logEv("the window's page area shrank a lot (developer tools may have been opened)"); saveNow(); }
 }, 2000);
-function guardStop(){ running = false; clearInterval(beepT); beepT = null; try{ navigator.keyboard && navigator.keyboard.unlock && navigator.keyboard.unlock(); }catch(_){} try{ wake && wake.release(); }catch(_){} if(document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
+function guardStop(){ running = false; try{ flashOff(); }catch(_){} clearInterval(beepT); beepT = null; try{ navigator.keyboard && navigator.keyboard.unlock && navigator.keyboard.unlock(); }catch(_){} try{ wake && wake.release(); }catch(_){} if(document.fullscreenElement) document.exitFullscreen().catch(() => {}); }
 const away = () => document.visibilityState === "hidden" || !document.hasFocus();
 // every time the student leaves: beep, lock, record — and keep beeping until they come back
 function left(how){
@@ -79,13 +79,24 @@ function showLock(){
   try{ window.mathVirtualKeyboard && mathVirtualKeyboard.hide(); }catch(_){}
   $$(".modal").forEach(m => m.classList.add("hidden")); $("#accBar").classList.add("hidden");
   if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
-  $("#scrLock").classList.remove("hidden"); $("#lkCode").value = ""; $("#lkErr").textContent = ""; setTimeout(() => $("#lkCode").focus(), 50); }
+  $("#scrLock").classList.remove("hidden"); $("#lkCode").value = ""; $("#lkErr").textContent = ""; setTimeout(() => $("#lkCode").focus(), 50);
+  flashOn(); }
+// until the teacher unlocks: the lock screen flashes white / red (once a second: well under the 3-a-second safety limit)
+// and the window's title flashes, so it shows in the taskbar or tab bar even from another app
+let flashT = null, title0 = null;
+function flashOn(){
+  $("#scrLock").classList.add("flash");
+  if(flashT) return;
+  title0 = title0 || document.title; let on = false;
+  flashT = setInterval(() => { on = !on; document.title = on ? "⚠️ LEFT THE TEST ⚠️" : "🔒 Locked · ask your teacher"; }, 700);
+}
+function flashOff(){ $("#scrLock").classList.remove("flash"); clearInterval(flashT); flashT = null; if(title0) document.title = title0; }
 async function teacherOK(code){ return (await BC.codeHash(code, EXAM.unlock.salt, EXAM.unlock.iter)) === EXAM.unlock.hash; }
 $("#lkGo").onclick = async () => {
   soundOn(); goFull();                       // while the click still counts
   const c = $("#lkCode").value;
   if(!c || !(await teacherOK(c))){ $("#lkErr").textContent = "That's not the teacher code."; logEv("wrong teacher code"); return; }
-  ST.locked = null; logEv("unlocked by teacher"); $("#scrLock").classList.add("hidden"); if(ST.prefs.accents && !READ_ONLY()) $("#accBar").classList.remove("hidden"); clearInterval(beepT); beepT = null; changed(); saveNow(); soundOn(); goFull(); keepAwake();
+  ST.locked = null; logEv("unlocked by teacher"); flashOff(); $("#scrLock").classList.add("hidden"); if(ST.prefs.accents && !READ_ONLY()) $("#accBar").classList.remove("hidden"); clearInterval(beepT); beepT = null; changed(); saveNow(); soundOn(); goFull(); keepAwake();
 };
 $("#lkCode").addEventListener("keydown", e => { if(e.key === "Enter") $("#lkGo").click(); });
 

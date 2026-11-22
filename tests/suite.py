@@ -16,7 +16,10 @@ LONG = "This is a deliberately long answer option that wraps over two or three p
 async def fresh(b, **ctx):
     c = await b.new_context(**({"viewport": {"width": 1400, "height": 1000}} | ctx)); pg = await c.new_page(); errs = []
     pg.on("pageerror", lambda e: errs.append(str(e))); pg.on("dialog", lambda d: asyncio.ensure_future(d.accept("2x2") if d.type == "prompt" else d.accept()))
-    await pg.goto(APP); await pg.wait_for_timeout(1400)
+    await pg.goto(APP)
+    try: await pg.wait_for_selector("#startModal.open", timeout=20000)   # BEE has loaded (it opens the start screen last)
+    except Exception: pass
+    await pg.wait_for_timeout(300)
     await pg.evaluate("document.getElementById('startModal').classList.remove('open')")
     return c, pg, errs
 
@@ -198,7 +201,7 @@ async def settings_tabs(b):
     await pg.click("#setTabs [data-tab=print]"); prn = [await vis("paper"), await vis("showMarks"), await vis("answerMode")]
     keys = await pg.evaluate("[...document.querySelectorAll('#setTabs ~ .tabpane [data-k]')].map(e => e.dataset.k)")
     ok("settings tabs: Exam / Look / Printing each show their own settings", first == [True, False, False] and look == [False, True, True] and all(prn), (first, look, prn))
-    ok("settings tabs: every setting is in exactly one tab", len(keys) == len(set(keys)) == 28, len(keys))
+    ok("settings tabs: every setting is in exactly one tab", len(keys) == len(set(keys)) == 29, len(keys))
     await pg.reload(); await pg.wait_for_timeout(1200)
     ok("settings tabs: last tab is remembered", await pg.evaluate("$('#setTabs .on').dataset.tab") == "print")
     await pg.evaluate("localStorage.removeItem('bee.tab')"); await c.close()
@@ -232,14 +235,20 @@ async def tour_and_demo(b):
         ok(f"welcome tour {w}px: closes and is remembered", await pg.evaluate("$('#tourTip').classList.contains('hidden') && localStorage.getItem('bee.toured') === '1'"))
         await c.close()
     c, pg, errs = await fresh(b)
-    await pg.evaluate("openStart()"); await pg.click("#stDemo"); await pg.wait_for_timeout(1500)
+    await pg.evaluate("openStart()"); await pg.click("#stDemo")
+    try: await pg.wait_for_function("!$('#startModal').classList.contains('open') && S.items.length > 5", timeout=15000)
+    except Exception: pass
+    await pg.wait_for_timeout(500)
     d = await pg.evaluate("({ t: S.d.title, q: S.items.filter(i => i.type === 'q').length, file: proj.handle, open: $('#startModal').classList.contains('open') })")
     r = await build(pg)
-    ok("demo exam (website): opens with its questions and builds", d["t"] and d["q"] >= 20 and not d["file"] and not d["open"] and r["pages"] >= 3, (d, r["pages"]))
+    ok("demo exam (website): opens with its questions and builds", d["t"] and d["q"] >= 20 and not d["file"] and not d["open"] and r["pages"] >= 3, (d, r["pages"], errs[:3]))
     await pg.evaluate("tourAt >= 0 && endTour()"); await c.close()
     c = await b.new_context(viewport={"width": 1400, "height": 1000}); pg = await c.new_page()
     await pg.goto("file://" + OFFLINE); await pg.wait_for_timeout(2500)
-    await pg.evaluate("openStart()"); await pg.click("#stDemo"); await pg.wait_for_timeout(1500)
+    await pg.evaluate("openStart()"); await pg.click("#stDemo")
+    try: await pg.wait_for_function("!$('#startModal').classList.contains('open') && S.items.length > 5", timeout=15000)
+    except Exception: pass
+    await pg.wait_for_timeout(500)
     n = await pg.evaluate("S.items.filter(i => i.type === 'q').length")
     ok("demo exam (offline file): works without internet", n >= 20, n); await c.close()
 

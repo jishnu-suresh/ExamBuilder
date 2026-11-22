@@ -197,3 +197,8 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
 
 .saveto.nudge{outline:3px solid #E8A33B;outline-offset:3px;border-radius:10px;animation:nudge 1s ease 2}
 @keyframes nudge{50%{outline-color:transparent}}
+
+/* the lock flashes until the teacher unlocks it: 1 s white / red (under 3 flashes a second) */
+.lockscr.flash{animation:lockflash 1s steps(1,end) infinite}
+.lockscr.flash .box{border:6px solid #D2232A;box-shadow:0 0 0 4px #fff}
+@keyframes lockflash{0%{background:#FFFFFF}50%{background:#D2232A}}

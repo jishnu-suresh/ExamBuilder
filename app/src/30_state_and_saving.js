@@ -1,7 +1,7 @@
 /* ---------------- state ---------------- */
 const defaults = () => ({
   d: {
-    title: "Semester 1 Exam", subtitle: "", year: "", subject: "", duration: "2 hrs",
+    title: "Semester 1 Exam", subtitle: "", year: "", subject: "", subjectSub: "", duration: "2 hrs",
     teacher: "", className: "", date: "", totalOverride: "",
     instructions: "Write all answers clearly, legibly and neatly using a blue or black ink pen.\nYou may use pencils for drawing if needed.\nWrite your answers on the lined paper provided.\nFor multiple-choice questions, you may highlight the chosen answer directly on the exam paper.",
     school: "The Hive Academy", paper: "a4", fontSize: "11", accent: "#2E2E2E",
