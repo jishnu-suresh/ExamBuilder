@@ -294,17 +294,14 @@ async def maths_keyboard_close(b):
     await c.close()
 
 async def beta_switch(b):
-    # the student version is hidden until launch; the secret link switches it on for one browser
+    # v2: the computer version is on for everyone; old ?beta=… links don't change that; Basic mode hides it like other advanced options
     c, pg, errs = await fresh(b)
     vis = lambda: pg.evaluate("[...document.querySelectorAll('#dlMenu [data-dl=student], #dlMenu [data-dl=answers]')].map(x => getComputedStyle(x).display !== 'none')")
-    await pg.click("#dlMenuBtn"); hidden = await vis()
-    await pg.goto(pg.url.split("?")[0] + "?beta=bee"); await pg.wait_for_timeout(1500); await pg.evaluate("$('#startModal').classList.remove('open')")
-    await pg.click("#dlMenuBtn"); shown = await vis()
-    await pg.goto(pg.url.split("?")[0]); await pg.wait_for_timeout(1500); await pg.evaluate("$('#startModal').classList.remove('open')")
-    await pg.click("#dlMenuBtn"); kept = await vis()
+    await pg.click("#dlMenuBtn"); shown = await vis(); await pg.click("#dlMenuBtn")
     await pg.goto(pg.url.split("?")[0] + "?beta=off"); await pg.wait_for_timeout(1500); await pg.evaluate("$('#startModal').classList.remove('open')")
-    await pg.click("#dlMenuBtn"); off = await vis()
-    ok("student version hidden until the secret link, remembered, and ?beta=off hides it again", hidden == [False, False] and shown == [True, True] and kept == [True, True] and off == [False, False], [hidden, shown, kept, off])
+    await pg.click("#dlMenuBtn"); old = await vis(); await pg.click("#dlMenuBtn")
+    await pg.click("#btnMode"); await pg.click("#dlMenuBtn"); basic = await vis(); await pg.click("#dlMenuBtn"); await pg.click("#btnMode")
+    ok("💻 Computer version and 📥 Student answers are in the menu for everyone (hidden only in 🌱 Basic mode)", shown == [True, True] and old == [True, True] and basic == [False, False], [shown, old, basic])
     await c.close()
 
 async def save_light(b):

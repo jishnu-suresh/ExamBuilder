@@ -2,16 +2,9 @@
    Export: the exam becomes one offline HTML file (app/student/). The questions inside are locked with the start code;
    the full exam (with the answer key) is sealed for the teacher only and simply carried along.
    Answers: the student's file seals their answers with the teacher's public key. Only this BEE (teacher key) opens them. */
-/* 🧪 not launched yet: hidden from everyone except browsers switched on with the secret link  …/?beta=bee
-   (…/?beta=off switches it off again). To launch: make BETA always true. */
-const BETA = (() => {
-  try{
-    const q = new URLSearchParams(location.search).get("beta");
-    if(q === "bee"){ localStorage.setItem("bee.beta", "1"); setTimeout(() => toast("🧪 Test features are on in this browser (💻 student version). ?beta=off turns them off."), 1500); }
-    if(q === "off"){ localStorage.removeItem("bee.beta"); setTimeout(() => toast("Test features are off in this browser."), 1500); }
-    return localStorage.getItem("bee.beta") === "1";
-  }catch(_){ return false; }
-})();
+/* 🚀 launched in v2: the computer version is on for everyone. (Old ?beta=… links still open BEE normally.) */
+const BETA = true;
+try{ localStorage.removeItem("bee.beta"); }catch(_){}
 document.body.classList.toggle("beta", BETA);
 const PLAYER = /*__PLAYER__*/null;        // the offline BEE carries the template inside; the website fetches it
 const BLUE_HEX = "#1F4FB8";
@@ -47,7 +40,7 @@ function askPassword(mode, info){
 }
 ["#pw1", "#pw2"].forEach(s => $(s).addEventListener("keydown", e => { if(e.key === "Enter") $("#pwGo").click(); }));
 // the school key: one key for the whole school, made once by one person and loaded by every teacher (file + password)
-// making or changing the school key is only offered with the admin link  …/?beta=bee&keyadmin=hive  (not remembered),
+// making or changing the school key is only offered with the admin link  …/?keyadmin=hive  (not remembered),
 // and replacing an existing key also needs the current school key password
 const KEYADMIN = (() => { try{ return new URLSearchParams(location.search).get("keyadmin") === "hive"; }catch(_){ return false; } })();
 document.querySelectorAll(".key-admin").forEach(el => el.classList.toggle("hidden", !KEYADMIN));

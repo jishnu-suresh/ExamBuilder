@@ -177,9 +177,9 @@ A new version shows the "Fresh honey in the hive!" bar. The page only reloads af
 
 ## 6b. 💻 The computer version for students
 
-> 🔑 **Key admin:** making the school key and changing its password are only offered with `…/?beta=bee&keyadmin=hive` (`KEYADMIN`, not remembered). Replacing an existing key also needs its current password.
+> 🔑 **Key admin:** making the school key and changing its password are only offered with `…/?keyadmin=hive` (`KEYADMIN`, not remembered). Replacing an existing key also needs its current password.
 
-> 🧪 **Not launched yet.** The menu items are hidden (`.beta-only`) unless a browser was switched on with `?beta=bee` (`?beta=off` switches it off; it's remembered in `localStorage`). To launch, make `BETA` always true in `65_student_version.js`.
+> 🚀 **Launched in v2.** `BETA` is always true, so the menu items show for everyone (🌱 Basic mode hides them like other advanced options). Old `?beta=…` links still open BEE normally.
 
 **What happens:**
 

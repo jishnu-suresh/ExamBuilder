@@ -386,6 +386,12 @@ if(window.__PWA__){
 
 /* ---------------- ✨ what's new (newest first; add an entry at the top for each update teachers should know about) ---------------- */
 const NEWS = [
+  { id: "2026-11-22-v2", title: "v2 · November 2026", items: [
+    "🎉 <b>💻 Exams on computers.</b> ⬇ Download → 👩‍🏫 Teacher → <b>💻 Computer version</b> makes one offline file students answer on a laptop: maths keyboard, read aloud, accommodations, a timer, and a lock with an alarm if they leave the test.",
+    "Each file has a <b>start code</b> (you give it to the students) and a <b>teacher code</b> (for you only: unlock, add time, finish). 🖨 The invigilator sheet lists both.",
+    "When the test ends, the student's answers are saved as one sealed file. <b>📥 Student answers</b> turns them into PDFs to mark, with the answers in blue.",
+    "The first time on a computer, BEE asks for the <b>school key</b> file and its password (ask Jishnu)."
+  ] },
   { id: "2026-11-22", title: "v1 · November 2026", items: [
     "🎉 <b>BEE v1</b> — the first version for all teachers.",
     "The <b>Questions</b> section is more compact: 🤖 Paste from AI, 📷 Add photos, 📄 Open .txt / .md and 💬 AI prompts sit in one row. 🔎 Find &amp; replace and ⓘ help are on the Questions heading.",

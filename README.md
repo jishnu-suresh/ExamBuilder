@@ -1,6 +1,6 @@
 # 🐝 BEE — Build • Edit • Evaluate
 
-**Version: v1** (November 2026) — see ✨ What's new on the start screen.
+**Version: v2** (November 2026) — see ✨ What's new on the start screen.
 
 Make clean, formatted exam papers (PDF) from typed questions, pasted AI output, photos, maths, science and graphs.
 Everything runs on the teacher's own computer — exams and student details never leave it.
@@ -32,6 +32,7 @@ No internet / no install? Download the single-file version: [`docs/download/Exam
 - **Versions A, B, C…** at download time: shuffled questions and MCQ options, each with its own answer key
 - Bold / italic / underline / colour, find & replace, undo/redo, arrange view (drag & drop)
 - Compact editor: the formatting bar shows on the question you are typing in; Exam details and the rubric fold to one line; drag the preview's edge to resize it, or ⇥ hide it while typing
+- **💻 Exams on computers** (v2): ⬇ Download → 👩‍🏫 Teacher → *Computer version* makes one offline file per exam. Students answer on a laptop (maths keyboard, read aloud, accommodations, timer, lock with alarm if they leave). A start code opens it; a teacher code unlocks, adds time or finishes. The answers come back as one sealed file; *Student answers* turns them into PDFs to mark. Needs the school key (one per school).
 - **⬇ Download menu** in three groups — 📄 Paper, 🌻 Accommodations, 👩‍🏫 Teacher — with short, tidy file names (`Subject_Title_Class.pdf`)
 - 🌻 Accommodations: large print (16 pt, double spacing); **easy-to-read PDF** (Atkinson Hyperlegible or OpenDyslexic font, optional cream paper); separate-answer-sheet mode (compact paper)
 - **Save light** in the top bar: 🟢 saved, 🟠 saving, 🔴 not saved yet — plus a warning before closing with unsaved changes
@@ -48,7 +49,7 @@ build/fetch_vendor.sh      # once: downloads pinned libraries into .vendor/ (nee
 python3 build/build.py     # builds docs/ (the web app) and docs/download/Exam_Builder_offline.html
 ```
 - `app/src/` — the application (HTML/CSS/JS), split into sections; `ORDER.txt` sets the order
-- `app/student/` — 🧪 work in progress, not launched yet (see HOW_BEE_WORKS.md)
+- `app/student/` — 💻 the computer version students answer on (see HOW_BEE_WORKS.md)
 - `build/` — build script, service-worker template, vendor fetcher
 - `docs/` — generated site served by GitHub Pages (Settings → Pages → Branch `main`, folder `/docs`)
 - `tests/` — browser tests: `python3 tests/run_all.py` (also run by GitHub on every push, in Chrome; `tests/tbrowsers.py` repeats the main steps in Firefox and Safari/WebKit)

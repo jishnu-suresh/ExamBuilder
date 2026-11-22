@@ -109,7 +109,7 @@ async def main():
         await pg.click("#fileMenu summary")
         names = await pg.evaluate("['#btnUndo', '#btnRedo', '#btnRefresh', '#zoomIn', '#btnMode'].map(s => document.querySelector(s).getAttribute('aria-label'))")
         ok("icon-only buttons have spoken names", all(names), names)
-        ok("the version (v1) shows in the corner", "v1" in await pg.text_content(".wm"))
+        ver = await pg.evaluate("BEE_VERSION"); ok(f"the version ({ver}) shows in the corner", ver in await pg.text_content(".wm"))
         ok("the browser tab shows the exam's name", (await pg.title()).startswith(("End-of-Term", "• End-of-Term")), await pg.title())
         await pg.evaluate("setFold('detPanel', false)"); await pg.wait_for_timeout(300)
         ok("the Instructions box shows all its lines", await pg.evaluate("(() => { const t = document.querySelector('textarea[data-k=instructions]'); return t.scrollHeight <= t.clientHeight + 2; })()"))

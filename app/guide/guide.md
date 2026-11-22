@@ -57,6 +57,17 @@ Too many buttons? Click **🍯🐝** at the top to switch to **🌱 Basic** mode
 | Answers on a separate sheet | **🖨 Printing** in Exam details (*all options*) |
 | Change a word everywhere | **🔎 next to the Questions heading** (*all options*) |
 
+## Exams on computers (💻)
+
+Students can also answer on a laptop, offline. You make the exam in BEE as usual; Chrome or Edge on the student laptops works best.
+
+1. **Make the file:** ⬇ Download → 👩‍🏫 Teacher → **💻 Computer version** (switch off 🌱 Basic mode if you don't see it). Choose the time and options, then download. The first time on a computer, BEE asks for the **school key** file and its password: ask Jishnu.
+2. **Note the two codes** on the 🖨 invigilator sheet: the **start code** (give it to students when the exam starts) and the **teacher code** (keep it to yourself).
+3. **Put the file on each laptop**, for example with a USB stick. Students double-click it, type their name and the start code, and the test opens full screen.
+4. **During the test:** if a student leaves the test window, it beeps and locks until you type the teacher code. The teacher menu lets you add time or end the test for one student.
+5. **When time is up**, the screen asks the student to raise their hand. Type the teacher code, then add time or **Finish**: the answers are saved as one `.bee-answers` file.
+6. **Mark:** collect the answer files and open them with ⬇ Download → 👩‍🏫 Teacher → **📥 Student answers**. Each becomes a PDF of the paper with the student's answers in blue.
+
 ## Printing
 
 Print at **100% (“Actual size”)**, not “Fit to page”: otherwise the answer lines and margins shrink.
