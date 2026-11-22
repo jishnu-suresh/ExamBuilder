@@ -161,7 +161,7 @@ async def insert_menu(b):
 async def save_dialog(b):
     c, pg, errs = await fresh(b)
     await pg.evaluate("window.__picked=[]; window.showSaveFilePicker = async (o) => { __picked.push(o.suggestedName); return { name:o.suggestedName, kind:'file', createWritable: async () => ({ write: async()=>{}, close: async()=>{} }), queryPermission: async()=>'granted', requestPermission: async()=>'granted' }; }; 0")
-    await pg.click("#btnSave"); await pg.wait_for_timeout(300)
+    await pg.click("#fileMenu summary"); await pg.click("#btnSave"); await pg.wait_for_timeout(300)
     await pg.fill("#svName", "ELA 7 / Semester 1: final?"); await pg.click("#svGo"); await pg.wait_for_timeout(500)
     ok("Save as: the typed name (tidied) reaches the folder picker", (await pg.evaluate("__picked")) == ["ELA 7 - Semester 1 - final.exam.json"], await pg.evaluate("__picked")); await c.close()
 
@@ -266,7 +266,7 @@ async def switch_files(b):
       window.__disk = async n => JSON.parse(await (await (await root.getFileHandle(n + '.exam.json')).getFile()).text()).d.title; }""")
     async def op(n, delay=0):
         await pg.evaluate(f"() => {{ window.__pick = '{n}.exam.json'; FileSystemFileHandle.prototype.requestPermission = () => new Promise(r => setTimeout(() => r('granted'), {delay})); }}")
-        await pg.click("#btnOpen")
+        await pg.click("#fileMenu summary"); await pg.click("#btnOpen")
     seq = []
     for n in "ABCACB":
         await op(n); await pg.wait_for_timeout(500); seq.append(await pg.evaluate("S.d.title") == "T" + n)

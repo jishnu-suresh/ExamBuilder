@@ -10,10 +10,14 @@
   <button class="btn sm mode-btn" id="btnMode" title="All options are shown. Click for Basic mode (only the everyday buttons)."><span class="bees">🍯🐝</span></button>
   <button class="btn sm icon" id="btnUndo" title="Undo (Ctrl/⌘ + Z)" disabled>↩️</button>
   <button class="btn sm icon" id="btnRedo" title="Redo (Ctrl/⌘ + Shift + Z, or Ctrl + Y)" disabled>↪️</button>
-  <button class="btn sm icon" id="btnHistory" title="🕰️ Earlier versions of your exam (kept in this browser)">🕰️</button>
-  <button class="btn sm" id="btnNew" title="Start a new exam">＋ <span class="lbl">New</span></button>
-  <button class="btn sm" id="btnOpen" title="Open a saved .exam.json project">📂 <span class="lbl">Open</span></button>
-  <button class="btn sm" id="btnSave" title="Save the project to a (new) file">💾 <span class="lbl">Save as…</span></button>
+  <button class="btn sm" id="btnHistory" title="Earlier versions of your exam (kept in this browser)" aria-label="History: earlier versions">🕰️ <span class="lbl lbl-wide">History</span></button>
+  <details class="qmenu file-menu" id="fileMenu"><summary class="btn sm" title="New, open or save an exam" aria-label="File: new, open, save">📁 <span class="lbl">File</span> ▾</summary>
+    <div class="qmenu-pop right">
+      <button type="button" class="qm-item" id="btnNew">＋ New exam</button>
+      <button type="button" class="qm-item" id="btnOpen">📂 Open a saved exam…</button>
+      <button type="button" class="qm-item" id="btnSave">💾 Save as… <span class="hint">a project file (.exam.json)</span></button>
+    </div>
+  </details>
   <span class="dl-wrap">
     <button class="btn primary" id="dlMenuBtn" title="Choose what to download" aria-haspopup="menu">⬇ <span class="lbl">Download</span> ▾</button>
     <div class="dl-menu hidden" id="dlMenu">
@@ -111,7 +115,7 @@
     <section class="panel rubric-panel foldable adv" id="rbPanel">
       <h2 style="margin-bottom:6px"><span class="step">R</span>Rubric page <span class="hint rb-hint" style="font:400 12.5px system-ui;margin-left:4px">for the teacher, after the cover</span><span class="fold-sum" id="rbSum"></span>
         <button type="button" class="btn sm fold-btn" data-fold="rbPanel" title="Fold this section away (click again to open it)">▴ Fold</button>
-        <label class="switch" title="Add a rubric page after the cover"><input type="checkbox" id="rbOn"><span></span></label></h2>
+        <label class="switch" title="Add a rubric page after the cover"><input type="checkbox" id="rbOn" aria-label="Rubric page on or off"><span></span></label></h2>
       <div id="rubricBox" class="hidden"></div>
     </section>
 
@@ -283,6 +287,14 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
     <p class="hint" style="margin:0 0 10px">Copies BEE kept in this browser while you worked. <b>Restore</b> brings one back (your current work is kept as a version first); <b>⬇</b> saves it as a separate file.</p>
     <div id="histList" class="hist-list"></div>
     <div class="row" style="justify-content:space-between;margin-top:10px"><button class="btn" data-wipe title="For shared computers: removes your exams and earlier versions from this browser">🧹 Remove my exams from this browser</button><button class="btn" data-close>Close</button></div>
+  </div>
+</div>
+<div class="errbar hidden" id="errBar" role="alert"><span>⚠️ <b>Something went wrong in BEE.</b> Your work is kept. Please tell us so it can be fixed.</span><button class="btn sm primary" id="errReport">💬 Report it</button><button class="btn sm icon" id="errClose" aria-label="Close">×</button></div>
+<div class="modal" id="newsModal">
+  <div class="box" style="max-width:520px">
+    <h3 style="margin:0 0 4px">✨ What's new in 🐝 BEE</h3>
+    <div id="newsList" class="news-list"></div>
+    <div class="actions" style="justify-content:flex-end"><button class="btn primary" data-close>Got it</button></div>
   </div>
 </div>
 <div class="modal" id="photoAskModal">
@@ -513,19 +525,25 @@ x = 3
   <div class="box start-box">
     <div class="start-brand"><span class="bee">🐝</span><span class="bee-name">BEE</span></div>
     <div class="start-tag">Build&nbsp;•&nbsp;Edit&nbsp;•&nbsp;Evaluate</div>
-    <p class="hint" style="text-align:center;margin:4px 0 14px">Each exam is a project file. It's saved automatically every minute, so your work is never lost.</p>
+    <p class="start-intro">Each exam is a project file, saved automatically every minute.</p>
     <div class="start-opts">
       <button class="start-btn primary hidden" id="stContinueFile"><b id="stFileName">Continue</b><span>🟢 From your project file: BEE keeps saving to it</span></button>
       <button class="start-btn hidden" id="stContinueLocal"><b>Continue where you left off</b><span id="stLocalInfo">only in this browser</span></button>
-      <button class="start-btn" id="stNew"><b>＋ New exam</b><span>First choose where to save the project file</span></button>
-      <button class="start-btn" id="stOpen"><b>📂 Open a saved exam</b><span>An .exam.json project file</span></button>
-      <button class="start-btn" id="stDemo"><b>🐝 Try the demo exam</b><span>A finished sample paper to look around and play with</span></button>
+      <div class="start-grid2">
+        <button class="start-btn" id="stNew"><b>＋ New exam</b><span>First choose where to save it</span></button>
+        <button class="start-btn" id="stOpen"><b>📂 Open a saved exam</b><span>An .exam.json project file</span></button>
+      </div>
     </div>
-    <p style="text-align:center;margin:10px 0 0"><a href="#" id="stTour" style="font-size:13px;color:var(--gold-d)">New here? Take the 1-minute tour →</a> <span style="color:var(--muted)">·</span> <a href="guide.html" target="_blank" rel="noopener" id="stGuide" data-guide style="font-size:13px;color:var(--gold-d)">📖 Teacher guide</a></p>
-    <p class="hint" id="stNote" style="margin:12px 0 0"></p>
-    <p style="text-align:center;margin:14px 0 0;font:italic 12px Georgia,serif;color:var(--muted)">🐝 BEE · Build • Edit • Evaluate · © Jishnu <a class="fb-link" href="https://forms.cloud.microsoft/r/KXXUcfCRvs" target="_blank" rel="noopener" title="Report a problem or share an idea (feedback form)" aria-label="Feedback form: report a problem or share an idea">💬</a></p>
-    <p style="text-align:center;margin:6px 0 0"><a href="#" id="stSkip" style="color:var(--muted);font-size:13px">Continue without a project file</a></p>
-    <p style="text-align:center;margin:6px 0 0"><a href="#" id="stWipe" data-wipe style="color:var(--muted);font-size:12.5px">🧹 Shared computer? Remove my exams from this browser</a></p>
+    <div class="start-demos"><span class="start-demos-lbl">🐝 Try a demo:</span>
+      <button class="demo-btn" id="stDemoSimple" title="A short 1-page science quiz">📝 Simple quiz</button>
+      <button class="demo-btn" id="stDemo" title="A finished sample paper that uses every feature of BEE">✨ Every feature</button>
+    </div>
+    <p class="start-links"><a href="#" id="stTour">New here? Take the 1-minute tour →</a><span class="dot">·</span><a href="guide.html" target="_blank" rel="noopener" id="stGuide" data-guide>📖 Teacher guide</a><span class="dot">·</span><a href="#" id="stNews">✨ What's new</a></p>
+    <p class="start-note" id="stNote"></p>
+    <div class="start-foot">
+      <a href="#" id="stSkip">Continue without a project file</a><span class="dot">·</span><a href="#" id="stWipe" data-wipe>🧹 Shared computer? Remove my exams</a>
+      <div class="start-credit">🐝 BEE <span class="ver">v1</span> · Build • Edit • Evaluate · © Jishnu <a class="fb-link" href="https://forms.cloud.microsoft/r/KXXUcfCRvs" target="_blank" rel="noopener" title="Report a problem or share an idea (feedback form)" aria-label="Feedback form: report a problem or share an idea">💬</a></div>
+    </div>
   </div>
 </div>
 
@@ -536,7 +554,7 @@ x = 3
   <div class="tour-step" id="tourStep"></div><h3 id="tourTitle"></h3><p id="tourText"></p>
   <div class="tour-btns"><a href="#" id="tourSkip">Skip tour</a><span style="flex:1"></span><button class="btn sm" id="tourBack">← Back</button><button class="btn sm primary" id="tourNext">Next →</button></div>
 </div>
-<div class="wm"><span aria-hidden="true">🐝 BEE · © Jishnu</span> <a class="fb-link" href="https://forms.cloud.microsoft/r/KXXUcfCRvs" target="_blank" rel="noopener" title="Report a problem or share an idea (feedback form)" aria-label="Feedback form: report a problem or share an idea">💬</a></div>
+<div class="wm"><span aria-hidden="true">🐝 BEE <span class="ver">v1</span> · © Jishnu</span> <a class="fb-link" href="https://forms.cloud.microsoft/r/KXXUcfCRvs" target="_blank" rel="noopener" title="Report a problem or share an idea (feedback form)" aria-label="Feedback form: report a problem or share an idea">💬</a></div>
 <!-- VERSIONS -->
 <!-- 💻 COMPUTER VERSION FOR STUDENTS -->
 <div class="modal" id="stuModal">
@@ -725,7 +743,7 @@ if(window.pdfjsLib){
 <script type="text/plain" id="tess-eng">__TESS_ENG__</script>
 <script>
 "use strict";
-const DEFAULT_LOGO = "__LOGO__";
+const DEFAULT_LOGO = "__LOGO__", BEE_BUILD = "__BUILD__", BEE_VERSION = "v1";   // the version teachers see (raise it for each release)
 const GUIDE_HTML = /*__GUIDE__*/"";
 const DEFAULT_LOGO_SIZE = [__LOGO_W__, __LOGO_H__];
 let FONT_R = "__FONT_R__";

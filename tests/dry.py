@@ -111,7 +111,7 @@ async def main():
         n_after = await pg.evaluate("__exam.S().items.filter(x=>x.type=='q').length"); ok("H2 work restored after reload", n_after==13, n_after)
         # I: open old-format project with edge cases
         await pg.evaluate("window.__openName='edge.exam.json'; __files['edge.exam.json']=" + json.dumps(open(__import__('_bee').fx('edge.exam.json')).read()))
-        await pg.click('#btnOpen')
+        await pg.click('#fileMenu summary'); await pg.click('#btnOpen')
         for _ in range(40):   # wait for the file to be read (instead of a fixed delay)
             await pg.clock.run_for(500)
             if await pg.evaluate("__exam.S().d.subject")=='Edge cases': break

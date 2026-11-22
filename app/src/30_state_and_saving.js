@@ -1,3 +1,29 @@
+/* ⚠️ an unexpected error: offer to report it, with the details copied for the feedback form */
+(() => {
+  const FORM = "https://forms.cloud.microsoft/r/KXXUcfCRvs", seen = new Set(); let last = "";
+  const ignore = (msg, src) => !msg || /ResizeObserver loop|^Script error\.?$|AbortError|NotAllowedError|The user aborted|Failed to fetch|NetworkError|Load failed/i.test(msg)
+    || /^(chrome|moz|safari(-web)?)-extension:/.test(src || "");
+  function report(msg, src, stack){
+    if(ignore(msg, src) || seen.has(msg)) return; seen.add(msg);
+    const where = location.protocol === "file:" ? "offline file" : (matchMedia("(display-mode: standalone)").matches ? "installed app" : "website");
+    last = ["BEE " + (typeof BEE_VERSION !== "undefined" ? BEE_VERSION : "") + " (build " + (typeof BEE_BUILD !== "undefined" ? BEE_BUILD : "?") + ") · " + where, new Date().toString(), navigator.userAgent, "", msg, src || "", (stack || "").split("\n").slice(0, 6).join("\n")].join("\n");
+    const bar = document.getElementById("errBar"); if(bar) bar.classList.remove("hidden");
+  }
+  window.__beeError = report;
+  addEventListener("error", e => report(e.message, e.filename ? e.filename + ":" + e.lineno : "", e.error && e.error.stack));
+  addEventListener("unhandledrejection", e => { const r = e.reason || {}; report(r.message || String(r), "", r.stack); });
+  addEventListener("DOMContentLoaded", wire); if(document.readyState !== "loading") setTimeout(wire, 0);
+  function wire(){
+    const go = document.getElementById("errReport"), x = document.getElementById("errClose"); if(!go || go.__w) return; go.__w = 1;
+    go.onclick = async () => {
+      let copied = false; try{ await navigator.clipboard.writeText(last); copied = true; }catch(_){}
+      window.open(FORM, "_blank", "noopener");
+      if(typeof toast === "function") toast(copied ? "The details are copied: paste them into the form (Ctrl/⌘ + V)." : "Please describe what you were doing in the form.", 6000);
+      document.getElementById("errBar").classList.add("hidden");
+    };
+    x.onclick = () => document.getElementById("errBar").classList.add("hidden");
+  }
+})();
 /* ---------------- state ---------------- */
 const defaults = () => ({
   d: {
@@ -111,6 +137,17 @@ let saveT;
   const wire = () => { const ok = document.getElementById("tabsBannerOk"); if(ok) ok.onclick = () => { dismissed = true; show(); }; show(); };
   if(document.readyState === "loading") addEventListener("DOMContentLoaded", wire); else wire();
   window.__otherTabs = () => others.size;
+})();
+// icon-only buttons (↩️, ↑, B, ✓…) get a spoken name from their tooltip, for screen readers — also ones added later
+(() => {
+  const letters = s => (s || "").replace(/[^\p{L}\p{N}]/gu, "");
+  const name = root => (root.querySelectorAll ? root : document).querySelectorAll("button[title]:not([aria-label]), summary[title]:not([aria-label]), a[title]:not([aria-label])").forEach(el => {
+    if(letters(el.textContent).length < 2) el.setAttribute("aria-label", el.title.replace(/\s*[—(].*$/, "").trim() || el.title);
+  });
+  let queued = false;
+  const run = () => { queued = false; name(document); };
+  new MutationObserver(() => { if(!queued){ queued = true; requestAnimationFrame(run); } }).observe(document.documentElement, { childList: true, subtree: true });
+  if(document.readyState !== "loading") run(); else addEventListener("DOMContentLoaded", run);
 })();
 // make the browser draw a box again (Safari sometimes leaves a just-shown panel blank until the next click)
 function repaint(el){
@@ -305,7 +342,7 @@ document.getElementById("svGo").onclick = async () => {
 };
 // closing the dialog any other way (Cancel, Esc, clicking outside) = not saved
 new MutationObserver(() => { if(!$("#saveModal").classList.contains("open") && svResolve){ const r = svResolve; svResolve = null; r(false); } }).observe(document.getElementById("saveModal"), { attributes: true, attributeFilter: ["class"] });
-function applyState(o){ S = mergeState(o); refreshDetails(); updateLogoUI(); lastEdited = null; render(); preview(); histReset(); }
+function applyState(o){ window.__folded = 0; window.__rbInit = 0;   /* an exam just opened: fold its details again (unless the teacher chose otherwise) */ S = mergeState(o); refreshDetails(); updateLogoUI(); lastEdited = null; render(); preview(); histReset(); }
 async function openProject(){
   if(!FS_OK){ $("#projIn").click(); return false; }
   try{

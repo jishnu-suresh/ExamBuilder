@@ -171,6 +171,7 @@ function setMode(basic){
   document.body.classList.toggle("basic", !!basic);
   $("#btnMode").innerHTML = basic ? '🌱 <span class="lbl">Basic</span>' : '<span class="bees">🍯🐝</span>';
   $("#btnMode").title = basic ? "Basic mode: only the everyday buttons. Click to show all options again." : "All options are shown. Click for Basic mode (only the everyday buttons).";
+  $("#btnMode").setAttribute("aria-label", basic ? "Basic mode is on: show all options" : "All options are shown: switch to Basic mode");
   if(basic){ const t = document.querySelector('#setTabs [data-tab="exam"]'); if(t && !t.classList.contains("on")) t.click(); }
   try{ basic ? localStorage.setItem("bee.basic", "1") : localStorage.removeItem("bee.basic"); }catch(_){}
 }
@@ -258,7 +259,7 @@ function openStart(isNew){
   const hasLocal = !isNew && storedLocal && Array.isArray(storedLocal.items) && (storedLocal.items.length || storedLocal.d && storedLocal.d.subject);
   locBtn.classList.toggle("hidden", !hasLocal || !!storedHandle);
   if(hasLocal) $("#stLocalInfo").textContent = "🟠 Only in this browser, not in a file · " + (storedLocal.d.subject || storedLocal.d.title || "Exam") + " · " + storedLocal.items.filter(x => x.type === "q").length + " questions" + (storedLocal.savedAt ? " · last edited " + new Date(storedLocal.savedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "");
-  $("#stNote").textContent = FS_OK ? "" : "This browser (e.g. Safari or Firefox) doesn't let web pages save to a file on your computer automatically — Chrome and Edge do. Your work is still kept safely in this browser, and 💾 Save as… downloads a project copy whenever you like.";
+  $("#stNote").textContent = FS_OK ? "" : "ⓘ In this browser (Safari or Firefox), your work is kept here in the browser, not in a file. Use 💾 Save as… (under 📁 File) to keep a copy on your computer, or use Chrome or Edge to save to a file automatically.";
   $("#stSkip").parentElement.classList.toggle("hidden", !!isNew);
   $("#startModal").classList.add("open");
 }
@@ -284,10 +285,11 @@ $("#stContinueFile").onclick = async () => {
 };
 
 /* ---------------- 🐝 demo exam + first-time tour ---------------- */
-const DEMO = /*__DEMO__*/null;   // the single offline file carries the demo inside it; the website fetches it
-async function loadDemo(){
-  let o = DEMO;
-  if(!o){ try{ o = await (await fetch("demo/demo_all_features.exam.json")).json(); }catch(_){ toast("The demo exam needs an internet connection the first time"); return false; } }
+const DEMO = /*__DEMO__*/null, DEMO_SIMPLE = /*__DEMO_SIMPLE__*/null;   // the offline file carries the demos inside it; the website fetches them
+async function loadDemo(kind){
+  const simple = kind === "simple";
+  let o = simple ? DEMO_SIMPLE : DEMO;
+  if(!o){ try{ o = await (await fetch(simple ? "demo/demo_simple.exam.json" : "demo/demo_all_features.exam.json")).json(); }catch(_){ toast("The demo exam needs an internet connection the first time"); return false; } }
   await keepVersion("Before opening the demo exam");
   // the teacher's own exam is saved into its file first; the demo is never written into it
   await leaveCurrentFile(); storedHandle = null;
@@ -298,6 +300,7 @@ async function loadDemo(){
   return true;
 }
 $("#stDemo").onclick = async () => { if(await loadDemo()){ $("#startModal").classList.remove("open"); setTimeout(() => startTour(), 500); } };
+$("#stDemoSimple").onclick = async () => { if(await loadDemo("simple")){ $("#startModal").classList.remove("open"); setTimeout(() => startTour(), 500); } };
 $("#stTour").onclick = e => { e.preventDefault(); $("#startModal").classList.remove("open"); setTimeout(() => startTour(), 300); };
 
 const TOUR = [
@@ -381,6 +384,33 @@ if(window.__PWA__){
   }
 }
 
+/* ---------------- ✨ what's new (newest first; add an entry at the top for each update teachers should know about) ---------------- */
+const NEWS = [
+  { id: "2026-11-22", title: "v1 · November 2026", items: [
+    "🎉 <b>BEE v1</b> — the first version for all teachers.",
+    "The <b>Questions</b> section is more compact: 🤖 Paste from AI, 📷 Add photos, 📄 Open .txt / .md and 💬 AI prompts sit in one row. 🔎 Find &amp; replace and ⓘ help are on the Questions heading.",
+    "<b>📁 File</b> at the top holds New, Open and Save as…",
+    "📷 Add photos asks whether you want <b>pictures</b> or the <b>text</b> (you can tell BEE to remember).",
+    "<b>Subject subtitle</b> (optional) in Exam details, e.g. “Higher Level · Paper 2”.",
+    "🗑 <b>Delete all questions</b> is under ⋯ and always asks first.",
+    "Two demos to try: a 📝 simple quiz and ✨ every feature.",
+    "📖 Teacher guide on the start screen, and 💬 in the corner to report a problem or share an idea."
+  ] }
+];
+function showNews(){
+  $("#newsList").innerHTML = NEWS.slice(0, 3).map(n => `<h4>${n.title}</h4><ul>${n.items.map(i => "<li>" + i + "</li>").join("")}</ul>`).join("");
+  openModal("#newsModal");
+  try{ localStorage.setItem("bee.news", NEWS[0].id); }catch(_){}
+}
+$("#stNews").onclick = e => { e.preventDefault(); showNews(); };
+function maybeNews(){
+  let seen = null, known = false;
+  try{ seen = localStorage.getItem("bee.news"); known = !!(localStorage.getItem("bee.toured") || storedLocal || storedHandle); }catch(_){}
+  if(seen === NEWS[0].id) return;
+  if(!known || navigator.webdriver){ try{ localStorage.setItem("bee.news", NEWS[0].id); }catch(_){} return; }   // first visit: the tour comes first
+  setTimeout(showNews, 400);
+}
+
 /* ---------------- init ---------------- */
 (async () => {
   storedLocal = await loadLocal();
@@ -393,6 +423,7 @@ if(window.__PWA__){
   updateChip();
   histReset();
   openStart(false);
+  maybeNews();
   mathReady.then(() => { mathOK = !!(window.MathJax && MathJax.tex2svg); render(); preview(); }).catch(e => { console.error(e); preview(); });
 })();
 window.__exam = { S: () => S, set: o => { S = mergeState(o); refreshDetails(); updateLogoUI(); render(); }, parseText, buildPDF };

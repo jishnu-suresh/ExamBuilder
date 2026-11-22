@@ -49,7 +49,8 @@ li{margin:3px 0}
 <body><div class="bar"><span><b>🐝 BEE</b> · Teacher guide</span><button onclick="print()">🖨 Print</button></div>
 <main>""" + body + """</main></body></html>"""
 GUIDE_HTML = guide_page()
-common = {"__LOGO__": "data:image/png;base64," + b64(logo), "__LOGO_W__": str(LW), "__LOGO_H__": str(LH),
+BUILD_ID = hashlib.sha1(src.encode()).hexdigest()[:7]          # which BEE a teacher has (same source → same id)
+common = {"__BUILD__": BUILD_ID, "__LOGO__": "data:image/png;base64," + b64(logo), "__LOGO_W__": str(LW), "__LOGO_H__": str(LH),
           '/*__GUIDE__*/""': json.dumps(GUIDE_HTML).replace("</", "<\\/")}
 
 def easyfonts():
@@ -85,6 +86,7 @@ single.update({
     "/*__PDFJS__*/": rd(os.path.join(V, "pdfjs", "pdf.min.js")),
     "/*__EASYFONTS__*/null": json.dumps(easyfonts()),
     "/*__DEMO__*/null": rd(os.path.join(ROOT, "demo", "demo_all_features.exam.json")).strip().replace("</", "<\\/"),
+    "/*__DEMO_SIMPLE__*/null": rd(os.path.join(ROOT, "demo", "demo_simple.exam.json")).strip().replace("</", "<\\/"),
     "__PDFJS_WORKER__": rd(os.path.join(V, "pdfjs", "pdf.worker.min.js")),
 })
 # ---------------------------------------------------------------- 💻 student computer version (template)

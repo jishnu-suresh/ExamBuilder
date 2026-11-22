@@ -1,5 +1,7 @@
 # 🐝 BEE — Build • Edit • Evaluate
 
+**Version: v1** (November 2026) — see ✨ What's new on the start screen.
+
 Make clean, formatted exam papers (PDF) from typed questions, pasted AI output, photos, maths, science and graphs.
 Everything runs on the teacher's own computer — exams and student details never leave it.
 

@@ -18,6 +18,21 @@ async def main():
         gp = await np.value; await gp.wait_for_load_state()
         ok("📖 Teacher guide on the start screen opens the guide in a new window", "guide.html" in gp.url and "Your first exam in 5 steps" in await gp.text_content("main"), gp.url)
         await gp.close()
+        # start screen: two demos; ✨ What's new
+        ok("start screen: 📝 Simple quiz and ✨ Every feature demos", await pg.is_visible("#stDemoSimple") and await pg.is_visible("#stDemo"))
+        ok("first visit: no 'What's new' window", await pg.is_hidden("#newsModal"))
+        await pg.click("#stNews"); await pg.wait_for_timeout(200)
+        ok("✨ What's new opens from the start screen", await pg.is_visible("#newsModal") and "File" in await pg.text_content("#newsList"))
+        await pg.click("#newsModal [data-close]")
+        p3 = await ctx.new_page()
+        await p3.add_init_script("Object.defineProperty(navigator, 'webdriver', { get: () => false }); localStorage.setItem('bee.toured', '1'); localStorage.setItem('bee.news', 'old')")
+        await p3.goto("http://127.0.0.1:8765/"); await p3.wait_for_timeout(2500)
+        ok("a returning teacher sees 'What's new' once after an update", await p3.is_visible("#newsModal"))
+        await p3.close()
+        await pg.click("#stDemoSimple"); await pg.wait_for_timeout(2500); await pg.evaluate("tourAt >= 0 && endTour()")
+        sq = await pg.evaluate("({ t: S.d.title, q: S.items.length, pages: buildPDF({}).getNumberOfPages() })")
+        ok("📝 the simple demo opens a short quiz", sq["t"] == "Science Quiz" and sq["q"] == 6 and sq["pages"] <= 3, sq)
+        await pg.evaluate("openStart()")
         ok("a new exam: Exam details open", not await pg.evaluate("$('#detPanel').classList.contains('folded')"))
         await pg.evaluate("$('#startModal').classList.remove('open'); loadDemo()"); await pg.wait_for_timeout(3000); await pg.evaluate("tourAt >= 0 && endTour()")
         st = await pg.evaluate("({ det: $('#detPanel').classList.contains('folded'), rb: $('#rbPanel').classList.contains('folded'), sum: $('#detSum').textContent, title: !!$('#detPanel [data-k=title]').offsetParent })")
@@ -80,6 +95,18 @@ async def main():
         pg.once("dialog", lambda d: (msgs.append(d.message), asyncio.ensure_future(d.dismiss())))
         await pg.click("#qMore summary"); await pg.click("#clearAll"); await pg.wait_for_timeout(300)
         ok("🗑 Delete all questions… asks first (with the count and 🕰️), and Cancel keeps them", msgs and "Delete all" in msgs[0] and "🕰️" in msgs[0] and await pg.evaluate("S.items.length") == n0, msgs)
+        # top bar: 📁 File ▾ holds New / Open / Save as; icon buttons have spoken names
+        await pg.click("#fileMenu summary"); await pg.wait_for_timeout(150)
+        ok("📁 File ▾ opens with New, Open and Save as…", all([await pg.is_visible(x) for x in ("#btnNew", "#btnOpen", "#btnSave")]))
+        await pg.click("#fileMenu summary")
+        names = await pg.evaluate("['#btnUndo', '#btnRedo', '#btnRefresh', '#zoomIn', '#btnMode'].map(s => document.querySelector(s).getAttribute('aria-label'))")
+        ok("icon-only buttons have spoken names", all(names), names)
+        ok("the version (v1) shows in the corner", "v1" in await pg.text_content(".wm"))
+        # ⚠️ an unexpected error offers a report
+        await pg.evaluate("setTimeout(() => { throw new Error('test error from tlayout') }, 0)"); await pg.wait_for_timeout(400)
+        ok("⚠️ an unexpected error shows 'Something went wrong · 💬 Report it'", await pg.is_visible("#errBar") and await pg.is_visible("#errReport"))
+        await pg.click("#errClose")
+        errs[:] = [e for e in errs if "test error from tlayout" not in e]
         # 🌱 Basic mode: only the everyday buttons; Full mode brings everything back; remembered
         await pg.click("#btnMode"); await pg.wait_for_timeout(200)
         st = await pg.evaluate("""({ basic: document.body.classList.contains('basic'), rubric: !!$('#rbPanel').offsetParent, look: !!$('#setTabs [data-tab=look]').offsetParent,

@@ -14,7 +14,7 @@ Open **[jishnu-suresh.github.io/ExamBuilder](https://jishnu-suresh.github.io/Exa
 
 ## Your first exam in 5 steps
 
-A short paper takes about 10 minutes. To look around first, click **🐝 Try the demo exam** on the start screen.
+A short paper takes about 10 minutes. To look around first, click **📝 Simple quiz or ✨ Every feature** on the start screen.
 
 1. **Start a new exam.** On the start screen, click **＋ New exam** and choose where to save it (for example your Documents folder). This file, ending in `.exam.json`, is your exam: BEE saves to it every minute.
 2. **Fill in the exam details:** title, subject, duration, class, teacher and the instructions for students. Once filled in, this section folds to one line; click it to open it again.
@@ -32,10 +32,10 @@ Your exam is safe once it is in a project file (`.exam.json`). The light next to
 | Light | What it means | What to do |
 | --- | --- | --- |
 | 🟢 Green | Saved in your project file | Nothing |
-| 🟠 Orange: “Only in this browser” | Not in a file yet | Click it, or **💾 Save as…**, to make a project file |
+| 🟠 Orange: “Only in this browser” | Not in a file yet | Click it, or 📁 File → **💾 Save as…**, to make a project file |
 | 🔴 Red, with a red bar | Not saved | Click **💾 Save to a file** in the bar |
 
-- **Open a saved exam:** **📂 Open**, or double-click the `.exam.json` file if BEE is installed as an app.
+- **Open a saved exam:** 📁 File → **📂 Open**, or double-click the `.exam.json` file if BEE is installed as an app.
 - **Went wrong? Go back:** **↩️** undoes the last change. **🕰️** shows earlier versions BEE kept while you worked; **Restore** brings one back.
 - **Shared or classroom computer:** when you finish, click **🧹 Remove my exams from this browser**. It is on the start screen and in the 🕰️ window. Otherwise the next person to open BEE on that computer can see your exam and its answer key. Your saved files are not touched.
 

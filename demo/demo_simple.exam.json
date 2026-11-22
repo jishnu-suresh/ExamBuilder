@@ -1,0 +1,138 @@
+{
+ "app": "exam-builder",
+ "version": 2,
+ "savedAt": 1794823222790,
+ "d": {
+  "title": "Science Quiz",
+  "subtitle": "",
+  "year": "",
+  "subject": "Science",
+  "duration": "20 min",
+  "teacher": "Ms. J. Clark",
+  "className": "",
+  "date": "",
+  "totalOverride": "",
+  "instructions": "Answer all the questions.\nWrite your answers in the spaces provided.",
+  "school": "The Hive Academy",
+  "paper": "a4",
+  "fontSize": "11",
+  "accent": "#2E2E2E",
+  "lineSpacing": "1",
+  "largePrint": false,
+  "answerMode": "inline",
+  "showMarks": true,
+  "nameEveryPage": false,
+  "restartNumbering": false,
+  "sectionNewPage": false,
+  "endMarker": true,
+  "scoreTable": true,
+  "bigInline": true,
+  "rubricOn": false,
+  "rubric": {
+   "title": "Scoring by Section (for Teacher)",
+   "showParts": true,
+   "showTotal": true,
+   "showGrade": true,
+   "showComments": true,
+   "showDesc": true,
+   "groups": [
+    {
+     "heading": "Essay (Question 16) — breakdown",
+     "items": [
+      {
+       "name": "Ideas & content",
+       "desc": "Relevant, interesting ideas that answer the task",
+       "pts": "4"
+      },
+      {
+       "name": "Organisation",
+       "desc": "Clear paragraphs, introduction and conclusion",
+       "pts": "4"
+      },
+      {
+       "name": "Language & style",
+       "desc": "Varied vocabulary and sentences, suitable tone",
+       "pts": "4"
+      },
+      {
+       "name": "Grammar & spelling",
+       "desc": "Accurate spelling, punctuation and grammar",
+       "pts": "3"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "logo": null,
+ "items": [
+  {
+   "id": "s1",
+   "type": "q",
+   "text": "Which organelle carries out photosynthesis?",
+   "marks": "1",
+   "lines": "",
+   "mcq": "single",
+   "optCols": "2",
+   "options": [
+    "Mitochondrion",
+    "Chloroplast",
+    "Ribosome",
+    "Nucleus"
+   ],
+   "correct": [
+    1
+   ]
+  },
+  {
+   "id": "s2",
+   "type": "q",
+   "text": "Which of these are renewable energy sources?",
+   "marks": "1",
+   "lines": "",
+   "mcq": "single",
+   "optCols": "2",
+   "options": [
+    "Coal",
+    "Wind",
+    "Natural gas",
+    "Oil"
+   ],
+   "correct": [
+    1
+   ]
+  },
+  {
+   "id": "s3",
+   "type": "q",
+   "text": "Water boils at ________ °C at sea level.",
+   "marks": "1",
+   "lines": "",
+   "answer": "100"
+  },
+  {
+   "id": "s4",
+   "type": "q",
+   "text": "A force of $20\\,\\mathrm{N}$ acts on a mass of $4\\,\\mathrm{kg}$. Calculate its acceleration using $a = \\frac{F}{m}$.",
+   "marks": "2",
+   "lines": "3",
+   "answer": "$a = \\frac{20}{4} = 5\\,\\mathrm{m/s^2}$"
+  },
+  {
+   "id": "s5",
+   "type": "q",
+   "text": "Name **two** things a plant needs for photosynthesis.",
+   "marks": "2",
+   "lines": "2",
+   "answer": "Any two of: light, water, carbon dioxide, chlorophyll"
+  },
+  {
+   "id": "s6",
+   "type": "q",
+   "text": "Explain why we see lightning before we hear thunder.",
+   "marks": "3",
+   "lines": "4",
+   "answer": "Light travels much faster than sound, so the light reaches us first."
+  }
+ ]
+}

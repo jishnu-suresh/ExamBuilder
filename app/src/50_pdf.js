@@ -76,7 +76,7 @@ function buildPDF(opt){
   const mmPt = .3528;
   const hasLogo = !!(S.logo && S.logo.src);
 
-  doc.setProperties({ title: [D.subject, D.title].filter(Boolean).join(" — ") || "Exam", author: D.teacher || D.school || "", creator: "BEE · Build • Edit • Evaluate · © Jishnu" });
+  doc.setProperties({ title: [D.subject, D.title].filter(Boolean).join(" — ") || "Exam", author: D.teacher || D.school || "", creator: "BEE " + (typeof BEE_VERSION !== "undefined" ? BEE_VERSION : "") + " · Build • Edit • Evaluate · © Jishnu" });
 
   /* --- decorative primitives --- */
   function hexagon(cx, cy, r, style){
