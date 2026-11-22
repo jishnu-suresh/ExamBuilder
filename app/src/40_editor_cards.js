@@ -83,7 +83,6 @@ function render(){
     const tools = `<div class="tools">
         <button class="btn icon" data-act="up" title="Move up" ${idx === 0 ? "disabled" : ""}>↑</button>
         <button class="btn icon" data-act="down" title="Move down" ${idx === S.items.length - 1 ? "disabled" : ""}>↓</button>
-        <button class="btn icon" data-act="insbelow" title="Insert a new question below this one">＋</button>
         <button class="btn icon" data-act="dup" title="Duplicate">⧉</button>
         <button class="btn icon danger" data-act="del" title="Delete">✕</button></div>`;
     const imgBlock = it.img ? `<div class="img"><img src="${it.img.src}" alt=""></div>
