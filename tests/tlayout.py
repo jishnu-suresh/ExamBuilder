@@ -79,6 +79,14 @@ async def main():
         ok("BEE open in two tabs: both show the warning to save and close one", both == [True, True], both)
         await p2.close(); await pg.wait_for_timeout(500)
         ok("closing the other tab clears the warning", await pg.is_hidden("#tabsBanner"))
+        # ＋ between two cards: add a question, MCQ, text or part exactly there
+        ids0 = await pg.evaluate("S.items.map(i => i.id)")
+        g = pg.locator(".ins-gap").nth(3); await g.scroll_into_view_if_needed(); bb = await g.bounding_box()
+        await pg.mouse.move(bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2); await pg.wait_for_timeout(250)
+        await pg.click(".ins-gap >> nth=3 >> [data-gap=mcq]"); await pg.wait_for_timeout(400)
+        ids1 = await pg.evaluate("S.items.map(i => i.id)"); new = [x for x in ids1 if x not in ids0]
+        ok("＋ between cards adds an MCQ exactly there", len(new) == 1 and ids1.index(new[0]) == 3 and await pg.evaluate(f"S.items[3].mcq === 'single'"), [ids1.index(new[0]) if new else None])
+        await pg.click("#btnUndo"); await pg.wait_for_timeout(300)
         # compact Questions: the photo question (asked each time unless remembered), Delete all under ⋯ asks first
         h = await pg.evaluate("(() => { const a = document.querySelector('.q-head').getBoundingClientRect(), b = document.getElementById('list').getBoundingClientRect(); return b.top - a.top; })()")
         ok("Questions section: heading to first question under 200px", h < 200, h)

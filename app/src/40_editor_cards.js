@@ -140,7 +140,7 @@ function render(){
         ${it.mcq || /^\s*\(?[a-hA-H][\).]/m.test(qText(it)) ? `<label>Options <select data-f="optCols">${opt("", "1 per line", it.optCols)}${opt("2", "2 columns", it.optCols)}${opt("4", "4 columns", it.optCols)}</select></label>` : ""}
       ${moreChips(it)}</div>
     </div></div>`;
-  }).join("");
+  }).map((h, k) => (k === 0 ? gapHtml("") : "") + h + (k < S.items.length - 1 ? gapHtml(S.items[k].id) : "")).join("");
   if(window.editingId){ const ec = list.querySelector(`.card[data-id="${window.editingId}"]`); if(ec) ec.classList.add("editing"); }
   list.querySelectorAll("textarea").forEach(autoGrow);
   list.querySelectorAll(".card").forEach(c => { const it = S.items.find(x => x.id === c.dataset.id); if(it && it.type !== "section") updateRich(c, it); });
@@ -180,6 +180,22 @@ function subsBlock(it){
     </div>`).join("")}
     <button class="btn sm" data-act="subadd">＋ Add (${LETTERS[subs.length]})</button></div>`;
 }
+// ＋ between two cards: a thin line that opens into "＋ Question · ＋ MCQ · ＋ Text · ＋ Part" under the pointer
+function gapHtml(after){
+  return `<div class="ins-gap" data-after="${after}"><div class="ins-gap-in"><span class="ins-gap-lbl">Add here:</span>`
+    + `<button type="button" tabindex="-1" data-gap="q">＋ Question</button><button type="button" tabindex="-1" data-gap="mcq">＋ MCQ</button>`
+    + `<button type="button" tabindex="-1" data-gap="n">＋ Text</button><button type="button" tabindex="-1" data-gap="s">＋ Part</button></div></div>`;
+}
+document.getElementById("list").addEventListener("click", e => {
+  const b = e.target.closest("[data-gap]"); if(!b) return;
+  const after = b.closest(".ins-gap").dataset.after, at = after ? S.items.findIndex(i => i.id === after) + 1 : 0;
+  const ROMAN = ["I","II","III","IV","V","VI","VII","VIII","IX","X"];
+  const n = { q: () => ({ id: nid(), type: "q", text: "", marks: "", lines: "", img: null }),
+              mcq: () => ({ id: nid(), type: "q", text: "", marks: "1", lines: "", img: null, mcq: "single", options: ["", "", "", ""] }),
+              n: () => ({ id: nid(), type: "note", text: "", img: null }),
+              s: () => ({ id: nid(), type: "section", text: "Part " + (ROMAN[S.items.slice(0, at).filter(i => i.type === "section").length] || "") + ": ", marks: "" }) }[b.dataset.gap]();
+  S.items.splice(Math.max(0, at), 0, n); lastEdited = n.id; render(); changed(); focusItem(n.id);
+});
 function autoGrow(t){ t.style.height = "auto"; t.style.height = Math.min(420, t.scrollHeight + 2) + "px"; }
 // the Instructions box grows to show all its lines (only while it can be seen: a hidden box measures 0)
 (() => {
