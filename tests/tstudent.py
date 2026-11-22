@@ -29,7 +29,12 @@ async def export_student(pg, key_mode="make", keyfile=None):
             handled = True
             if key_mode == "make":
                 await pg.click("#needKeyModal summary"); await pg.click("[data-needkey=make]")
-                await pg.wait_for_selector("#pwModal.open"); await pg.fill("#pw1", TEACHER_PW); await pg.fill("#pw2", TEACHER_PW); await pg.click("#pwGo")
+                await pg.wait_for_selector("#pwModal.open"); await pg.wait_for_timeout(150)
+                for attempt in range(3):
+                    await pg.fill("#pw1", TEACHER_PW); await pg.fill("#pw2", TEACHER_PW)
+                    if await pg.evaluate("$('#pw1').value === $('#pw2').value"): break
+                    print(f"NOTE: the two password boxes didn't both hold what was typed (attempt {attempt + 1}); typing again", flush=True)
+                await pg.click("#pwGo")
             else:
                 async with pg.expect_file_chooser() as fc: await pg.click("[data-needkey=load]")
                 await (await fc.value).set_files(keyfile)
