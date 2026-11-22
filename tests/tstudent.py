@@ -110,6 +110,12 @@ async def main():
         said = await pg.evaluate("cs => cs.map(([k, s, l, o]) => SPEECH[k](s, l, o))", cases)
         want = ["three fifths times 45", "9.8 metres per second squared", "C H 4, plus 2 O 2, gives C O 2, plus 2 H 2 O", "25 degrees Celsius", "inverse sine of 0.5", "Water (H 2 O) boils at 100 degrees Celsius; 3 square centimetres", "trois quarts plus x au carré", "one fourth"]
         ok("read aloud: maths, units and chemistry in words (English, French, US)", said == want, [x for x in zip(said, want) if x[0] != x[1]])
+        cases2 = [["tex", r"|x-3|<2", "en", {}], ["tex", r"P(A|B)", "en", {}], ["tex", r"2.5\times10^{3}\,\mathrm{J}", "en", {}], ["tex", r"\ce{Fe^{3+}}", "en", {}], ["tex", r"F_{net}=ma", "en", {}],
+                  ["tex", r"9.8\,\mathrm{m\,s^{-2}}", "en", {}], ["tex", r"x\in[0,1]", "en", {}], ["tex", r"1{,}5", "fr", {}], ["text", "Na⁺ and Cl⁻ ions; a 60 W bulb", "en", {}], ["tex", r"\sin^2 x", "en", {}]]
+        said2 = await pg.evaluate("cs => cs.map(([k, s, l, o]) => SPEECH[k](s, l, o))", cases2)
+        want2 = ["the absolute value of x minus 3, is less than 2", "P of A given B", "2.5 times 10 to the power 3 joules", "iron 3 plus", "F net equals m a",
+                 "9.8 metres per second squared", "x is in the closed interval from 0 to 1", "1 virgule 5", "sodium plus and chloride ions; a 60 watt bulb", "sine squared of x"]
+        ok("read aloud: absolute values, given, standard form, ions, intervals, French decimals", said2 == want2, [x for x in zip(said2, want2) if x[0] != x[1]])
 
         # ---------- student answers
         sc, sp, serrs = await student(b, P("exam.html"))
@@ -193,6 +199,8 @@ async def main():
         r = await sp.evaluate("({ bar: !$('#tts').classList.contains('hidden'), lab: $('#ttsLab').textContent, hi: !!document.querySelector('#q-' + PAPER.items.filter(i => i.k === 'q')[0].id + ' .reading'), text: UNITS[TTS.i].text })")
         ok("read aloud: the reading bar opens and the question is highlighted", r["bar"] and "Question 1" in r["lab"] and r["hi"], r)
         ok("read aloud: the question is said in words", "three fifths times 45" in r["text"], r["text"])
+        mc = await sp.evaluate("(() => { const u = UNITS.find(u => /Option A:/.test(u.text)); if(!u) return null; const c = chunks(u.text); return { one: /Choose (one answer|all the answers)/.test(u.text), gaps: c.filter(x => x.gap).length, opts: c.filter(x => /^Option [A-Z]:/.test(x.t)).length }; })()")
+        ok("read aloud: an MCQ says 'Choose…' and pauses before each option", mc and mc["one"] and mc["opts"] >= 2 and mc["gaps"] >= mc["opts"], mc)
         await sp.click("#ttsPlay"); pz = await sp.evaluate("[TTS.paused, $('#ttsPlay').textContent]")
         await sp.click("#ttsPlay"); rs = await sp.evaluate("TTS.paused")
         await sp.click("#ttsNext"); nx = await sp.evaluate("[TTS.i, $('#ttsLab').textContent]")

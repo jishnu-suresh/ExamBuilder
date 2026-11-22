@@ -68,11 +68,21 @@ function fillVoices(){
 }
 if(hasTTS()) speechSynthesis.addEventListener("voiceschanged", () => { if(PAPER) fillVoices(); });
 function curVoice(){ const id = $("#ttsVoice").value; return speechSynthesis.getVoices().find(v => v.voiceURI === id) || null; }
-// short pieces: Chrome stops long readings, and a pause or a new speed is quicker to apply
+// short pieces: Chrome stops long readings, and a pause or a new speed is quicker to apply.
+// A piece only ends at . ! ? ; : followed by a space, so "9.8" is never cut. "‖" starts a new piece after a short pause.
 function chunks(t){
-  const parts = String(t || "").replace(/\s+/g, " ").match(/[^.!?;:]+[.!?;:]*\s*/g) || [t], out = [];
-  for(const p of parts){ if(out.length && (out[out.length - 1] + p).length < 160) out[out.length - 1] += p; else out.push(p); }
-  return out.map(x => x.trim()).filter(Boolean);
+  const out = [];
+  String(t || "").split("‖").forEach((seg, k) => {
+    const parts = seg.replace(/\s+/g, " ").trim().match(/.+?(?:[.!?;:]+(?=\s|$)|$)/g) || [];
+    let first = true;
+    for(const p0 of parts){
+      const p = p0.trim(), last = out[out.length - 1]; if(!p) continue;
+      if(!first && last && (last.t + " " + p).length < 160) last.t += " " + p;
+      else out.push({ t: p, gap: first && k > 0 && out.length > 0 });
+      first = false;
+    }
+  });
+  return out;
 }
 function mark(){ $$(".reading").forEach(e => e.classList.remove("reading")); const u = UNITS[TTS.i]; if(u && u.el){ u.el.classList.add("reading"); const r = u.el.getBoundingClientRect(); if(r.top < 70 || r.bottom > innerHeight - 100) u.el.scrollIntoView({ behavior: "smooth", block: "center" }); } }
 function readUnit(i){
@@ -91,10 +101,13 @@ function speakChunk(){
     if($("#ttsGo").checked && TTS.i + 1 < UNITS.length) return readUnit(TTS.i + 1);
     TTS.paused = false; $("#ttsPlay").textContent = "▶"; return;
   }
-  const u = new SpeechSynthesisUtterance(TTS.chunks[TTS.k]), v = curVoice();
+  const u = new SpeechSynthesisUtterance(TTS.chunks[TTS.k].t), v = curVoice();
   if(v){ u.voice = v; u.lang = v.lang; } else u.lang = (PAPER.lang === "fr" ? "fr-FR" : EXAM.accent || "en-GB");
   u.rate = ST.prefs.rate || 1;
-  u.onend = () => { if(tok !== TTS.tok) return; TTS.k++; speakChunk(); };
+  u.onend = () => { if(tok !== TTS.tok) return; TTS.k++;
+    const nx = TTS.chunks[TTS.k];
+    if(nx && nx.gap) setTimeout(() => { if(tok === TTS.tok && !TTS.paused) speakChunk(); }, 600 / (ST.prefs.rate || 1));   // a breath before each answer
+    else speakChunk(); };
   u.onerror = e => { if(tok !== TTS.tok || e.error === "interrupted" || e.error === "canceled") return; TTS.k++; speakChunk(); };
   speechSynthesis.speak(u);
 }

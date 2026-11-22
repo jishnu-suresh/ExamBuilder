@@ -1,6 +1,10 @@
 /* ---- the question paper (the HTML was made by BEE, from the same text as the printed paper) ---- */
 const READ_ONLY = () => EXAM.mode === "read";
 let UNITS = [];         // the parts that can be read aloud, in reading order: { text, label, el }
+// the words said around the questions, in the paper's language. "‖" in a reading is a short pause (before each MCQ option)
+const SW = () => PAPER && PAPER.lang === "fr"
+  ? { ins: "Consignes", part: "Partie", opt: "Réponse", one: "Choisissez une réponse.", multi: "Choisissez toutes les bonnes réponses.", mk: n => String(n).replace(/(\d)[.,](\d)/, "$1 virgule $2") + (parseFloat(String(n).replace(",", ".")) < 2 ? " point." : " points.") }
+  : { ins: "Instructions", part: "Part", opt: "Option", one: "Choose one answer.", multi: "Choose all the answers that are right.", mk: n => n + (n === "1" ? " mark." : " marks.") };
 function renderPaper(){
   const P = PAPER, c = P.cover, el = $("#paper"), RO = READ_ONLY();
   UNITS = [];
@@ -10,7 +14,7 @@ function renderPaper(){
   const facts = [c.subject && ["Subject", c.subject], (EXAM.timeMin || c.durationText) && ["Time", EXAM.timeMin ? EXAM.timeMin + " minutes" : c.durationText], c.total && ["Total", c.total + " marks"], c.teacher && ["Teacher", c.teacher], c.date && ["Date", c.date]].filter(Boolean);
   let h = `<div class="cover"><h1>${esc(c.title)}</h1>${c.subtitle ? `<div class="sub">${esc(c.subtitle)}</div>` : ""}
     <div class="meta">${facts.map(([k, v]) => `<span>${esc(k)}: <b>${esc(v)}</b></span>`).join("")}</div>
-    ${c.instructionsHTML ? `<div class="instr rich" data-u="${unit("Instructions", "Instructions. " + (c.instructionsPlain || ""))}">${c.instructionsHTML}<div style="text-align:right">${sayBtn(UNITS.length - 1, "Read the instructions")}</div></div>` : ""}</div>`;
+    ${c.instructionsHTML ? `<div class="instr rich" data-u="${unit(SW().ins, SW().ins + ". " + (c.instructionsPlain || ""))}">${c.instructionsHTML}<div style="text-align:right">${sayBtn(UNITS.length - 1, "Read the instructions")}</div></div>` : ""}</div>`;
   for(const it of P.items){
     if(it.k === "sec"){ h += `<h2 class="sec rich" data-u="${unit(it.plain.slice(0, 40), it.plain)}">${it.html}</h2>`; continue; }
     if(it.k === "note"){
@@ -19,14 +23,14 @@ function renderPaper(){
       h += `<div class="note rich" data-u="${u}">${it.html}${it.plain.length > 30 || RO ? `<div style="text-align:right">${sayBtn(u)}</div>` : ""}</div>`; continue;
     }
     const qn = it.no ? "Question " + it.no : "Question";
-    const opts = it.mcq ? it.opts.map(o => o.L + ": " + o.plain).join(". ") : "";
-    const u = unit(qn, qn + ". " + it.plain + (opts ? ". " + opts : "") + (it.marks ? ". " + it.marks + (it.marks === "1" ? " mark." : " marks.") : ""));
+    const w = SW(), opts = it.mcq ? " ‖ " + (it.mcq === "multi" ? w.multi : w.one) + it.opts.map(o => " ‖ " + w.opt + " " + o.L + ": " + o.plain + ".").join("") + " ‖ " : "";
+    const u = unit(qn, qn + ". " + it.plain + (opts ? "." + opts : "") + (it.marks ? (opts ? "" : ". ") + w.mk(it.marks) : ""));
     h += `<section class="q" id="q-${it.id}" data-q="${it.id}">
       <div class="qh"><span class="no">${esc(it.no || "")}</span>
         <div class="body"><div data-u="${u}"><div class="rich">${it.html}</div>
           ${it.mcq ? (RO ? `<div class="ro-opts">${it.opts.map(o => `<div><b>${esc(o.L)}.</b><span class="rich">${o.html}</span></div>`).join("")}</div>` : optsHTML(it)) : ""}</div>
           ${it.ans && !RO ? `<div data-area="${it.id}|main"></div>` : ""}
-          ${(it.subs || []).map(sb => { const su = unit(qn + " " + sb.L, "Part " + sb.L.replace(/[()]/g, "") + ". " + sb.plain + (sb.marks ? ". " + sb.marks + (sb.marks === "1" ? " mark." : " marks.") : "")); return `<div class="sub" data-sk="${esc(sb.key)}"><div class="sl" data-u="${su}"><b>${esc(sb.L)}</b><div class="rich" style="flex:1">${sb.html}</div>
+          ${(it.subs || []).map(sb => { const su = unit(qn + " " + sb.L, SW().part + " " + sb.L.replace(/[()]/g, "") + ". " + sb.plain + (sb.marks ? ". " + SW().mk(sb.marks) : "")); return `<div class="sub" data-sk="${esc(sb.key)}"><div class="sl" data-u="${su}"><b>${esc(sb.L)}</b><div class="rich" style="flex:1">${sb.html}</div>
               ${sb.marks ? `<span class="mk">[${esc(sb.marks)}]</span>` : ""}${sayBtn(su, "Read " + sb.L + " aloud")}</div>
               ${RO ? "" : `<div data-area="${it.id}|s:${sb.key}"></div>`}</div>`; }).join("")}
         </div>

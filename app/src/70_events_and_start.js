@@ -386,6 +386,15 @@ if(window.__PWA__){
 
 /* ---------------- ✨ what's new (newest first; add an entry at the top for each update teachers should know about) ---------------- */
 const NEWS = [
+  { id: "2026-11-22-v2.1", title: "v2.1 · November 2026", items: [
+    "🔊 <b>Read aloud sounds more like a teacher</b> in the 💻 computer version, in English and French.",
+    "<b>Multiple-choice questions:</b> \"Choose one answer\", then a short pause before each option (\"Option A…\", \"Option B…\").",
+    "<b>Maths:</b> absolute values, intervals, sets, matrices, \"P of A given B\", sin² x, f⁻¹(x), dy/dx, long fractions (\"…all over…\"), and 2.5 × 10³ said as \"10 to the power 3\".",
+    "<b>Physics:</b> more units in words (nm, µF, kΩ, kJ mol⁻¹, m s⁻², \"in km/h\"), and F<sub>net</sub> said as \"F net\".",
+    "<b>Chemistry:</b> Cu → \"copper\", Fe³⁺ → \"iron 3 plus\", Cl⁻ → \"chloride\", Ca(OH)₂ with its brackets, ¹⁴C → \"carbon 14\", [H⁺] → \"the concentration of H plus\".",
+    "<b>French papers:</b> decimals with \"virgule\", \"Consignes\", \"Partie\", \"points\" and \"Réponse A\" in the reading.",
+    "💡 For the most natural voices, use <b>Microsoft Edge</b> with internet, or download a Premium voice on a Mac."
+  ] },
   { id: "2026-11-22-v2", title: "v2 · November 2026", items: [
     "🎉 <b>💻 Exams on computers.</b> ⬇ Download → 👩‍🏫 Teacher → <b>💻 Computer version</b> makes one offline file students answer on a laptop: maths keyboard, read aloud, accommodations, a timer, and a lock with an alarm if they leave the test.",
     "Each file has a <b>start code</b> (you give it to the students) and a <b>teacher code</b> (for you only: unlock, add time, finish). 🖨 The invigilator sheet lists both.",

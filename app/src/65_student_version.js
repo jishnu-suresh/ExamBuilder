@@ -223,12 +223,12 @@ function studentRich(text, q, pics){
     plain.push(speakText(r.s));
     let h = esc(r.s); if(r.b) h = "<b>" + h + "</b>"; if(r.i) h = "<i>" + h + "</i>"; if(r.u) h = "<u>" + h + "</u>"; if(r.x) h = "<s>" + h + "</s>"; if(r.c) h = `<span style="color:${esc(cssHex(r.c))}">` + h + "</span>"; return h;
   }).join("");
-  const pic = (id, P, size, align) => { pics[id] = { src: P.src, w: P.w, h: P.h }; plain.push(" (picture) "); return `<div class="picwrap" style="text-align:${align || "center"}"><img class="pic" data-pic="${esc(id)}" src="${P.src}" alt="Picture" style="width:${size || 100}%"></div>`; };
+  const pic = (id, P, size, align) => { pics[id] = { src: P.src, w: P.w, h: P.h }; plain.push(SAY.lang === "fr" ? " (image) " : " (picture) "); return `<div class="picwrap" style="text-align:${align || "center"}"><img class="pic" data-pic="${esc(id)}" src="${P.src}" alt="Picture" style="width:${size || 100}%"></div>`; };
   const html = parseRich(text, fmtOf(q)).map(b => {
     if(b.type === "gap"){ plain.push(". "); return "<div style='height:.6em'></div>"; }
     if(b.type === "img"){ const P = picData(b.id); return P ? pic(b.id, P, b.size, b.align) : ""; }
-    if(b.type === "pic"){ plain.push(" (picture: " + b.desc + ") "); return `<div class="picmiss">Picture: ${esc(b.desc)}</div>`; }
-    if(b.type === "mol"){ const m = MOLS[b.smi]; plain.push(" (molecule " + (b.cap || "") + ") "); return m && m.png ? `<div class="molbox"><img src="${m.png}" alt="Molecule ${esc(b.cap || b.smi)}">${b.cap ? `<div>${esc(b.cap)}</div>` : ""}</div>` : esc(b.smi); }
+    if(b.type === "pic"){ plain.push((SAY.lang === "fr" ? " (image : " : " (picture: ") + b.desc + ") "); return `<div class="picmiss">Picture: ${esc(b.desc)}</div>`; }
+    if(b.type === "mol"){ const m = MOLS[b.smi]; plain.push((SAY.lang === "fr" ? " (molécule " : " (molecule ") + (b.cap || "") + ") "); return m && m.png ? `<div class="molbox"><img src="${m.png}" alt="Molecule ${esc(b.cap || b.smi)}">${b.cap ? `<div>${esc(b.cap)}</div>` : ""}</div>` : esc(b.smi); }
     if(b.type === "display"){ const m = texSVG(b.tex, true); plain.push(speakTex(b.tex)); return `<div class="disp"><span class="math" role="img" aria-label="${esc(speakTex(b.tex).trim())}">${m.err || !m.svg ? esc(b.tex) : m.svg}</span></div>`; }
     if(b.type === "table"){ ti++; const h = "<table>" + b.rows.map((r, i) => "<tr>" + r.map((c, k) => { const head = b.header && i === 0, t = head ? "th" : "td";
       const x = !head && blankCell(c) ? `<td class="blank" data-cell="${ti}:${i}:${k}"></td>` : `<${t}>` + runsH(c) + `</${t}>`; plain.push(", "); return x; }).join("") + "</tr>").join("") + "</table>"; plain.push(". "); return h; }
