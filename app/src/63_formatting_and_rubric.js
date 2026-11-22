@@ -34,8 +34,16 @@ function insertMenu(it){
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-ins]");
   document.querySelectorAll(".ins-menu").forEach(m => { if(!t || m !== t.nextElementSibling) m.classList.add("hidden"); });
-  if(t){ const m = t.nextElementSibling; m.classList.toggle("hidden"); if(!m.classList.contains("hidden")){ const r = m.getBoundingClientRect(); m.classList.toggle("up", r.bottom > innerHeight - 8 && r.top > r.height + 60); } }
+  if(t){ const m = t.nextElementSibling; m.classList.toggle("hidden"); if(!m.classList.contains("hidden")){ keepOnScreen(m); const r = m.getBoundingClientRect(); m.classList.toggle("up", r.bottom > innerHeight - 8 && r.top > r.height + 60); } }
 });
+// a menu never runs off the side of the screen (phones): shift it back in
+function keepOnScreen(m){
+  m.style.transform = ""; const r = m.getBoundingClientRect(), pad = 8;
+  const dx = r.left < pad ? pad - r.left : (r.right > innerWidth - pad ? innerWidth - pad - r.right : 0);
+  if(dx) m.style.transform = `translateX(${Math.round(dx)}px)`;
+  if(r.width > innerWidth - 2 * pad) m.style.maxWidth = (innerWidth - 2 * pad) + "px";
+}
+document.addEventListener("toggle", e => { const d = e.target; if(d.matches && d.matches("details.qmenu") && d.open){ const p = d.querySelector(".qmenu-pop"); if(p) keepOnScreen(p); } }, true);
 function fmtBar(it){
   const f = it.fmt || {};
   return `<div class="fmtbar" title="Select words to format just them — or select nothing to format the whole question">

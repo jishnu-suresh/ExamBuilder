@@ -271,11 +271,11 @@ async function onListClick(e){
     case "linenums": it.lineNums = !it.lineNums; break;
     case "half": it.width = it.width === "half" ? "" : "half"; break;
     case "correct": { ensureOptions(it); const oi = +b.dataset.oi; let c = new Set(it.correct || []); if(c.has(oi)) c.delete(oi); else { if(it.mcq !== "multi") c = new Set(); c.add(oi); } it.correct = [...c].sort((a, b2) => a - b2); break; }
-    case "showans": it._ans = true; render(); setTimeout(() => { const t = document.querySelector(`.card[data-id="${it.id}"] textarea[data-f=answer]`); if(t) t.focus(); }, 30); return;
+    case "showans": { it._ans = true; render(); const t = document.querySelector(`.card[data-id="${it.id}"] textarea[data-f=answer]`); if(t) t.focus(); return; }   // the box exists right after render: focus now, not later
     case "subadd": { it.subs = it.subs || []; const sb = { id: nid(), text: "", marks: "", lines: "", space: "lines", answer: "" }; it.subs.push(sb); render(); changed(); setTimeout(() => { const t = document.querySelector(`.card[data-id="${it.id}"] textarea[data-sub="${sb.id}"][data-sf=text]`); if(t) t.focus(); }, 30); return; }
     case "subdel": { const k = (it.subs || []).findIndex(x => x.id === b.dataset.sid); if(k >= 0) it.subs.splice(k, 1); if(!it.subs.length) delete it.subs; break; }
     case "subup": { const k = (it.subs || []).findIndex(x => x.id === b.dataset.sid); if(k > 0) [it.subs[k - 1], it.subs[k]] = [it.subs[k], it.subs[k - 1]]; break; }
-    case "subans": { const sb = (it.subs || []).find(x => x.id === b.dataset.sid); if(sb) sb._ans = true; render(); setTimeout(() => { const t = document.querySelector(`.card[data-id="${it.id}"] textarea[data-sub="${b.dataset.sid}"][data-sf=answer]`); if(t) t.focus(); }, 30); return; }
+    case "subans": { const sb = (it.subs || []).find(x => x.id === b.dataset.sid); if(sb) sb._ans = true; render(); { const t = document.querySelector(`.card[data-id="${it.id}"] textarea[data-sub="${b.dataset.sid}"][data-sf=answer]`); if(t) t.focus(); } return; }
     case "sec2col": { const all = window.__secAllHalf(it.id); window.__secQs(it.id).forEach(q => q.width = all ? "" : "half"); toast(all ? "Part set back to one column" : "Questions in this part now print two per row"); lastEdited = it.id; break; }
     case "optadd": ensureOptions(it); it.options.push(""); lastEdited = it.id; render(); changed(); focusOpt(it.id, it.options.length - 1); return;
     case "optdel": it.options.splice(+b.dataset.oi, 1); break;
