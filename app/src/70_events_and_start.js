@@ -390,6 +390,7 @@ const NEWS = [
     "🎉 <b>BEE v1</b> — the first version for all teachers.",
     "The <b>Questions</b> section is more compact: 🤖 Paste from AI, 📷 Add photos, 📄 Open .txt / .md and 💬 AI prompts sit in one row. 🔎 Find &amp; replace and ⓘ help are on the Questions heading.",
     "<b>📁 File</b> at the top holds New, Open and Save as…",
+    "<b>Add a question anywhere:</b> point between two questions and choose ＋ Question, ＋ MCQ, ＋ Text or ＋ Part.",
     "📷 Add photos asks whether you want <b>pictures</b> or the <b>text</b> (you can tell BEE to remember).",
     "<b>Subject subtitle</b> (optional) in Exam details, e.g. “Higher Level · Paper 2”.",
     "🗑 <b>Delete all questions</b> is under ⋯ and always asks first.",
