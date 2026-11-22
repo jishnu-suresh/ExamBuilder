@@ -558,12 +558,17 @@ function buildPDF(opt){
     const PAD = 2, ncol = Math.max(...b.rows.map(r => r.length));
     // natural (single-line) width of every column
     const nat = Array(ncol).fill(18);
-    b.rows.forEach(r => r.forEach((c, j) => { const l = layoutPara({ runs: c }, 1e4); nat[j] = Math.max(nat[j], (l[0] ? l[0].width : 0) + 2 * PAD + .5); }));
+    const bold = (c, ri) => ri === 0 && b.header ? c.map(x => Object.assign({}, x, { b: true })) : c;   // the header row is drawn bold: measure it bold
+    const blank = c => !c.length || /^[\s_.…?-]*$/.test(c.map(x => x.t === "math" ? "x" : (x.s || "")).join(""));
+    b.rows.forEach((r, ri) => r.forEach((c, j) => {
+      const l = layoutPara({ runs: bold(c, ri) }, 1e4); nat[j] = Math.max(nat[j], (l[0] ? l[0].width : 0) + 2 * PAD + .5);
+      if(!(ri === 0 && b.header) && blank(c)) nat[j] = Math.max(nat[j], 26);                         // a cell to fill in: room to write by hand
+    }));
     let tot = nat.reduce((a, v) => a + v, 0);
     const cw = tot <= width ? nat : nat.map(v => Math.max(14, v * width / tot));
     tot = cw.reduce((a, v) => a + v, 0);
     const grid = b.rows.map((r, ri) => {
-      const cells = cw.map((w, j) => { const c = r[j] || []; const ls = layoutPara({ runs: ri === 0 && b.header ? c.map(x => Object.assign({}, x, { b: true })) : c }, w - 2 * PAD); return { ls, h: ls.reduce((a, l) => a + l.h, 0) }; });
+      const cells = cw.map((w, j) => { const c = r[j] || []; const ls = layoutPara({ runs: bold(c, ri) }, w - 2 * PAD); return { ls, h: ls.reduce((a, l) => a + l.h, 0) }; });
       return { cells, h: Math.max(LH * 1.25, ...cells.map(c => c.h)) + 2 * PAD * .8 };
     });
     const H = grid.reduce((a, r) => a + r.h, 0);
@@ -1083,14 +1088,12 @@ function flash(el){ el.classList.remove("jumped"); void el.offsetWidth; el.class
 document.getElementById("pv").addEventListener("click", ev => {
   const c = ev.target.closest("canvas[data-page]"); if(!c) return;
   const g = pvLocate(c, ev); if(!g) return;
-  c.title = ""; c.__quiet = Date.now();                 // no tooltip left floating (Safari) once the editor jumps
   jumpToItem(g.id);
 });
 document.getElementById("pv").addEventListener("mousemove", ev => {
   const c = ev.target.closest("canvas[data-page]"); if(!c) return;
   const g = pvLocate(c, ev); c.style.cursor = g ? "pointer" : "";
-  if(c.__quiet && Date.now() - c.__quiet < 1500) return;
-  c.title = g ? (g.id === "__cover" ? "Click to edit the exam details" : g.id === "__rubric" ? "Click to edit the rubric" : "Click to edit this in the editor") : "";
+  if(c.title) c.title = "";
 });
 async function showPreview(bytes, jumpPage){
   const run = ++pvRun;
