@@ -385,6 +385,7 @@ if(window.__PWA__){
 }
 
 /* ---------------- ✨ what's new (newest first; add an entry at the top for each update teachers should know about) ---------------- */
+document.querySelectorAll(".ver").forEach(e => { e.textContent = BEE_VERSION; });   // the corner pill and the start screen always show the real version
 const NEWS = [
   { id: "2026-11-22-v2.1", title: "v2.1 · November 2026", items: [
     "🔊 <b>Read aloud sounds more like a teacher</b> in the 💻 computer version, in English and French.",
