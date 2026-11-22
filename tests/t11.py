@@ -8,7 +8,7 @@ async def main():
         errs=[]; pg.on('pageerror',lambda e: errs.append(str(e))); pg.on('console',lambda m: m.type=='error' and errs.append(m.text[:150]))
         await pg.goto('file://' + __import__('os').path.abspath(__import__('os').path.join(__import__('os').path.dirname(__file__), '..', 'docs', 'download', 'Exam_Builder_offline.html')) + ''); await pg.wait_for_timeout(1500)
         await pg.evaluate("__exam.set({d:{subject:'Toggle test'}, items:[]})"); await pg.click('#stSkip')
-        await pg.click('#addQ'); await pg.wait_for_timeout(200)
+        await pg.click('#bottomBar [data-add=q]'); await pg.wait_for_timeout(200)
         card='.card:last-child'; ta=card+' textarea[data-f=text]'
         async def sel(word):
             await pg.evaluate(f"(()=>{{const t=document.querySelector('{ta}'); const i=t.value.indexOf('{word}'); t.focus(); t.setSelectionRange(i,i+{len(word)});}})()")
@@ -39,7 +39,7 @@ async def main():
         ok("1j toggle one word off inside", t=="Underline ++these++ three ++words++ please", t)
         # 2: undo / redo
         await pg.wait_for_timeout(800)
-        await pg.click('#addQ'); await pg.wait_for_timeout(200)
+        await pg.click('#bottomBar [data-add=q]'); await pg.wait_for_timeout(200)
         await pg.fill(ta, "First draft"); await pg.wait_for_timeout(800)
         await pg.fill(ta, "Second draft"); await pg.wait_for_timeout(800)
         await pg.focus(ta); await pg.keyboard.press('Control+z'); await pg.wait_for_timeout(200)

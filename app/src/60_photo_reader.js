@@ -1,8 +1,9 @@
 /* ---------------- reading text from photos ---------------- */
 const PREF_KEY = "examBuilder.prefs";
-let PREFS = { photoMode: "image" };
+let PREFS = { photoMode: "ask" };
 try{ Object.assign(PREFS, JSON.parse(localStorage.getItem(PREF_KEY) || "{}")); }catch(e){}
 if(PREFS.aiKey !== undefined || PREFS.photoMode === "ai"){ delete PREFS.aiKey; if(PREFS.photoMode === "ai") PREFS.photoMode = "offline"; try{ localStorage.setItem(PREF_KEY, JSON.stringify(PREFS)); }catch(e){} }
+if(!PREFS.v2){ if(PREFS.photoMode === "image") PREFS.photoMode = "ask"; PREFS.v2 = 1; try{ localStorage.setItem(PREF_KEY, JSON.stringify(PREFS)); }catch(_){} }   // "Picture" was only the old default: ask once
 function savePrefs(){ try{ localStorage.setItem(PREF_KEY, JSON.stringify(PREFS)); }catch(e){} }
 
 /* offline engine (Tesseract, fully embedded) */
@@ -113,4 +114,15 @@ $("#ocrReplace").onclick = () => applyOcr(true);
 /* photo-mode controls */
 function syncPhotoMode(){ setSeg($("#photoMode"), PREFS.photoMode); }
 $("#photoMode").addEventListener("click", e => { const b = e.target.closest("button"); if(!b) return; PREFS.photoMode = b.dataset.m; savePrefs(); syncPhotoMode(); if(b.dataset.m === "offline") getTess(); });
+// 📷 Add photos: ask "pictures or text?" (unless a choice was remembered), then pick the photos
+let photoOnce = null;
+function photoModeNow(){ const m = photoOnce || PREFS.photoMode; photoOnce = null; return m === "offline" ? "offline" : "image"; }
+function pickPhotos(){ pendingImgTarget = null; $("#fileIn").accept = "image/*"; $("#fileIn").click(); }
+$("#photoAskModal").addEventListener("click", e => {
+  const b = e.target.closest("[data-pm]"); if(!b) return;
+  const m = b.dataset.pm;
+  if($("#photoRemember").checked){ PREFS.photoMode = m; savePrefs(); syncPhotoMode(); } else photoOnce = m;
+  if(m === "offline") getTess();
+  $("#photoAskModal").classList.remove("open"); pickPhotos();
+});
 syncPhotoMode();

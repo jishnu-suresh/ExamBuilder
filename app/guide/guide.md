@@ -19,7 +19,7 @@ A short paper takes about 10 minutes. To look around first, click **🐝 Try the
 1. **Start a new exam.** On the start screen, click **＋ New exam** and choose where to save it (for example your Documents folder). This file, ending in `.exam.json`, is your exam: BEE saves to it every minute.
 2. **Fill in the exam details:** title, subject, duration, class, teacher and the instructions for students. Once filled in, this section folds to one line; click it to open it again.
 3. **Add your questions,** in any of these ways:
-   - **🤖 Paste from AI:** paste what ChatGPT, Claude or Gemini wrote. Click **🤖 Prompt for your AI** for a ready-made prompt that makes the AI write questions BEE understands.
+   - **🤖 Paste from AI:** paste what ChatGPT, Claude or Gemini wrote. Click **💬 AI prompts** for a ready-made prompt that makes the AI write questions BEE understands.
    - **📷 Add photos** of a worksheet, as pictures or as text.
    - **Type them:** use **＋ Question**, **＋ MCQ** and **＋ Part** at the bottom of the list.
 4. **Check the preview** on the right: it is the real PDF and updates as you type. Click a question in it to jump to that question. Tick **Key** to see the answer key.
@@ -55,7 +55,7 @@ Too many buttons? Click **🍯🐝** at the top to switch to **🌱 Basic** mode
 | Versions A, B, C with shuffled questions | **⬇ Download ▾ → Versions** (*all options*) |
 | Change fonts, colours or the logo | **🎨 Look** in Exam details (*all options*) |
 | Answers on a separate sheet | **🖨 Printing** in Exam details (*all options*) |
-| Change a word everywhere | **🔎 Find & replace** (*all options*) |
+| Change a word everywhere | **🔎 next to the Questions heading** (*all options*) |
 
 ## Printing
 
@@ -70,7 +70,7 @@ Print at **100% (“Actual size”)**, not “Fit to page”: otherwise the answ
 | Problem | Try this |
 | --- | --- |
 | The preview doesn't update | Click **↻** at the top of the preview |
-| A question looks wrong in the PDF | Check the maths between `$ … $`; open **ⓘ Format & maths help** for examples |
+| A question looks wrong in the PDF | Check the maths between `$ … $`; open **ⓘ next to the Questions heading** for examples |
 | I lost my changes | Click **🕰️** and **Restore** an earlier version |
 | A yellow bar says BEE is open twice | Save your work in one tab or window, then close the other |
 | BEE looks old or odd | Click **Update now** if the bar shows, or reload the page |

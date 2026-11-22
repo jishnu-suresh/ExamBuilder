@@ -96,7 +96,8 @@ async function handleFiles(files){
     }catch(e){ toast(e.message || ("Couldn't read " + f.name)); }
   }
   if(added){ const L = S.items[S.items.length - added]; if(L) lastEdited = L.id; render(); changed(); toast("Added " + added + " item" + (added > 1 ? "s" : "")); }
-  if(newPhotos.length && PREFS.photoMode !== "image") queueOcr(newPhotos);
+  const pm = photoModeNow();                       // a one-time choice from the photo question is used once, then forgotten
+  if(newPhotos.length && pm === "offline") queueOcr(newPhotos);
 }
 
 /* ---------------- numbering & totals ---------------- */

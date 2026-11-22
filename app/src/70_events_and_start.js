@@ -4,7 +4,7 @@ document.querySelectorAll(".modal").forEach(m => m.addEventListener("click", e =
 
 const drop = $("#drop");
 $("#tilePaste").onclick = () => $("#pasteText").click();
-$("#tilePhoto").onclick = () => { pendingImgTarget = null; $("#fileIn").accept = "image/*"; $("#fileIn").click(); };
+$("#tilePhoto").onclick = () => { if(PREFS.photoMode === "ask"){ $("#photoRemember").checked = false; openModal("#photoAskModal"); } else pickPhotos(); };
 $("#tileFile").onclick = () => { pendingImgTarget = null; $("#fileIn").accept = ".txt,.text,.md,.markdown,.tex,text/plain,text/markdown"; $("#fileIn").click(); };
 $("#pasteCopyIxl").onclick = e => { e.preventDefault(); copyPrompt("ixl"); };
 $("#pasteCopyPrompt").onclick = async e => { e.preventDefault(); try{ await navigator.clipboard.writeText(USER_AI_PROMPT); toast("Prompt copied — paste it into your AI chat"); }catch(_){ $("#pasteModal").classList.remove("open"); openModal("#promptModal"); } };
@@ -145,7 +145,7 @@ function setTab(t){
 }
 $("#setTabs").addEventListener("click", e => { const b = e.target.closest("[data-tab]"); if(b) setTab(b.dataset.tab); });
 try{ setTab(localStorage.getItem("bee.tab") || "exam"); }catch(_){}
-$("#clearAll").onclick = () => { if(!S.items.length) return; keepVersion("Before Clear all"); if(confirm("Remove all questions? (Exam details are kept.)")){ S.items = []; render(); changed(); } };
+$("#clearAll").onclick = () => { $("#qMore").open = false; if(!S.items.length) return toast("There are no questions to delete."); keepVersion("Before deleting all questions"); const n = S.items.filter(i => i.type === "q").length; if(confirm("Delete all " + n + " question" + (n === 1 ? "" : "s") + "?\n\nThe exam details are kept, and you can get the questions back from 🕰️ (earlier versions).")){ S.items = []; render(); changed(); } };
 $("#dlMenuBtn").onclick = e => { e.stopPropagation(); $("#dlMenu").classList.toggle("hidden"); };
 document.addEventListener("click", e => { if(!e.target.closest(".dl-wrap")) $("#dlMenu").classList.add("hidden"); });
 $("#dlMenu").addEventListener("click", e => {
@@ -154,6 +154,10 @@ $("#dlMenu").addEventListener("click", e => {
   ({ full: () => download(), large: () => download({ large: true }), cover: () => download({ coverOnly: true }), rubric: () => download({ rubricOnly: true }), questions: () => download({ noCover: true }), key: () => download({ key: true }), versions: () => openModal("#verModal"), dys: () => openModal("#dysModal"), student: () => openStudentDialog(), answers: () => pickAnswers() })[b.dataset.dl]();
 });
 $("#btnRefresh").onclick = preview;
+// the Questions menus (⋯, 💬 AI prompts) close when clicking elsewhere or choosing something in them
+document.addEventListener("click", e => {
+  document.querySelectorAll("details.qmenu[open]").forEach(d => { if(!d.contains(e.target) || e.target.closest(".qm-item, .open-prompt")) d.open = false; });
+});
 // 📖 the teacher guide opens in a new window: the website's guide.html, or (offline file) the copy built into BEE
 document.addEventListener("click", e => {
   const a = e.target.closest("[data-guide]"); if(!a) return;

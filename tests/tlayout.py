@@ -64,6 +64,22 @@ async def main():
         ok("BEE open in two tabs: both show the warning to save and close one", both == [True, True], both)
         await p2.close(); await pg.wait_for_timeout(500)
         ok("closing the other tab clears the warning", await pg.is_hidden("#tabsBanner"))
+        # compact Questions: the photo question (asked each time unless remembered), Delete all under ⋯ asks first
+        h = await pg.evaluate("(() => { const a = document.querySelector('.q-head').getBoundingClientRect(), b = document.getElementById('list').getBoundingClientRect(); return b.top - a.top; })()")
+        ok("Questions section: heading to first question under 200px", h < 200, h)
+        await pg.click("#tilePhoto"); await pg.wait_for_timeout(200)
+        asked = await pg.is_visible("#photoAskModal")
+        await pg.check("#photoRemember")
+        async with pg.expect_file_chooser() as fc: await pg.click("#photoAskModal [data-pm=image]")
+        await (await fc.value).set_files([])
+        ok("📷 Add photos asks 'pictures or text?'; 'remember' keeps the choice", asked and await pg.evaluate("PREFS.photoMode") == "image", await pg.evaluate("PREFS.photoMode"))
+        async with pg.expect_file_chooser() as fc: await pg.click("#tilePhoto")
+        await (await fc.value).set_files([])
+        ok("…and next time it goes straight to the photos", not await pg.is_visible("#photoAskModal"))
+        n0 = await pg.evaluate("S.items.length"); msgs = []
+        pg.once("dialog", lambda d: (msgs.append(d.message), asyncio.ensure_future(d.dismiss())))
+        await pg.click("#qMore summary"); await pg.click("#clearAll"); await pg.wait_for_timeout(300)
+        ok("🗑 Delete all questions… asks first (with the count and 🕰️), and Cancel keeps them", msgs and "Delete all" in msgs[0] and "🕰️" in msgs[0] and await pg.evaluate("S.items.length") == n0, msgs)
         # 🌱 Basic mode: only the everyday buttons; Full mode brings everything back; remembered
         await pg.click("#btnMode"); await pg.wait_for_timeout(200)
         st = await pg.evaluate("""({ basic: document.body.classList.contains('basic'), rubric: !!$('#rbPanel').offsetParent, look: !!$('#setTabs [data-tab=look]').offsetParent,

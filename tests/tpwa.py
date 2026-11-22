@@ -31,7 +31,7 @@ async def main():
         ok("preview scrolled to edited page", await pg.evaluate("document.querySelector('#pv').scrollTop")>200, await pg.evaluate("document.querySelector('#pv').scrollTop"))
         await pg.screenshot(path='pwa_ui.png')
         # OCR via lazy path
-        await pg.click('#photoMode button[data-m=offline]')
+        await pg.evaluate("$('#qMore').open = true"); await pg.click('#photoMode button[data-m=offline]')
         await pg.set_input_files('#fileIn',[__import__('_bee').fx('page_photo.jpg')])
         await pg.wait_for_function("document.querySelector('#ocrText').value.length>20 || /⚠/.test(document.querySelector('#ocrMsg').textContent)", timeout=120000)
         txt = await pg.input_value('#ocrText'); ok("offline photo reader works (lazy-loaded)", 'passive voice' in txt, txt[:60].replace('\n',' | '))
