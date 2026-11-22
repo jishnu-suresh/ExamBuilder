@@ -103,6 +103,8 @@ async def main():
         ok("icon-only buttons have spoken names", all(names), names)
         ok("the version (v1) shows in the corner", "v1" in await pg.text_content(".wm"))
         ok("the browser tab shows the exam's name", (await pg.title()).startswith(("End-of-Term", "• End-of-Term")), await pg.title())
+        await pg.evaluate("setFold('detPanel', false)"); await pg.wait_for_timeout(300)
+        ok("the Instructions box shows all its lines", await pg.evaluate("(() => { const t = document.querySelector('textarea[data-k=instructions]'); return t.scrollHeight <= t.clientHeight + 2; })()"))
         ok("School name sits in 🎨 Look, next to the logo", await pg.evaluate("!!document.querySelector('[data-pane=look] [data-k=school]') && !document.querySelector('[data-pane=exam] [data-k=school]')"))
         # ⚠️ an unexpected error offers a report
         await pg.evaluate("setTimeout(() => { throw new Error('test error from tlayout') }, 0)"); await pg.wait_for_timeout(400)

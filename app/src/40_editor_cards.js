@@ -21,6 +21,7 @@ document.addEventListener("change", e => { if(e.target.matches && e.target.match
 setTimeout(syncStyleUI, 0); addEventListener("load", () => setTimeout(syncStyleUI, 50));
 function refreshDetails(){
   try{ renderRubric(); }catch(e){}
+  setTimeout(() => window.growInstructions && growInstructions(), 0);
   setTimeout(syncStyleUI, 0);
   document.querySelectorAll("[data-k]").forEach(el => {
     const k = el.dataset.k;
@@ -180,6 +181,14 @@ function subsBlock(it){
     <button class="btn sm" data-act="subadd">＋ Add (${LETTERS[subs.length]})</button></div>`;
 }
 function autoGrow(t){ t.style.height = "auto"; t.style.height = Math.min(420, t.scrollHeight + 2) + "px"; }
+// the Instructions box grows to show all its lines (only while it can be seen: a hidden box measures 0)
+(() => {
+  const box = document.querySelector('textarea[data-k="instructions"]'); if(!box) return;
+  const grow = () => { if(box.offsetParent) autoGrow(box); };
+  box.addEventListener("input", grow);
+  if("IntersectionObserver" in window) new IntersectionObserver(es => { if(es.some(e => e.isIntersecting)) grow(); }).observe(box);
+  window.growInstructions = grow;
+})();
 
 let pendingImgTarget = null, pendingInline = null;
 function focusOpt(id, oi){ setTimeout(() => { const el = document.querySelector(`.card[data-id="${id}"] input[data-opt="${oi}"]`); if(el){ el.focus(); el.select(); } }, 30); }
