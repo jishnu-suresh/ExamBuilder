@@ -41,10 +41,16 @@ async def export_student(pg, key_mode="make", keyfile=None):
     except Exception as e: state = repr(e)
     raise Exception(f"no student file was downloaded; downloads={[d.suggested_filename for d in downs]}; page={state}")
 
+async def bee_ready(pg):
+    """Wait until BEE has loaded (it opens the start screen last), then close the start screen."""
+    try: await pg.wait_for_selector("#startModal.open", timeout=20000)
+    except Exception: pass
+    await pg.wait_for_timeout(300); await pg.evaluate("$('#startModal').classList.remove('open')")
+
 async def make_student_file(b, url=WEB, code="ABCD-2345", tcode="135790", extra="25", key_mode="make", keyfile=None, setup=None):
     ctx = await b.new_context(accept_downloads=True, viewport={"width": 1300, "height": 900}); pg = await ctx.new_page()
     errs = []; pg.on("pageerror", lambda e: errs.append(str(e)))
-    await pg.goto(url + ("?keyadmin=hive" if key_mode == "make" else "")); await pg.wait_for_timeout(1800)
+    await pg.goto(url + ("?keyadmin=hive" if key_mode == "make" else "")); await bee_ready(pg)
     await pg.evaluate("loadDemo()"); await pg.wait_for_timeout(2500); await pg.evaluate("tourAt >= 0 && endTour()")
     await pg.evaluate("openStudentDialog()"); await pg.wait_for_timeout(400)
     await pg.fill("#stuCode", code); await pg.fill("#stuTCode", tcode); await pg.select_option("#stuExtra", extra)
@@ -74,8 +80,8 @@ async def main():
         ok("answer key is not readable inside the file", keys and not any(k in html for k in keys), [k for k in keys if k in html][:2] or "no model answers in the demo")
         await pg.wait_for_timeout(800)
         # making a school key is hidden from everyone without the admin link
-        cz = await b.new_context(); pz = await cz.new_page(); await pz.goto(WEB + "?beta=bee"); await pz.wait_for_timeout(1500)
-        await pz.evaluate("$('#startModal').classList.remove('open'); loadDemo()"); await pz.wait_for_timeout(2500); await pz.evaluate("tourAt >= 0 && endTour(); openStudentDialog()")
+        cz = await b.new_context(); pz = await cz.new_page(); await pz.goto(WEB + "?beta=bee"); await bee_ready(pz)
+        await pz.evaluate("loadDemo()"); await pz.wait_for_timeout(2500); await pz.evaluate("tourAt >= 0 && endTour(); openStudentDialog()")
         await pz.wait_for_timeout(400); await pz.fill("#stuCode", "ZZZZ-2345"); await pz.fill("#stuTCode", "1111"); await pz.click("#stuGo"); await pz.wait_for_selector("#needKeyModal.open")
         hid = await pz.evaluate("[!!document.querySelector('#needKeyModal [data-needkey=make]').offsetParent, !!document.querySelector('#needKeyModal summary').offsetParent, getComputedStyle(document.querySelector('#keyModal .key-admin')).display]")
         made = await pz.evaluate("makeSchoolKey()")
@@ -303,7 +309,7 @@ async def main():
         ok("teacher's own exam untouched", await pg.evaluate("S.d.title === 'End-of-Term Examination' && S.items.length === 30"))
         ok("no errors in BEE", not berrs, berrs)
         # the same browser after a reload: the key is locked again, so the answers need the password
-        await pg.reload(); await pg.wait_for_timeout(1800); await pg.evaluate("$('#startModal').classList.remove('open'); ANS.length = 0")
+        await pg.reload(); await bee_ready(pg); await pg.evaluate("ANS.length = 0")
         async with pg.expect_file_chooser() as fc: await pg.evaluate("pickAnswers()")
         await (await fc.value).set_files(P("lea.bee-answers"))
         await pg.wait_for_selector("#pwModal.open", timeout=8000)
