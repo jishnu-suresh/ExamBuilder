@@ -112,6 +112,12 @@ let saveT;
   if(document.readyState === "loading") addEventListener("DOMContentLoaded", wire); else wire();
   window.__otherTabs = () => others.size;
 })();
+// make the browser draw a box again (Safari sometimes leaves a just-shown panel blank until the next click)
+function repaint(el){
+  if(!el) return;
+  el.style.transform = "translateZ(0)"; void el.offsetHeight;
+  requestAnimationFrame(() => { el.style.transform = ""; void el.offsetHeight; });
+}
 // 🧹 shared computers: remove this teacher's exams from this browser (the school key and preferences stay)
 async function wipeBrowser(){
   window.__wiped = true; clearTimeout(saveT); proj.dirty = false; proj.handle = null;

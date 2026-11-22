@@ -25,6 +25,8 @@ async def main():
         b = await getattr(p, NAME).launch()
         # ---------- teacher: BEE opens, the demo paper becomes a PDF
         ctx, pg, errs, d = await T.make_student_file(b, url=WEB)
+        await pg.wait_for_timeout(600)
+        ok("making the computer version: the window shows 'Student file ready' with the codes", await pg.is_visible("#stuDone h3") and (await pg.text_content("#stuShowCode")).strip() == "ABCD-2345")
         n = await pg.evaluate("(() => { const doc = buildPDF({}); return doc.getNumberOfPages(); })()")
         ok("BEE builds the demo paper as a PDF", n >= 4, n)
         async with pg.expect_download(timeout=60000) as dl: await pg.evaluate("document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')); download()")

@@ -319,10 +319,13 @@ $("#stuGo").onclick = async () => {
     const tpl = await playerTemplate();
     const html = tpl.replace("/*__EXAM" + "__*/null", () => JSON.stringify(EXAM).replace(/<\//g, "<\\/").replace(/<!--/g, "<\\!--"));
     const name = fileStem(S.d.title || "Exam", ver && "Version " + ver, mode === "read" ? "read-aloud" : "computer version") + ".html";
-    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([html], { type: "text/html" })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     lastExport = { mode, name, code, tcode, title: S.d.title || "Exam", subject: S.d.subject || "", ver, base, extraPct, timeMin: EXAM.timeMin, nq, kid: key.kid, readAloud: EXAM.readAloud };
     $("#stuFile").textContent = name; $("#stuShowCode").textContent = code; $("#stuShowTCode").textContent = tcode;
-    $("#stuForm").classList.add("hidden"); $("#stuDone").classList.remove("hidden");
+    // show "ready" first, then download: Safari could leave the window blank when both happened at once
+    $("#stuForm").classList.add("hidden"); $("#stuDone").classList.remove("hidden"); repaint($("#stuModal .box"));
+    await new Promise(r => setTimeout(r, 80));
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([html], { type: "text/html" })); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    setTimeout(() => repaint($("#stuModal .box")), 400);
   }catch(e){ console.error(e); toast("Couldn't make the student file: " + e.message); }
   finally{ btn.disabled = false; btn.textContent = lbl; }
 };
