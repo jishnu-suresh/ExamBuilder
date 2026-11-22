@@ -1082,11 +1082,14 @@ function jumpToItem(id){
 function flash(el){ el.classList.remove("jumped"); void el.offsetWidth; el.classList.add("jumped"); setTimeout(() => el.classList.remove("jumped"), 1600); }
 document.getElementById("pv").addEventListener("click", ev => {
   const c = ev.target.closest("canvas[data-page]"); if(!c) return;
-  const g = pvLocate(c, ev); if(g) jumpToItem(g.id);
+  const g = pvLocate(c, ev); if(!g) return;
+  c.title = ""; c.__quiet = Date.now();                 // no tooltip left floating (Safari) once the editor jumps
+  jumpToItem(g.id);
 });
 document.getElementById("pv").addEventListener("mousemove", ev => {
   const c = ev.target.closest("canvas[data-page]"); if(!c) return;
   const g = pvLocate(c, ev); c.style.cursor = g ? "pointer" : "";
+  if(c.__quiet && Date.now() - c.__quiet < 1500) return;
   c.title = g ? (g.id === "__cover" ? "Click to edit the exam details" : g.id === "__rubric" ? "Click to edit the rubric" : "Click to edit this in the editor") : "";
 });
 async function showPreview(bytes, jumpPage){

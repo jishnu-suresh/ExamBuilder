@@ -110,7 +110,7 @@ input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
 .toast.show{opacity:1}
 .hidden{display:none!important}
 #btnUndo,#btnRedo{padding:3px 6px;min-width:0;font-size:13px;line-height:1;opacity:.85}
-#btnUndo:disabled,#btnRedo:disabled{opacity:.35}
+#btnUndo:disabled,#btnRedo:disabled{opacity:.4;filter:grayscale(1);background:transparent;border-color:transparent;box-shadow:none;cursor:default}   /* "nothing to undo yet": flat and grey, not broken-looking */
 body:not(.beta) .beta-only{display:none!important}
 .modal.open{padding-bottom:var(--kbh,0px)!important;transition:padding .15s}
 .modal.open .box{max-height:calc(92vh - var(--kbh,0px))}
@@ -317,7 +317,7 @@ math-field:focus-within{border-color:var(--gold);box-shadow:0 0 0 3px rgba(181,1
 .rich mjx-container{display:inline-block}
 .rich .err{color:var(--danger);font-size:12px}
 .card .graphbtn{font-size:12.5px}
-.wm{position:fixed;right:14px;bottom:3px;font:500 11.5px/1.4 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:#2B2B2B;opacity:.72;pointer-events:none;user-select:none;z-index:45;letter-spacing:.2px}
+.wm{position:fixed;right:12px;bottom:5px;font:500 11.5px/1.4 system-ui,-apple-system,"Segoe UI",Arial,sans-serif;color:#5C554A;background:rgba(250,247,240,.94);border:1px solid var(--line);border-radius:999px;padding:1px 9px;pointer-events:none;user-select:none;z-index:45;letter-spacing:.2px;box-shadow:0 1px 4px rgba(60,45,20,.06)}
 .dl-wrap{position:relative;display:inline-flex}
 .dl-menu{position:absolute;right:0;top:calc(100% + 6px);background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(60,45,10,.16);padding:8px;z-index:30;display:grid;grid-template-columns:repeat(3,minmax(190px,1fr));gap:4px 6px;width:min(680px,94vw)}
 .dl-menu.hidden{display:none}

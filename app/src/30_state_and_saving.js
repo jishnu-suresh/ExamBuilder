@@ -221,7 +221,8 @@ function updateChip(){
   c.title = st.k === "browser" || st.k === "danger" && st.why === "nofile" ? "Your latest changes are kept only in this browser's memory. Clearing the browser, another computer or a full disk could lose them. Save to a file to be safe." : "Your project is saved automatically every minute";
   // the browser tab shows • while the latest changes are not in a file (like Word)
   const risky = st.k !== "file";
-  document.title = (risky ? "• " : "") + BASE_TITLE;
+  const exam = ((S && S.d && (S.d.title || S.d.subject)) || "").trim();           // the exam's name first, so tabs can be told apart
+  document.title = (risky ? "• " : "") + (exam ? exam + " · 🐝 BEE" : BASE_TITLE);
   // the banner nobody can miss: work only in the browser for more than 10 minutes, or saving has stopped
   const ban = document.getElementById("saveBanner");
   if(ban){

@@ -55,15 +55,14 @@
         <div class="fields">
         <label class="f">Exam title<input data-k="title" placeholder="Semester 1 Exam"></label>
         <label class="f"><span>Subtitle <span class="hint">· optional, under the title</span></span><input data-k="subtitle" placeholder="e.g. Unit 3 — Fractions &amp; Percentages"></label>
-        <label class="f">Academic year<input data-k="year" placeholder="2025-2026"></label>
         <label class="f">Subject<input data-k="subject" placeholder="e.g. English Language"></label>
         <label class="f"><span>Subject subtitle <span class="hint">· optional, under the subject</span></span><input data-k="subjectSub" placeholder="e.g. Higher Level · Paper 2"></label>
+        <label class="f">Academic year<input data-k="year" placeholder="2025-2026"></label>
         <label class="f">Duration<input data-k="duration" placeholder="2 hrs"></label>
         <label class="f">Teacher name<input data-k="teacher" placeholder="e.g. Jenifer Clark"></label>
         <label class="f"><span>Class / Grade <span class="hint">· leave blank → students fill in</span></span><input data-k="className" placeholder="e.g. Grade 8B"></label>
         <label class="f"><span>Date <span class="hint">· leave blank → students fill in</span></span><input data-k="date" placeholder="e.g. 12 Dec 2025"></label>
         <label class="f"><span>Total marks <span class="hint" id="autoTotalHint">· auto: 0</span></span><input data-k="totalOverride" type="number" min="0" step="0.5" placeholder="auto from questions"></label>
-          <label class="f">School name<input data-k="school" placeholder="The Hive Academy"></label>
         <label class="f full">Instructions <span class="hint">one instruction per line — each becomes a bullet</span><textarea data-k="instructions"></textarea></label>
         </div>
       </div>
@@ -75,6 +74,7 @@
           <label class="f">Language on the paper<select data-k="lang"><option value="">English</option><option value="fr">Français</option></select></label>
           <label class="f">Question font size<select data-k="fontSize"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12">12 pt</option><option value="13">13 pt</option><option value="14">14 pt</option><option value="16">16 pt</option><option value="18">18 pt</option></select></label>
           <label class="f">Line spacing<select data-k="lineSpacing"><option value="1">Normal</option><option value="1.5">1.5 lines</option><option value="2">Double</option></select></label>
+          <label class="f full"><span>School name <span class="hint">· at the bottom of every page, and on the cover when there is no logo</span></span><input data-k="school" placeholder="The Hive Academy"></label>
           <div class="f full">
             <span class="kind" style="margin-bottom:6px">Logo</span>
             <div class="logo-row">
