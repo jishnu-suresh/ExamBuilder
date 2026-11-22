@@ -45,6 +45,7 @@ const away = () => document.visibilityState === "hidden" || !document.hasFocus()
 // every time the student leaves: beep, lock, record — and keep beeping until they come back
 function left(how){
   if(!running || !ST || ST.endedAt || (typeof picking !== "undefined" && picking)) return;
+  if(ST.timeUpAt){ logEv("left", { how, afterTimeUp: true }); return; }
   if(!awaySince) awaySince = now();
   logEv("left", { how });
   if(!ST.locked){ ST.locked = { at: now(), how }; showLock(); }
@@ -81,14 +82,15 @@ function showLock(){
   if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
   $("#scrLock").classList.remove("hidden"); $("#lkCode").value = ""; $("#lkErr").textContent = ""; setTimeout(() => $("#lkCode").focus(), 50);
   flashOn(); }
-// until the teacher unlocks: the lock screen flashes white / red (once a second: well under the 3-a-second safety limit)
-// and the window's title flashes, so it shows in the taskbar or tab bar even from another app
+// until the teacher unlocks: the lock screen glows softly, and the window's title alternates (calmly, every 2 s),
+// so it shows in the taskbar or tab bar even from another app
 let flashT = null, title0 = null;
 function flashOn(){
   $("#scrLock").classList.add("flash");
   if(flashT) return;
   title0 = title0 || document.title; let on = false;
-  flashT = setInterval(() => { on = !on; document.title = on ? "⚠️ LEFT THE TEST ⚠️" : "🔒 Locked · ask your teacher"; }, 700);
+  flashT = setInterval(() => { on = !on; document.title = on ? "🔒 Waiting for the teacher" : (title0 || "BEE test"); }, 2000);
+  document.title = "🔒 Waiting for the teacher";
 }
 function flashOff(){ $("#scrLock").classList.remove("flash"); clearInterval(flashT); flashT = null; if(title0) document.title = title0; }
 async function teacherOK(code){ return (await BC.codeHash(code, EXAM.unlock.salt, EXAM.unlock.iter)) === EXAM.unlock.hash; }
@@ -128,8 +130,31 @@ function tick(){
     if(ST.lastCheck == null) ST.lastCheck = q;
     if(q < ST.lastCheck && ms > 10 * 60000){ ST.lastCheck = q; timeNote("Time check: " + Math.round(ms / 60000) + " minutes left."); }
   }
-  if(ms <= 0) endTest("time");
+  if(ms <= 0 && $("#scrTimeUp").classList.contains("hidden")) timeUp();   // also after a reload: the screen comes back
 }
+// ⏰ time's up: the paper is covered (no more typing) until the teacher adds time or finishes the test
+function timeUp(){
+  if(!ST.timeUpAt){ ST.timeUpAt = now(); logEv("time up"); changed(); saveNow(); }
+  try{ stopReading(); }catch(_){}
+  try{ window.mathVirtualKeyboard && mathVirtualKeyboard.hide(); }catch(_){}
+  $$(".modal").forEach(m => m.classList.add("hidden"));
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  $("#tuCodeRow").classList.remove("hidden"); $("#tuMenu").classList.add("hidden"); $("#tuCode").value = ""; $("#tuErr").textContent = "";
+  $("#scrTimeUp").classList.remove("hidden"); setTimeout(() => $("#tuCode").focus(), 50);
+  title0 = title0 || document.title; document.title = "⏰ Time's up · waiting for the teacher";
+}
+function timeUpDone(){ $("#scrTimeUp").classList.add("hidden"); if(title0) document.title = title0; }
+$("#tuCode").addEventListener("keydown", e => { if(e.key === "Enter") $("#tuGo").click(); });
+$("#tuGo").onclick = async () => {
+  soundOn(); goFull();
+  if(!(await teacherOK($("#tuCode").value))){ $("#tuErr").textContent = "That's not the teacher code."; logEv("wrong teacher code"); return; }
+  $("#tuCodeRow").classList.add("hidden"); $("#tuMenu").classList.remove("hidden");
+};
+document.querySelectorAll("#tuMenu [data-add]").forEach(b => b.onclick = () => {
+  const m = +b.dataset.add; ST.extraMin = (ST.extraMin || 0) + m; ST.warned = {}; ST.timeUpAt = null;
+  logEv("time added by teacher", { min: m }); changed(); saveNow(); timeUpDone(); goFull(); tick(); toast(`${m} more minutes.`);
+});
+$("#tuEnd").onclick = () => { timeUpDone(); endTest("time"); };
 function timeNote(txt){
   const n = document.createElement("div"); n.className = "time-note"; n.setAttribute("role", "status"); n.textContent = "⏱ " + txt;
   document.body.appendChild(n); setTimeout(() => n.remove(), 9000);
