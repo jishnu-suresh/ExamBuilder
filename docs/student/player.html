@@ -4443,9 +4443,15 @@ function curVoice(){ const id = $("#ttsVoice").value; if(id === TEACHER){ const 
 // one player for all the recordings: Safari lets the same player carry on to the next question by itself
 const VO = new Audio(); VO.preload = "auto";
 function playRec(){
-  const tok = ++TTS.tok, U = UNITS[TTS.i];
-  const fallback = () => { if(tok !== TTS.tok) return; U.audioBad = true; if(hasTTS()) readUnit(TTS.i); else { toast("This computer can't play the recording."); stopReading(); } };
-  VO.onended = () => { if(tok !== TTS.tok) return; TTS.k = 1; unitDone(); };
+  const tok = ++TTS.tok, U = UNITS[TTS.i]; let started = false;
+  // the computer voice steps in only if the recording never started (some browsers report an error at the very end)
+  const fallback = () => {
+    if(tok !== TTS.tok || TTS.k >= 1) return;
+    if(started){ TTS.k = 1; unitDone(); return; }
+    U.audioBad = true; if(hasTTS()) readUnit(TTS.i); else { toast("This computer can't play the recording."); stopReading(); }
+  };
+  VO.onplaying = () => { if(tok === TTS.tok) started = true; };
+  VO.onended = () => { if(tok !== TTS.tok || TTS.k >= 1) return; TTS.k = 1; unitDone(); };
   VO.onerror = fallback;
   if(VO.src !== U.audio) VO.src = U.audio; else VO.currentTime = 0;
   VO.playbackRate = ST.prefs.rate || 1;

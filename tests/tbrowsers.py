@@ -35,6 +35,7 @@ async def main():
         ctx, pg, errs, d = await T.make_student_file(b, url=WEB, setup=rec)
         if NAME != "webkit":
             r = await pg.evaluate("[window.__rec, AUD()[window.__rec.key] && AUD()[window.__rec.key].src.slice(0, 22)]")
+            print(f"NOTE [{NAME}] recorded as", r[1], flush=True)
             ok("🎙️ recording your voice works", r[0]["mic"] and r[1].startswith("data:audio/"), r)
         await pg.wait_for_timeout(600)
         ok("making the computer version: the window shows 'Student file ready' with the codes", await pg.is_visible("#stuDone h3") and (await pg.text_content("#stuShowCode")).strip() == "ABCD-2345")
@@ -58,7 +59,11 @@ async def main():
             v = await sp.evaluate(f"({{ rec: TTS.rec, t: VO.currentTime, ended: VO.ended, bad: !!UNITS[{ri}].audioBad, tts: speechSynthesis.q.length, playBtn: $('#ttsPlay').textContent }})")
             played = v["rec"] and (v["t"] > 0 or v["ended"]); fell = v["bad"] and v["tts"] > 0
             print(f"NOTE [{NAME}] the teacher's recording " + ("plays" if played else "can't play here: the computer voice reads it" if fell else "?"), v, flush=True)
-            ok("🎙️ the teacher's recording plays, or the computer voice reads it instead", played or fell, v)
+            if NAME == "webkit": ok("🎙️ the teacher's recording plays, or the computer voice reads it instead", played or fell, v)
+            else: ok("🎙️ the teacher's recording, made in this browser, plays here (and only once)", played and not v["bad"] and v["tts"] == 0, v)
+            await sp.wait_for_timeout(1500)
+            v2 = await sp.evaluate(f"({{ bad: !!UNITS[{ri}].audioBad, tts: speechSynthesis.q.length, i: TTS.i }})")
+            ok("🎙️ after the recording ends, the computer voice does not read it again", not v2["tts"] or v["bad"], v2)
             await sp.evaluate("stopReading()")
         else: ok("🎙️ the student file has the teacher's recording", False, "no unit with audio")
         qs = await sp.evaluate("PAPER.items.filter(i => i.k === 'q').map(q => q.id)")
