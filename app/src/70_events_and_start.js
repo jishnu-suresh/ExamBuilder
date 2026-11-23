@@ -396,6 +396,7 @@ document.querySelectorAll(".ver").forEach(e => { e.textContent = BEE_VERSION; })
 const NEWS = [
   { id: "2026-11-23-v2.2", title: "v2.2 · November 2026", items: [
     "🎙️ <b>Read aloud in your own voice.</b> In ⬇ Download → 👩‍🏫 Teacher → 💻 Computer version, press <b>🎙️ Record…</b> and read each question once. Students hear you instead of the computer voice, on every laptop and iPad, even offline.",
+    "<b>Don't say the question number</b>, because versions A–D can change it. For multiple choice, read the options too.",
     "Anything you don't record is still read by the computer voice. If you change a question after recording it, BEE marks it <b>⚠ text changed</b> so the wrong words are never played.",
     "Your recordings are saved with the exam, in its .exam.json file.",
     "📂 Opening a saved exam no longer waits on the start screen for the browser's \"Allow editing\" question."
