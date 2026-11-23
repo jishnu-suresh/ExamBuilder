@@ -9,28 +9,29 @@ function renderPaper(){
   const P = PAPER, c = P.cover, el = $("#paper"), RO = READ_ONLY();
   UNITS = [];
   // tidy the spoken text: no " ." or "?." (they make some voices pause oddly)
-  const unit = (label, text) => { UNITS.push({ label, text: String(text || "").replace(/\s+([.,;:?!])/g, "$1").replace(/([.?!:])(\s*\.)+/g, "$1").replace(/\s+/g, " ").trim() }); return UNITS.length - 1; };
+  // key: the same key BEE uses for the teacher's 🎙️ recording of this part (if there is one)
+  const unit = (label, text, key) => { UNITS.push({ label, audio: key && P.audio && P.audio[key] || null, text: String(text || "").replace(/\s+([.,;:?!])/g, "$1").replace(/([.?!:])(\s*\.)+/g, "$1").replace(/\s+/g, " ").trim() }); return UNITS.length - 1; };
   const sayBtn = (u, t) => EXAM.readAloud ? `<button class="ico" data-say="${u}" title="${esc(t || "Read this aloud")}">🔊</button>` : "";
   const facts = [c.subject && ["Subject", c.subject], (EXAM.timeMin || c.durationText) && ["Time", EXAM.timeMin ? EXAM.timeMin + " minutes" : c.durationText], c.total && ["Total", c.total + " marks"], c.teacher && ["Teacher", c.teacher], c.date && ["Date", c.date]].filter(Boolean);
   let h = `<div class="cover"><h1>${esc(c.title)}</h1>${c.subtitle ? `<div class="sub">${esc(c.subtitle)}</div>` : ""}
     <div class="meta">${facts.map(([k, v]) => `<span>${esc(k)}: <b>${esc(v)}</b></span>`).join("")}</div>
-    ${c.instructionsHTML ? `<div class="instr rich" data-u="${unit(SW().ins, SW().ins + ". " + (c.instructionsPlain || ""))}">${c.instructionsHTML}<div style="text-align:right">${sayBtn(UNITS.length - 1, "Read the instructions")}</div></div>` : ""}</div>`;
+    ${c.instructionsHTML ? `<div class="instr rich" data-u="${unit(SW().ins, SW().ins + ". " + (c.instructionsPlain || ""), "ins")}">${c.instructionsHTML}<div style="text-align:right">${sayBtn(UNITS.length - 1, "Read the instructions")}</div></div>` : ""}</div>`;
   for(const it of P.items){
-    if(it.k === "sec"){ h += `<h2 class="sec rich" data-u="${unit(it.plain.slice(0, 40), it.plain)}">${it.html}</h2>`; continue; }
+    if(it.k === "sec"){ h += `<h2 class="sec rich" data-u="${unit(it.plain.slice(0, 40), it.plain, it.id)}">${it.html}</h2>`; continue; }
     if(it.k === "note"){
-      if(it.heading){ h += `<div class="note rich heading" data-u="${unit(it.plain.slice(0, 40), it.plain)}">${it.html}</div>`; continue; }
-      const u = unit(it.plain.length > 30 ? "Text" : it.plain, it.plain);
+      if(it.heading){ h += `<div class="note rich heading" data-u="${unit(it.plain.slice(0, 40), it.plain, it.id)}">${it.html}</div>`; continue; }
+      const u = unit(it.plain.length > 30 ? "Text" : it.plain, it.plain, it.id);
       h += `<div class="note rich" data-u="${u}">${it.html}${it.plain.length > 30 || RO ? `<div style="text-align:right">${sayBtn(u)}</div>` : ""}</div>`; continue;
     }
     const qn = it.no ? "Question " + it.no : "Question";
     const w = SW(), opts = it.mcq ? " ‖ " + (it.mcq === "multi" ? w.multi : w.one) + it.opts.map(o => " ‖ " + w.opt + " " + o.L + ": " + o.plain + ".").join("") + " ‖ " : "";
-    const u = unit(qn, qn + ". " + it.plain + (opts ? "." + opts : "") + (it.marks ? (opts ? "" : ". ") + w.mk(it.marks) : ""));
+    const u = unit(qn, qn + ". " + it.plain + (opts ? "." + opts : "") + (it.marks ? (opts ? "" : ". ") + w.mk(it.marks) : ""), it.id);
     h += `<section class="q" id="q-${it.id}" data-q="${it.id}">
       <div class="qh"><span class="no">${esc(it.no || "")}</span>
         <div class="body"><div data-u="${u}"><div class="rich">${it.html}</div>
           ${it.mcq ? (RO ? `<div class="ro-opts">${it.opts.map(o => `<div><b>${esc(o.L)}.</b><span class="rich">${o.html}</span></div>`).join("")}</div>` : optsHTML(it)) : ""}</div>
           ${it.ans && !RO ? `<div data-area="${it.id}|main"></div>` : ""}
-          ${(it.subs || []).map(sb => { const su = unit(qn + " " + sb.L, SW().part + " " + sb.L.replace(/[()]/g, "") + ". " + sb.plain + (sb.marks ? ". " + SW().mk(sb.marks) : "")); return `<div class="sub" data-sk="${esc(sb.key)}"><div class="sl" data-u="${su}"><b>${esc(sb.L)}</b><div class="rich" style="flex:1">${sb.html}</div>
+          ${(it.subs || []).map(sb => { const su = unit(qn + " " + sb.L, SW().part + " " + sb.L.replace(/[()]/g, "") + ". " + sb.plain + (sb.marks ? ". " + SW().mk(sb.marks) : ""), "s:" + it.id + ":" + sb.key); return `<div class="sub" data-sk="${esc(sb.key)}"><div class="sl" data-u="${su}"><b>${esc(sb.L)}</b><div class="rich" style="flex:1">${sb.html}</div>
               ${sb.marks ? `<span class="mk">[${esc(sb.marks)}]</span>` : ""}${sayBtn(su, "Read " + sb.L + " aloud")}</div>
               ${RO ? "" : `<div data-area="${it.id}|s:${sb.key}"></div>`}</div>`; }).join("")}
         </div>

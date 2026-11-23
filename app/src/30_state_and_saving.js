@@ -102,7 +102,9 @@ setInterval(() => { if(S.items.length && (S.savedAt || 0) > versLastAt && Date.n
 function snapshot(){
   const used = new Set(); S.items.forEach(it => [it.text, it.answer].concat((it.subs || []).flatMap(sb => [sb.text, sb.answer])).forEach(t => String(t || "").split("\n").forEach(l => { const m = l.match(RE_IMG); if(m) used.add(m[1]); })));
   const items = S.items.map(it => it.pics && Object.keys(it.pics).some(k => !used.has(k)) ? Object.assign({}, it, { pics: Object.fromEntries(Object.entries(it.pics).filter(([k]) => used.has(k))) }) : it);
-  return { app: "exam-builder", version: 2, savedAt: S.savedAt || Date.now(), d: S.d, logo: S.logo.isDefault ? { isDefault: true } : S.logo, items };
+  // 🎙️ the teacher's recordings travel with the exam (kept outside d/items, so undo and typing never copy them)
+  const audio = S.audio && Object.keys(S.audio).length ? S.audio : undefined;
+  return { app: "exam-builder", version: 2, savedAt: S.savedAt || Date.now(), d: S.d, logo: S.logo.isDefault ? { isDefault: true } : S.logo, items, audio };
 }
 async function loadLocal(){
   let o = null;
@@ -112,7 +114,8 @@ async function loadLocal(){
 }
 function mergeState(o){
   const base = defaults();
-  const out = { d: Object.assign(base.d, o.d || {}), logo: o.logo || base.logo, items: Array.isArray(o.items) ? o.items : [], savedAt: o.savedAt || 0 };
+  const out = { d: Object.assign(base.d, o.d || {}), logo: o.logo || base.logo, items: Array.isArray(o.items) ? o.items : [], savedAt: o.savedAt || 0,
+    audio: o.audio && typeof o.audio === "object" && !Array.isArray(o.audio) ? o.audio : {} };
   if(out.logo && out.logo.isDefault) out.logo = base.logo;
   if(!out.d.accentChosen && /^#b5892e$/i.test(out.d.accent || "")) out.d.accent = defaults().d.accent;
   out.items.forEach(it => { if(!it.id) it.id = nid(); });
@@ -177,7 +180,7 @@ function saveLocal(clean){
   saveT = setTimeout(async () => {
     const snap = snapshot();
     try{ await IDB.set("state", snap); }
-    catch(e){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(snap)); }catch(_){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(Object.assign({}, snap, { items: S.items.map(it => Object.assign({}, it, { img: null })) }))); }catch(__){} } }
+    catch(e){ try{ const s2 = Object.assign({}, snap); delete s2.audio; localStorage.setItem(STORE_KEY, JSON.stringify(s2)); }catch(_){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(Object.assign({}, snap, { audio: undefined, items: S.items.map(it => Object.assign({}, it, { img: null })) }))); }catch(__){} } }
   }, 400);
 }
 

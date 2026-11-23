@@ -22,7 +22,7 @@ async def main():
         ok("start screen: 📝 Simple quiz and ✨ Every feature demos", await pg.is_visible("#stDemoSimple") and await pg.is_visible("#stDemo"))
         ok("first visit: no 'What's new' window", await pg.is_hidden("#newsModal"))
         await pg.click("#stNews"); await pg.wait_for_timeout(200)
-        ok("✨ What's new opens from the start screen", await pg.is_visible("#newsModal") and "File" in await pg.text_content("#newsList"))
+        ok("✨ What's new opens from the start screen", await pg.is_visible("#newsModal") and (await pg.evaluate("BEE_VERSION")) in await pg.text_content("#newsList"))
         await pg.click("#newsModal [data-close]")
         p3 = await ctx.new_page()
         await p3.add_init_script("Object.defineProperty(navigator, 'webdriver', { get: () => false }); localStorage.setItem('bee.toured', '1'); localStorage.setItem('bee.news', 'old')")

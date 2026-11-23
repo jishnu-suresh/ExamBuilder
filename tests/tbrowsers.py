@@ -22,9 +22,20 @@ WEB = "http://127.0.0.1:8766/"
 
 async def main():
     async with async_playwright() as p:
-        b = await getattr(p, NAME).launch()
+        b = await getattr(p, NAME).launch(**({"firefox_user_prefs": {"media.navigator.streams.fake": True, "media.navigator.permission.disabled": True}} if NAME == "firefox"
+                                             else {"args": ["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"]} if NAME == "chromium" else {}))
+        # 🎙️ the first question in the teacher's voice: recorded here with a pretend microphone (Firefox, Chromium),
+        # or a sample recorded in Chrome (WebKit has no pretend microphone)
+        sample = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "voice_sample.txt")).read().strip()
+        rec = """async () => { const u = recUnits(S.items).find(x => S.items.some(it => it.id === x.key && it.type === 'q'));
+          window.__rec = { key: u.key, mic: false };
+          if(%s){ try{ await startRec(u.key); await new Promise(r => setTimeout(r, 1800)); await stopRec(); }catch(e){ window.__rec.err = String(e); } window.__rec.mic = !!AUD()[u.key]; }
+          if(!AUD()[u.key]) AUD()[u.key] = { src: "%s", sig: u.sig, dur: 1.3 }; }""" % ("true" if NAME != "webkit" else "false", sample)
         # ---------- teacher: BEE opens, the demo paper becomes a PDF
-        ctx, pg, errs, d = await T.make_student_file(b, url=WEB)
+        ctx, pg, errs, d = await T.make_student_file(b, url=WEB, setup=rec)
+        if NAME != "webkit":
+            r = await pg.evaluate("[window.__rec, AUD()[window.__rec.key] && AUD()[window.__rec.key].src.slice(0, 22)]")
+            ok("🎙️ recording your voice works", r[0]["mic"] and r[1].startswith("data:audio/"), r)
         await pg.wait_for_timeout(600)
         ok("making the computer version: the window shows 'Student file ready' with the codes", await pg.is_visible("#stuDone h3") and (await pg.text_content("#stuShowCode")).strip() == "ABCD-2345")
         n = await pg.evaluate("(() => { const doc = buildPDF({}); return doc.getNumberOfPages(); })()")
@@ -39,6 +50,17 @@ async def main():
         await sp.fill("#stName", "Léa Martin"); await sp.fill("#stClass", "10B")
         await sp.fill("#stCode", "ABCD-2345"); await sp.click("#stGo"); await sp.wait_for_timeout(3000)
         ok("the start code opens the paper", await sp.is_visible("#scrExam"))
+        # 🎙️ the teacher's recording: it plays, or (if this browser can't play it) the computer voice reads instead
+        await sp.evaluate(T.FAKE_TTS)
+        ri = await sp.evaluate("UNITS.findIndex(u => u.audio)")
+        if ri >= 0:
+            await sp.evaluate("fillVoices()"); await sp.click(f'[data-say="{ri}"]'); await sp.wait_for_timeout(1500)
+            v = await sp.evaluate(f"({{ rec: TTS.rec, t: VO.currentTime, ended: VO.ended, bad: !!UNITS[{ri}].audioBad, tts: speechSynthesis.q.length, playBtn: $('#ttsPlay').textContent }})")
+            played = v["rec"] and (v["t"] > 0 or v["ended"]); fell = v["bad"] and v["tts"] > 0
+            print(f"NOTE [{NAME}] the teacher's recording " + ("plays" if played else "can't play here: the computer voice reads it" if fell else "?"), v, flush=True)
+            ok("🎙️ the teacher's recording plays, or the computer voice reads it instead", played or fell, v)
+            await sp.evaluate("stopReading()")
+        else: ok("🎙️ the student file has the teacher's recording", False, "no unit with audio")
         qs = await sp.evaluate("PAPER.items.filter(i => i.k === 'q').map(q => q.id)")
         await sp.fill(f"[data-area='{qs[0]}|main'] textarea", "27")
         pq = await sp.evaluate("PAPER.items.find(i => i.k === 'q' && /Pisum/.test(i.plain)).id")

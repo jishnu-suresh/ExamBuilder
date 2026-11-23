@@ -16,5 +16,6 @@
 64_versions_find_arrange_label.js
 65_student_version.js
 66_speech.js
+67_voice_recorder.js
 70_events_and_start.js
 99_end.html

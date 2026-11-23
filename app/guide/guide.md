@@ -68,6 +68,8 @@ Students can also answer on a laptop, offline. You make the exam in BEE as usual
 5. **When time is up**, the screen asks the student to raise their hand. Type the teacher code, then add time or **Finish**: the answers are saved as one `.bee-answers` file.
 6. **Mark:** collect the answer files and open them with ⬇ Download → 👩‍🏫 Teacher → **📥 Student answers**. Each becomes a PDF of the paper with the student's answers in blue.
 
+**🔊 Read aloud in your own voice.** In the 💻 Computer version window, press **🎙️ Record…** and read each question once (● Record, then ■ Stop). Students then hear you instead of the computer voice, on every laptop and iPad, even offline. Don't say the question number, and read multiple-choice options too. If you change a question afterwards, BEE marks its recording **⚠ text changed**: record it again, or press ✓ Still right. Anything you don't record is read by the computer voice (most natural in Microsoft Edge with internet).
+
 ## Printing
 
 Print at **100% (“Actual size”)**, not “Fit to page”: otherwise the answer lines and margins shrink.

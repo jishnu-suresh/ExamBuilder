@@ -196,7 +196,10 @@ function stuModeUI(){
   $("#stuReadRow").classList.toggle("hidden", read); $("#stuDrawRow").classList.toggle("hidden", read);
   $("#stuVoiceRow").classList.toggle("hidden", (S.d.lang || "en") !== "en");
   $("#stuGo").textContent = read ? "⬇ Download the read-aloud file" : "⬇ Download the student file";
+  $("#stuRecRow").classList.toggle("hidden", !(read || $("#stuRead").checked));      // 🎙️ only when questions can be read aloud
+  if(typeof recInfo === "function") recInfo();
 }
+$("#stuRead").addEventListener("change", stuModeUI);
 document.querySelectorAll('input[name="stuMode"]').forEach(r => r.addEventListener("change", stuModeUI));
 $("#stuCodeNew").onclick = () => { $("#stuCode").value = BC.newCode(8); };
 $("#stuTCodeNew").onclick = () => { $("#stuTCode").value = BC.newCode(6, true); };
@@ -255,10 +258,10 @@ function buildPaper(items){
   const out = [];
   for(const it0 of items){
     const it = cloneItem(it0); ensureOptions(it);
-    if(it.type === "section"){ const r = studentRich(it.text, it, pics); out.push({ k: "sec", html: r.html, plain: r.plain }); continue; }
+    if(it.type === "section"){ const r = studentRich(it.text, it, pics); out.push({ k: "sec", id: it.id, html: r.html, plain: r.plain }); continue; }
     if(it.type !== "q"){
       if(it.pagebreak || !((it.text || "").trim() || it.img)) continue;
-      const r = studentRich(it.text, it, pics); out.push({ k: "note", heading: !!it.heading, html: r.html + attachedPic(it, pics), plain: r.plain }); continue;
+      const r = studentRich(it.text, it, pics); out.push({ k: "note", id: it.id, heading: !!it.heading, html: r.html + attachedPic(it, pics), plain: r.plain }); continue;
     }
     const subs = Array.isArray(it.subs) ? it.subs : [], subMarks = subs.some(sb => num(sb.marks) > 0);
     const r = studentRich(it.text, it, pics);
@@ -295,6 +298,8 @@ $("#stuGo").onclick = async () => {
     const items = ver ? versionItems(S.items, ver, true, true) : S.items.map(cloneItem);
     await prepareMath({ items, logo: S.logo });
     const { paper, nq, total } = buildPaper(items);
+    // 🎙️ the teacher's recordings that still match their text (in this version), inside the locked paper
+    if(mode === "read" || $("#stuRead").checked){ const au = voiceFor(items); if(Object.keys(au).length) paper.audio = au; }
     const noTime = $("#stuNoTime").checked, base = noTime ? 0 : Math.max(1, +$("#stuMin").value || 60), extraPct = noTime ? 0 : +$("#stuExtra").value;
     const key = await needSchoolKey();
     if(!key){ toast("The school key is needed to make student files."); return; }

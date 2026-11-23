@@ -290,6 +290,16 @@ $$\int_0^1 \frac{x^2}{\sqrt{1+x^3}}\,dx$$     ← $$…$$ = equation on its own 
   </div>
 </div>
 <div class="errbar hidden" id="errBar" role="alert"><span>⚠️ <b>Something went wrong in BEE.</b> Your work is kept. Please tell us so it can be fixed.</span><button class="btn sm primary" id="errReport">💬 Report it</button><button class="btn sm icon" id="errClose" aria-label="Close">×</button></div>
+<div class="modal" id="recModal" data-sticky>
+  <div class="box" style="max-width:700px">
+    <h3 style="margin:0 0 4px">🎙️ Read the paper in your own voice</h3>
+    <p class="hint" style="margin:0 0 8px">Press <b>● Record</b>, read the text as it is written, then <b>■ Stop</b>. Students hear you when they press 🔊; anything you don't record is read by the computer voice.
+      <b>Don't say the question number</b> (versions A–D can change it). For multiple choice, read the options too: "A: …, B: …".</p>
+    <div class="rec-sum" id="recSum"></div>
+    <div id="recList" class="rec-list"></div>
+    <div class="actions" style="justify-content:flex-end"><button class="btn primary" data-close>Done</button></div>
+  </div>
+</div>
 <div class="modal" id="newsModal">
   <div class="box" style="max-width:520px">
     <h3 style="margin:0 0 4px">✨ What's new in 🐝 BEE</h3>
@@ -542,7 +552,7 @@ x = 3
     <p class="start-note" id="stNote"></p>
     <div class="start-foot">
       <a href="#" id="stSkip">Continue without a project file</a><span class="dot">·</span><a href="#" id="stWipe" data-wipe>🧹 Shared computer? Remove my exams</a>
-      <div class="start-credit">🐝 BEE <span class="ver">v2.1</span> · Build • Edit • Evaluate · © Jishnu <a class="fb-link" href="https://forms.cloud.microsoft/r/KXXUcfCRvs" target="_blank" rel="noopener" title="Report a problem or share an idea (feedback form)" aria-label="Feedback form: report a problem or share an idea">💬</a></div>
+      <div class="start-credit">🐝 BEE <span class="ver">v2.2</span> · Build • Edit • Evaluate · © Jishnu <a class="fb-link" href="https://forms.cloud.microsoft/r/KXXUcfCRvs" target="_blank" rel="noopener" title="Report a problem or share an idea (feedback form)" aria-label="Feedback form: report a problem or share an idea">💬</a></div>
     </div>
   </div>
 </div>
@@ -554,7 +564,7 @@ x = 3
   <div class="tour-step" id="tourStep"></div><h3 id="tourTitle"></h3><p id="tourText"></p>
   <div class="tour-btns"><a href="#" id="tourSkip">Skip tour</a><span style="flex:1"></span><button class="btn sm" id="tourBack">← Back</button><button class="btn sm primary" id="tourNext">Next →</button></div>
 </div>
-<div class="wm"><span aria-hidden="true">🐝 BEE <span class="ver">v2.1</span> · © Jishnu</span> <a class="fb-link" href="https://forms.cloud.microsoft/r/KXXUcfCRvs" target="_blank" rel="noopener" title="Report a problem or share an idea (feedback form)" aria-label="Feedback form: report a problem or share an idea">💬</a></div>
+<div class="wm"><span aria-hidden="true">🐝 BEE <span class="ver">v2.2</span> · © Jishnu</span> <a class="fb-link" href="https://forms.cloud.microsoft/r/KXXUcfCRvs" target="_blank" rel="noopener" title="Report a problem or share an idea (feedback form)" aria-label="Feedback form: report a problem or share an idea">💬</a></div>
 <!-- VERSIONS -->
 <!-- 💻 COMPUTER VERSION FOR STUDENTS -->
 <div class="modal" id="stuModal">
@@ -575,6 +585,7 @@ x = 3
       <div class="checks" style="flex-direction:column;gap:6px;margin-top:8px">
         <label><input type="checkbox" id="stuNoTime"> No time limit</label>
         <label id="stuReadRow"><input type="checkbox" id="stuRead" checked> 🔊 Students may have questions read aloud <span class="hint">(turn off for reading tests)</span></label>
+        <div id="stuRecRow" class="rec-row"><span>🎙️ <b>Your own voice</b> <span class="hint" id="stuRecInfo">Record the questions yourself: students hear you instead of the computer voice.</span></span><button class="btn sm" type="button" id="stuRecBtn">🎙️ Record…</button></div>
         <label id="stuDrawRow"><input type="checkbox" id="stuDraw" checked> ✏️ Drawing pad (sketches, graphs, labelling pictures)</label>
       </div>
       <div class="acc-box" id="stuAcc">
@@ -743,7 +754,7 @@ if(window.pdfjsLib){
 <script type="text/plain" id="tess-eng">__TESS_ENG__</script>
 <script>
 "use strict";
-const DEFAULT_LOGO = "__LOGO__", BEE_BUILD = "__BUILD__", BEE_VERSION = "v2.1";   // the version teachers see (raise it for each release)
+const DEFAULT_LOGO = "__LOGO__", BEE_BUILD = "__BUILD__", BEE_VERSION = "v2.2";   // the version teachers see (raise it for each release)
 const GUIDE_HTML = /*__GUIDE__*/"";
 const DEFAULT_LOGO_SIZE = [__LOGO_W__, __LOGO_H__];
 let FONT_R = "__FONT_R__";

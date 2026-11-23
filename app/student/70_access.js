@@ -59,15 +59,35 @@ function voiceList(){
     return { v, score, label: (nm || v.name) + (acc ? " — " + acc : "") + (/natural|neural|premium|enhanced/i.test(v.name) ? " ★" : "") + (!v.localService ? " (internet)" : "") };
   }).sort((a, b) => b.score - a.score);
 }
+// 🎙️ the teacher recorded some of the paper: their voice comes first (the computer voice reads the rest)
+const hasRec = () => !!(PAPER && PAPER.audio && Object.keys(PAPER.audio).length);
+const TEACHER = "__teacher";
 function fillVoices(){
   const vs = voiceList(), sel = $("#ttsVoice");
-  sel.innerHTML = vs.map((x, k) => `<option value="${esc(x.v.voiceURI)}">${esc(x.label)}</option>`).join("");
-  sel.classList.toggle("hidden", !vs.length);
-  const keep = ST && ST.prefs.voice && vs.find(x => x.v.voiceURI === ST.prefs.voice);
-  if(keep) sel.value = ST.prefs.voice; else if(vs[0]) sel.value = vs[0].v.voiceURI;
+  sel.innerHTML = (hasRec() ? `<option value="${TEACHER}">🎙️ Your teacher's voice</option>` : "") + vs.map((x, k) => `<option value="${esc(x.v.voiceURI)}">${esc(x.label)}</option>`).join("");
+  sel.classList.toggle("hidden", !sel.options.length);
+  const keep = ST && ST.prefs.voice && [...sel.options].some(o => o.value === ST.prefs.voice);
+  if(keep) sel.value = ST.prefs.voice; else if(sel.options[0]) sel.value = sel.options[0].value;
 }
+const teacherOn = () => hasRec() && $("#ttsVoice").value === TEACHER;
 if(hasTTS()) speechSynthesis.addEventListener("voiceschanged", () => { if(PAPER) fillVoices(); });
-function curVoice(){ const id = $("#ttsVoice").value; return speechSynthesis.getVoices().find(v => v.voiceURI === id) || null; }
+function curVoice(){ const id = $("#ttsVoice").value; if(id === TEACHER){ const b = voiceList()[0]; return b ? b.v : null; } return speechSynthesis.getVoices().find(v => v.voiceURI === id) || null; }
+// one player for all the recordings: Safari lets the same player carry on to the next question by itself
+const VO = new Audio(); VO.preload = "auto";
+function playRec(){
+  const tok = ++TTS.tok, U = UNITS[TTS.i];
+  const fallback = () => { if(tok !== TTS.tok) return; U.audioBad = true; if(hasTTS()) readUnit(TTS.i); else { toast("This computer can't play the recording."); stopReading(); } };
+  VO.onended = () => { if(tok !== TTS.tok) return; TTS.k = 1; unitDone(); };
+  VO.onerror = fallback;
+  if(VO.src !== U.audio) VO.src = U.audio; else VO.currentTime = 0;
+  VO.playbackRate = ST.prefs.rate || 1;
+  const p = VO.play();
+  if(p && p.catch) p.catch(e => { if(tok !== TTS.tok) return; if(e && e.name === "NotAllowedError"){ TTS.paused = true; $("#ttsPlay").textContent = "▶"; } else if(!(e && e.name === "AbortError")) fallback(); });
+}
+function unitDone(){
+  if($("#ttsGo").checked && TTS.i + 1 < UNITS.length) return readUnit(TTS.i + 1);
+  TTS.paused = false; $("#ttsPlay").textContent = "▶";
+}
 // short pieces: Chrome stops long readings, and a pause or a new speed is quicker to apply.
 // A piece only ends at . ! ? ; : followed by a space, so "9.8" is never cut. "‖" starts a new piece after a short pause.
 function chunks(t){
@@ -86,23 +106,22 @@ function chunks(t){
 }
 function mark(){ $$(".reading").forEach(e => e.classList.remove("reading")); const u = UNITS[TTS.i]; if(u && u.el){ u.el.classList.add("reading"); const r = u.el.getBoundingClientRect(); if(r.top < 70 || r.bottom > innerHeight - 100) u.el.scrollIntoView({ behavior: "smooth", block: "center" }); } }
 function readUnit(i){
-  if(!hasTTS()) return toast("This computer can't read aloud.");
   if(i < 0 || i >= UNITS.length) return stopReading();
-  speechSynthesis.cancel();
-  TTS.i = i; TTS.chunks = chunks(UNITS[i].text); TTS.k = 0; TTS.paused = false; TTS.tok++;
+  const rec = !!(UNITS[i].audio && !UNITS[i].audioBad && teacherOn());
+  if(!rec && !hasTTS()) return toast("This computer can't read aloud.");
+  if(hasTTS()) speechSynthesis.cancel();
+  try{ VO.pause(); }catch(_){}
+  TTS.i = i; TTS.rec = rec; TTS.chunks = rec ? [{ t: "" }] : chunks(UNITS[i].text); TTS.k = 0; TTS.paused = false; TTS.tok++;
   $("#tts").classList.remove("hidden"); document.body.classList.add("tts-up");
   $("#ttsLab").textContent = "🔊 " + UNITS[i].label; $("#ttsPlay").textContent = "⏸";
-  mark(); speakChunk();
+  mark(); if(rec) playRec(); else speakChunk();
   logEv("read aloud");
 }
 function speakChunk(){
   const tok = ++TTS.tok;
-  if(TTS.k >= TTS.chunks.length){
-    if($("#ttsGo").checked && TTS.i + 1 < UNITS.length) return readUnit(TTS.i + 1);
-    TTS.paused = false; $("#ttsPlay").textContent = "▶"; return;
-  }
+  if(TTS.k >= TTS.chunks.length) return unitDone();
   const u = new SpeechSynthesisUtterance(TTS.chunks[TTS.k].t), v = curVoice();
-  if(v){ u.voice = v; u.lang = v.lang; } else u.lang = (PAPER.lang === "fr" ? "fr-FR" : EXAM.accent || "en-GB");
+  if(v){ try{ u.voice = v; }catch(_){} u.lang = v.lang; } else u.lang = (PAPER.lang === "fr" ? "fr-FR" : EXAM.accent || "en-GB");
   u.rate = ST.prefs.rate || 1;
   u.onend = () => { if(tok !== TTS.tok) return; TTS.k++;
     const nx = TTS.chunks[TTS.k];
@@ -111,11 +130,16 @@ function speakChunk(){
   u.onerror = e => { if(tok !== TTS.tok || e.error === "interrupted" || e.error === "canceled") return; TTS.k++; speakChunk(); };
   speechSynthesis.speak(u);
 }
-function stopReading(){ TTS.tok++; if(hasTTS()) speechSynthesis.cancel(); TTS.i = -1; TTS.paused = false; $$(".reading").forEach(e => e.classList.remove("reading")); $("#tts").classList.add("hidden"); document.body.classList.remove("tts-up"); }
-function again(){ TTS.tok++; speechSynthesis.cancel(); TTS.paused = false; $("#ttsPlay").textContent = "⏸"; speakChunk(); }   // the same sentence again, with a new speed or voice
+function stopReading(){ TTS.tok++; if(hasTTS()) speechSynthesis.cancel(); try{ VO.pause(); }catch(_){} TTS.rec = false; TTS.i = -1; TTS.paused = false; $$(".reading").forEach(e => e.classList.remove("reading")); $("#tts").classList.add("hidden"); document.body.classList.remove("tts-up"); }
+function again(){ if(TTS.rec) return readUnit(TTS.i); TTS.tok++; speechSynthesis.cancel(); TTS.paused = false; $("#ttsPlay").textContent = "⏸"; speakChunk(); }   // the same sentence again, with a new speed or voice
 $("#ttsPlay").onclick = () => {
   if(TTS.i < 0) return;
   if(TTS.k >= TTS.chunks.length) return readUnit(TTS.i);              // finished: read it again
+  if(TTS.rec){
+    if(TTS.paused){ TTS.paused = false; $("#ttsPlay").textContent = "⏸"; VO.play().catch(() => {}); }
+    else { TTS.paused = true; $("#ttsPlay").textContent = "▶"; VO.pause(); }
+    return;
+  }
   if(TTS.paused){
     TTS.paused = false; $("#ttsPlay").textContent = "⏸"; speechSynthesis.resume();
     setTimeout(() => { if(!TTS.paused && !speechSynthesis.speaking) again(); }, 400);   // some voices can't carry on after a pause
@@ -124,9 +148,13 @@ $("#ttsPlay").onclick = () => {
 $("#ttsStop").onclick = stopReading;
 $("#ttsPrev").onclick = () => readUnit(Math.max(0, TTS.i - 1));
 $("#ttsNext").onclick = () => readUnit(Math.min(UNITS.length - 1, TTS.i + 1));
-$("#ttsRate").addEventListener("input", e => { ST.prefs.rate = +e.target.value; $("#ttsRateV").textContent = (+e.target.value).toFixed(2).replace(/0$/, "") + "×"; changed(); });
-$("#ttsRate").addEventListener("change", () => { if(TTS.i >= 0 && !TTS.paused) again(); });
-$("#ttsVoice").addEventListener("change", e => { ST.prefs.voice = e.target.value; changed(); if(TTS.i >= 0 && !TTS.paused) again(); });
+$("#ttsRate").addEventListener("input", e => { ST.prefs.rate = +e.target.value; VO.playbackRate = ST.prefs.rate; $("#ttsRateV").textContent = (+e.target.value).toFixed(2).replace(/0$/, "") + "×"; changed(); });
+$("#ttsRate").addEventListener("change", () => { if(TTS.i >= 0 && !TTS.paused && !TTS.rec) again(); });     // a recording just changes speed
+$("#ttsVoice").addEventListener("change", e => { ST.prefs.voice = e.target.value; changed();
+  if(TTS.i < 0) return;
+  if(!TTS.paused) readUnit(TTS.i);
+  else { TTS.tok++; if(hasTTS()) speechSynthesis.cancel(); try{ VO.pause(); }catch(_){} TTS.k = TTS.chunks.length; }   // paused: ▶ starts this part again in the new voice
+});
 $("#ttsGo").addEventListener("change", e => { ST.prefs.keepReading = e.target.checked; changed(); });
 function setupReading(){
   if(!EXAM.readAloud) return;
