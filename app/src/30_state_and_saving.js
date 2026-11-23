@@ -182,7 +182,15 @@ function saveLocal(clean){
 }
 
 /* project file: chosen once, then overwritten every minute */
-const FS_OK = typeof window.showSaveFilePicker === "function";
+// Chrome/Edge can open and save files directly. Some school computers switch this off (a Chrome/Edge policy):
+// the functions are still there but refuse. Then BEE uses the ordinary file window and downloads, and remembers it.
+// It is remembered for 14 days only, so a school that changes the setting gets direct saving back.
+const FS_BLOCK_KEY = "bee.fsBlocked", FS_BLOCK_DAYS = 14;
+let FS_OK = typeof window.showSaveFilePicker === "function" && !(Date.now() - (+localStorage.getItem(FS_BLOCK_KEY) || 0) < FS_BLOCK_DAYS * 864e5);
+// a refusal right after a real click = the computer blocks it (a refusal without a fresh click is only a timing problem)
+const clicked = () => !navigator.userActivation || navigator.userActivation.isActive;
+const fsRefused = (e, act) => !!e && act && (e.name === "SecurityError" || e.name === "NotAllowedError");
+function fsOff(){ FS_OK = false; try{ localStorage.setItem(FS_BLOCK_KEY, String(Date.now())); }catch(_){} updateChip(); }
 const proj = { handle: null, name: "", dirty: false, lastWrite: 0, perm: "none", writing: false };
 const PTYPES = [{ description: "Exam project", accept: { "application/json": [".json"] } }];
 function hhmm(t){ return new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
@@ -332,11 +340,15 @@ document.getElementById("svGo").onclick = async () => {
   let ok = false;
   if(!FS_OK){ downloadProject(name); toast("Saved " + name + ".exam.json to Downloads — open it later with 📂 Open"); ok = true; }
   else{
+    const act = clicked();
     try{
       const h = await showSaveFilePicker({ suggestedName: name + ".exam.json", types: PTYPES });
       if(svOpts.state){ await leaveCurrentFile(); S = svOpts.state; }      // a new exam replaces the old one only once its file is chosen
       await setHandle(h); await writeProject(true); toast("Saving to " + h.name + " — automatically every minute"); ok = true;
-    }catch(e){ if(!(e && e.name === "AbortError")) toast("Couldn't save: " + (e.message || e)); }
+    }catch(e){
+      if(fsRefused(e, act)){ fsOff(); if(svOpts.state){ await leaveCurrentFile(); S = svOpts.state; } downloadProject(name); toast("This computer doesn't let websites save into folders, so " + name + ".exam.json went to Downloads"); ok = true; }
+      else if(!(e && e.name === "AbortError")) toast("Couldn't save: " + (e.message || e));
+    }
   }
   if(ok && pdf) download({ name });
   if(res) res(ok);
@@ -346,27 +358,51 @@ new MutationObserver(() => { if(!$("#saveModal").classList.contains("open") && s
 function applyState(o){ window.__folded = 0; window.__rbInit = 0;   /* an exam just opened: fold its details again (unless the teacher chose otherwise) */ S = mergeState(o); refreshDetails(); updateLogoUI(); lastEdited = null; render(); preview(); histReset(); }
 async function openProject(){
   if(!FS_OK){ $("#projIn").click(); return false; }
+  const act = clicked();
   try{
     const [h] = await showOpenFilePicker({ types: PTYPES, multiple: false });
     return await openFromHandle(h);
-  }catch(e){ if(e && e.name === "AbortError") return false; toast("That file isn't a valid exam project"); return false; }
+  }catch(e){
+    if(e && e.name === "AbortError") return false;
+    if(fsRefused(e, act)){ fsOff(); $("#projIn").click(); toast("Choose the saved exam (.exam.json). If no window opened, click 📂 Open again.", 6000); return false; }
+    toast("Couldn't open the file: " + (e && e.message || e)); return false;
+  }
 }
 async function openFromHandle(h){
   try{
     const file = await h.getFile();
     if(fileKind(file)){ showBlocked(fileKind(file), [file.name]); return false; }
     if(/\.(txt|md|markdown|text)$/i.test(file.name)){ await handleFiles([file]); return true; }
-    const o = JSON.parse(await file.text());
-    if(!o || !Array.isArray(o.items)) throw new Error("not an exam project");
+    const o = examJson(await file.text(), file.name); if(!o) return false;
     await keepVersion("Before opening " + file.name);
     await leaveCurrentFile();
     applyState(o);
-    try{ proj.perm = h.requestPermission ? await h.requestPermission({ mode: "readwrite" }) : "granted"; }catch(_){ proj.perm = "prompt"; }
-    proj.handle = h; proj.name = h.name; proj.dirty = false; proj.lastWrite = Date.now();
+    proj.handle = h; proj.name = h.name; proj.dirty = false; proj.lastWrite = Date.now(); proj.perm = h.requestPermission ? "prompt" : "granted";
     try{ await IDB.set("handle", h); }catch(_){}
     try{ await IDB.set("state", snapshot()); }catch(_){}
-    updateChip(); toast("Opened " + h.name); return true;
-  }catch(e){ if(e && e.name === "AbortError") return false; toast("That file isn't a valid exam project"); return false; }
+    $("#startModal").classList.remove("open"); updateChip();
+    // Ask Chrome/Edge for permission to keep saving into this file, but don't wait for the answer: its small
+    // "Allow this site to edit…?" pop-up near the address bar is easy to miss, and BEE stayed stuck on the start screen.
+    // Until it's allowed, the 🔴 chip says so and "Allow saving" asks again.
+    if(h.requestPermission){
+      toast("Opened " + h.name + " · click Allow in the browser's pop-up to keep saving into it", 6000);
+      Promise.resolve().then(() => h.requestPermission({ mode: "readwrite" }))
+        .then(p => { if(proj.handle === h){ proj.perm = p; updateChip(); if(p === "granted" && proj.dirty) writeProject(true); } }, () => {});
+    } else toast("Opened " + h.name);
+    return true;
+  }catch(e){ if(e && e.name === "AbortError") return false; toast("Couldn't open " + (h && h.name || "the file") + ": " + (e && e.message || e)); return false; }
+}
+// the saved exam inside a file, or null with a message that says what is wrong
+function examJson(txt, name){
+  let o; try{ o = JSON.parse(String(txt).replace(/^\uFEFF/, "")); }catch(_){ toast(name + " isn't a saved BEE exam (it can't be read as one). Saved exams end in .exam.json", 6000); return null; }
+  if(o && Array.isArray(o.items)) return o;
+  toast(name + " isn't a saved BEE exam" + (o && (o.answers || o.student) ? " (it looks like a student's answers: use 📥 Mark answers)" : ""), 6000); return null;
+}
+// a saved exam chosen in the ordinary file window, or dropped on the page
+async function openExamFile(f){
+  const o = examJson(await f.text(), f.name); if(!o) return false;
+  await keepVersion("Before opening " + f.name); await leaveCurrentFile(); await setHandle(null);
+  applyState(o); saveLocal(); $("#startModal").classList.remove("open"); toast("Opened " + f.name); return true;
 }
 function freshState(){
   const keep = S.d, n = defaults();

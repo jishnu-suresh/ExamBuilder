@@ -3,7 +3,7 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
 const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
 const fmt = n => (Math.round(n * 100) / 100).toString();
-function toast(msg){ const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("show"), 2600); }
+function toast(msg, ms){ const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove("show"), ms || 2600); }
 
 /* ---------------- text parsing ---------------- */
 const RE_Q = /^\s*(?:\*\*)?(?:(?:Q|Question|Exercise|Ex)\s*\.?\s*)?(\d{1,3})\s*[\.\):\-–](?:\*\*)?(?=\s|$)\s*(.*)$/i;

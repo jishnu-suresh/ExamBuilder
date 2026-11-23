@@ -18,7 +18,9 @@ function pasteCount(){
 $("#pasteArea").addEventListener("input", pasteCount);
 ["dragenter", "dragover"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
 ["dragleave", "drop"].forEach(ev => document.addEventListener(ev, e => { e.preventDefault(); if(ev === "drop" || !e.relatedTarget) drop.classList.remove("over"); }));
-document.addEventListener("drop", e => { const fs = [...(e.dataTransfer?.files || [])]; if(fs.length) handleFiles(fs); });
+document.addEventListener("drop", e => { const fs = [...(e.dataTransfer?.files || [])]; if(!fs.length) return;
+  const ex = fs.find(f => /\.json$/i.test(f.name));                 // a saved exam dropped on BEE opens it
+  if(ex) openExamFile(ex); else handleFiles(fs); });
 document.addEventListener("paste", async e => {
   const files = [...(e.clipboardData?.files || [])].filter(f => /^image\//.test(f.type));
   if(files.length && !(e.target.matches && e.target.matches("textarea,input"))){ e.preventDefault(); handleFiles(files); }
@@ -245,8 +247,7 @@ $("#projIn").addEventListener("change", async e => {
   const f = e.target.files[0]; e.target.value = ""; if(!f) return;
   if(fileKind(f)){ showBlocked(fileKind(f), [f.name]); return; }
   if(/\.(txt|md|markdown|text)$/i.test(f.name)){ handleFiles([f]); $("#startModal").classList.remove("open"); return; }
-  try{ const o = JSON.parse(await f.text()); if(!o || !Array.isArray(o.items)) throw 0; await keepVersion("Before opening " + f.name); applyState(o); saveLocal(); $("#startModal").classList.remove("open"); toast("Opened " + f.name); }
-  catch(err){ toast("That file isn't a valid exam project"); }
+  await openExamFile(f);
 });
 
 /* start screen */
@@ -259,7 +260,9 @@ function openStart(isNew){
   const hasLocal = !isNew && storedLocal && Array.isArray(storedLocal.items) && (storedLocal.items.length || storedLocal.d && storedLocal.d.subject);
   locBtn.classList.toggle("hidden", !hasLocal || !!storedHandle);
   if(hasLocal) $("#stLocalInfo").textContent = "🟠 Only in this browser, not in a file · " + (storedLocal.d.subject || storedLocal.d.title || "Exam") + " · " + storedLocal.items.filter(x => x.type === "q").length + " questions" + (storedLocal.savedAt ? " · last edited " + new Date(storedLocal.savedAt).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : "");
-  $("#stNote").textContent = FS_OK ? "" : "ⓘ In this browser (Safari or Firefox), your work is kept here in the browser, not in a file. Use 💾 Save as… (under 📁 File) to keep a copy on your computer, or use Chrome or Edge to save to a file automatically.";
+  $("#stNote").textContent = FS_OK ? "" : typeof window.showSaveFilePicker === "function"
+    ? "ⓘ This computer doesn't let websites save into folders (a school setting). Your work is kept here in the browser. Use 💾 Save as… (under 📁 File) to download a copy, and 📂 Open to open it again."
+    : "ⓘ In this browser (Safari or Firefox), your work is kept here in the browser, not in a file. Use 💾 Save as… (under 📁 File) to keep a copy on your computer, or use Chrome or Edge to save to a file automatically.";
   $("#stSkip").parentElement.classList.toggle("hidden", !!isNew);
   $("#startModal").classList.add("open");
 }
@@ -270,8 +273,12 @@ $("#stSkip").onclick = e => { e.preventDefault(); $("#startModal").classList.rem
 $("#stContinueFile").onclick = async () => {
   const h = storedHandle; if(!h) return;
   let perm = "prompt";
+  // the browser asks "Allow this site to edit …?" in a small pop-up near the address bar: say so, so BEE doesn't look stuck
+  const lbl = $("#stFileName"), was = lbl.textContent;
+  const hint = setTimeout(() => { lbl.textContent = "⏳ Click Allow in the browser's pop-up (top of the window)"; }, 400);
   try{ perm = await h.requestPermission({ mode: "readwrite" }); }catch(_){}
-  if(perm !== "granted"){ toast("Permission is needed to keep saving to " + h.name); return; }
+  clearTimeout(hint); lbl.textContent = was;
+  if(perm !== "granted"){ toast("BEE needs your permission to open and keep saving to " + h.name + ". Click Continue again and choose Allow, or use 📂 Open.", 6000); return; }
   try{
     const o = JSON.parse(await (await h.getFile()).text());
     // use whichever copy is newer: the file, or this browser's autosave
