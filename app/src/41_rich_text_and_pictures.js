@@ -150,7 +150,10 @@ const RE_PRE = /^\s*\{(center|centre|right|left|justify|small|big|bigger|huge)\}
 function linePre(l){ let align = "", size = "", rest = String(l); for(let m; (m = rest.match(RE_PRE));){ const t = m[1].toLowerCase().replace("centre", "center"); if(SIZE_K[t]) size = t; else align = t; rest = rest.slice(m[0].length); } return { align, size, rest }; }
 const buildLine = (align, size, rest) => (align ? "{" + align + "}" : "") + (size ? "{" + size + "}" : "") + rest;
 // a picture placed inside the text:  {img: ID | 60% | center}
-const RE_IMG = /^\s*(?:\{(?:center|centre|right|left|justify|small|big|bigger|huge)\}\s*)*\{\s*img\s*:\s*([\w-]+)\s*(?:\|\s*(\d{1,3})\s*%?\s*)?(?:\|\s*(left|center|centre|right)\s*)?\}\s*$/i;
+//   … | wrap}  the text after it flows beside it (left or right)
+//   … | row}   it sits side by side with the picture on the next line (a chain of "row" pictures = one row)
+const RE_IMG = /^\s*(?:\{(?:center|centre|right|left|justify|small|big|bigger|huge)\}\s*)*\{\s*img\s*:\s*([\w-]+)\s*(?:\|\s*(\d{1,3})\s*%?\s*)?(?:\|\s*(left|center|centre|right)\s*)?(?:\|\s*(wrap|row)\s*)?\}\s*$/i;
+const imgTag = (id, size, align, mode) => "{img: " + id + " | " + size + "% | " + align + (mode ? " | " + mode : "") + "}";
 // page hint in a placeholder: "[diagram: page 2 — ladder…]"
 const pdfPage = d => { const m = String(d || "").match(/\bp(?:age|g|\.)?\s*(\d{1,3})\b/i); return m ? +m[1] : 0; };
 // put a finished picture where it belongs: in place of the first [diagram] placeholder, or at the cursor
@@ -339,7 +342,7 @@ function parseRich(text, base){
     const l = lines[i], t = l.trim();
     if(!t){ blocks.push({ type: "gap" }); continue; }
     const pm = l.match(RE_PIC); if(pm){ blocks.push({ type: "pic", desc: pm[1].trim() }); continue; }
-    const im = l.match(RE_IMG); if(im){ blocks.push({ type: "img", id: im[1], size: Math.max(5, Math.min(100, +im[2] || 60)), align: (im[3] || "center").toLowerCase().replace("centre", "center") }); continue; }
+    const im = l.match(RE_IMG); if(im){ blocks.push({ type: "img", id: im[1], size: Math.max(5, Math.min(100, +im[2] || 60)), align: (im[3] || "center").toLowerCase().replace("centre", "center"), mode: (im[4] || "").toLowerCase() }); continue; }
     const mo = l.match(RE_MOL); if(mo){ blocks.push({ type: "mol", smi: mo[1].trim(), cap: (mo[2] || "").trim() }); continue; }
     const open = t.startsWith("$$") ? "$$" : t.startsWith("\\[") ? "\\[" : null;
     if(open){
@@ -560,9 +563,17 @@ function richHTML(text, q){
     if(r.t === "math"){ const m = texSVG(r.tex, !!r.display); return m.err ? `<span class="err" title="${esc(m.errMsg)}">⚠ ${esc(r.tex)}</span>` : m.svg; }
     let h = esc(r.s); if(r.b) h = "<b>" + h + "</b>"; if(r.i) h = "<i>" + h + "</i>"; if(r.u) h = "<u>" + h + "</u>"; if(r.x) h = "<s>" + h + "</s>"; if(r.c) h = `<span style="color:${esc(cssHex(r.c))}">` + h + "</span>"; return h;
   }).join("");
-  return parseRich(text, fmtOf(q)).map(b => {
+  let floated = false;
+  return parseRich(text, fmtOf(q)).map((b, bi, BL) => {
+    if(b.skip) return "";
     if(b.type === "gap") return "<div style='height:.5em'></div>";
-    if(b.type === "img"){ const P = picData(b.id); return P ? `<div style="text-align:${b.align}"><img src="${P.src}" style="width:${b.size}%;max-width:100%;border-radius:4px"></div>` : `<span class="err">⚠ picture ${esc(b.id)} not found</span>`; }
+    if(b.type === "img"){
+      const P = picData(b.id); if(!P) return `<span class="err">⚠ picture ${esc(b.id)} not found</span>`;
+      const img = (id, w) => { const Q = picData(id); return Q ? `<img src="${Q.src}" style="width:${w};max-width:100%;border-radius:4px">` : ""; };
+      if(b.mode === "row"){ const R = picRow(BL, bi); return `<div style="display:flex;gap:10px;align-items:center;justify-content:${{ left: "flex-start", right: "flex-end" }[b.align] || "center"}">${R.map(x => `<div style="width:${x.size}%">${img(x.id, "100%")}</div>`).join("")}</div>`; }
+      if(b.mode === "wrap" && b.align !== "center"){ floated = true; return `<div style="float:${b.align};width:${Math.min(70, b.size)}%;margin:2px ${b.align === "left" ? "10px" : 0} 4px ${b.align === "right" ? "10px" : 0}">${img(b.id, "100%")}</div>`; }
+      return `<div style="text-align:${b.align}">${img(b.id, b.size + "%")}</div>`;
+    }
     if(b.type === "pic") return `<div class="picmiss">🖼 Picture missing: <i>${esc(b.desc)}</i></div>`;
     if(b.type === "mol"){ const m = MOLS[b.smi]; if(!m){ getMol(b.smi).then(() => { const c = q && $("#list").querySelector(`.card[data-id="${q.id}"]`); if(c) updateRich(c, q); }); return `<div class="molbox hint">⌬ drawing ${esc(b.smi)}…</div>`; }
       return m.err ? `<span class="err">⚠ ${esc(b.smi)} — ${esc(m.err)}</span>` : `<div class="molbox"><img src="${m.png}" alt="${esc(b.smi)}">${b.cap ? `<div class="cap">${esc(b.cap)}</div>` : ""}</div>`; }
@@ -570,7 +581,14 @@ function richHTML(text, q){
     if(b.type === "table") return "<table>" + b.rows.map((r, i) => "<tr>" + r.map(c => (b.header && i === 0 ? "<th>" : "<td>") + runsH(c) + (b.header && i === 0 ? "</th>" : "</td>")).join("") + "</tr>").join("") + "</table>";
     const mk = "";
     return `<div style="padding-left:${b.ind ? 1.2 : 0}em${b.align ? ";text-align:" + b.align : (!b.opt && !b.bullet && S.d.justify !== false ? ";text-align:justify" : "")}${b.scale && b.scale !== 1 ? ";font-size:" + b.scale + "em;line-height:1.35" : ""}">${b.bullet ? "• " : ""}${mk}${runsH(b.runs) || "&nbsp;"}</div>`;
-  }).join("") + (q && q.mcq === "multi" && !/all that apply/i.test(q.text || "") ? '<div><i style="color:var(--muted)">(Select all that apply.)</i></div>' : "");
+  }).join("") + (floated ? '<div style="clear:both"></div>' : "") + (q && q.mcq === "multi" && !/all that apply/i.test(q.text || "") ? '<div><i style="color:var(--muted)">(Select all that apply.)</i></div>' : "");
+}
+// the pictures of a side-by-side row that starts at BL[bi]: it and every picture chained after it with "row"
+// (the later ones are marked skip, so they aren't drawn twice)
+function picRow(BL, bi){
+  const R = [BL[bi]];
+  for(let j = bi; BL[j] && BL[j].type === "img" && BL[j].mode === "row" && BL[j + 1] && BL[j + 1].type === "img"; j++){ BL[j + 1].skip = true; R.push(BL[j + 1]); }
+  return R;
 }
 function mathErrors(text){
   const errs = []; if(!hasRich(text)) return errs;
@@ -587,12 +605,14 @@ function updateMiss(card, it){
     <div class="row"><button class="btn sm" data-act="fillpic">＋ Add the picture here</button><button class="btn sm" data-act="cutpdf" title="Cut the picture out of the PDF you gave the AI">📄 Cut from PDF${pdfPage(P[0]) ? " (page " + pdfPage(P[0]) + ")" : ""}</button><button class="btn sm" data-act="rmpic" title="Delete the [diagram: …] line">Remove the placeholder</button></div>`;
 }
 function picTags(it){
-  const out = [], scan = (txt, where) => String(txt || "").split("\n").forEach((l, li) => { const m = l.match(RE_IMG); if(m) out.push({ id: m[1], size: +m[2] || 60, align: (m[3] || "center").toLowerCase().replace("centre", "center"), where, li }); });
+  const out = [], scan = (txt, where) => String(txt || "").split("\n").forEach((l, li) => { const m = l.match(RE_IMG); if(m) out.push({ id: m[1], size: +m[2] || 60, align: (m[3] || "center").toLowerCase().replace("centre", "center"), mode: (m[4] || "").toLowerCase(), where, li }); });
   scan(it.text, null); (it.subs || []).forEach(sb => scan(sb.text, sb.id));
+  // ⇆ is offered when the next line holds another picture
+  out.forEach((t, k) => { const n = out[k + 1]; t.next = !!(n && n.where === t.where && n.li === t.li + 1); });
   return out;
 }
 function setPicTag(it, id, fn){   // rewrite (or with fn → null, delete) the {img: id …} line
-  const edit = txt => String(txt || "").split("\n").flatMap(l => { const m = l.match(RE_IMG); if(!m || m[1] !== id) return [l]; const t = fn({ size: +m[2] || 60, align: (m[3] || "center").toLowerCase().replace("centre", "center") }); return t ? ["{img: " + id + " | " + t.size + "% | " + t.align + "}"] : []; }).join("\n");
+  const edit = txt => String(txt || "").split("\n").flatMap(l => { const m = l.match(RE_IMG); if(!m || m[1] !== id) return [l]; const t = fn({ size: +m[2] || 60, align: (m[3] || "center").toLowerCase().replace("centre", "center"), mode: (m[4] || "").toLowerCase() }); return t ? [imgTag(id, t.size, t.align, t.mode)] : []; }).join("\n");
   it.text = edit(it.text); (it.subs || []).forEach(sb => sb.text = edit(sb.text));
 }
 function updatePics(card, it){
@@ -601,7 +621,8 @@ function updatePics(card, it){
   if(!T.length){ el.innerHTML = ""; return; }
   el.innerHTML = T.map(t => { const P = picData(t.id); return `<div class="picchip" data-pic="${t.id}">${P ? `<img src="${P.src}" alt="">` : "⚠"}
     <select data-picsize title="Picture width">${[5, 10, 15, 20, 25, 33, 40, 50, 60, 75, 100].map(v => `<option value="${v}" ${v === t.size ? "selected" : ""}>${v}%</option>`).join("")}${[5, 10, 15, 20, 25, 33, 40, 50, 60, 75, 100].includes(t.size) ? "" : `<option selected value="${t.size}">${t.size}%</option>`}</select>
-    <select data-picalign title="Position">${["left", "center", "right"].map(v => `<option value="${v}" ${v === t.align ? "selected" : ""}>${{ left: "⇤ Left", center: "↔ Centre", right: "⇥ Right" }[v]}</option>`).join("")}</select>
+    <select data-picalign title="Position">${["left", "center", "right", "wrap-left", "wrap-right"].map(v => `<option value="${v}" ${v === (t.mode === "wrap" && t.align !== "center" ? "wrap-" + t.align : t.align) ? "selected" : ""}>${{ left: "⇤ Left", center: "↔ Centre", right: "⇥ Right", "wrap-left": "⇤ Left · text beside", "wrap-right": "⇥ Right · text beside" }[v]}</option>`).join("")}</select>
+    ${t.next ? `<button class="btn sm ${t.mode === "row" ? "on" : ""}" data-picrow aria-pressed="${t.mode === "row"}" title="${t.mode === "row" ? "Side by side with the next picture: click to put it back underneath" : "Put this picture side by side with the next one"}">⇆ Side by side${t.mode === "row" ? " ✓" : ""}</button>` : ""}
     ${P && P.graph ? `<button class="btn sm" data-picgraph title="Change this graph">📈 Edit</button>` : ""}${P && P.svg ? `<button class="btn sm" data-picsvg title="Change this drawing">✏️ Edit drawing</button>` : ""}<button class="btn sm" data-picdel title="Remove this picture">✕</button></div>`; }).join("");
 }
 function updateRich(card, it){

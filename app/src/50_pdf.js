@@ -612,7 +612,10 @@ function buildPDF(opt){
       }
       group = [];
     };
-    for(const b of parseRich(text, fmtOf(q))){
+    const BL = parseRich(text, fmtOf(q));
+    for(let bi = 0; bi < BL.length; bi++){
+      const b = BL[bi];
+      if(b.skip) continue;
       if(grouped && b.type === "para" && b.opt){ group.push(b); continue; }
       if(grouped && b.type === "gap" && group.length) continue;
       flush();
@@ -627,6 +630,42 @@ function buildPDF(opt){
         continue;
       }
       if(b.type === "table"){ add([layoutTable(b, bw)]); continue; }
+      // ⇆ pictures side by side: one row, shrunk together if they don't fit, centred on each other
+      if(b.type === "img" && b.mode === "row"){
+        const R = picRow(BL, bi).map(x => ({ x, P: picData(x.id) })).filter(r => r.P), G = 4;
+        if(R.length){
+          let ws = R.map(r => bw * r.x.size / 100); const tot = ws.reduce((a, w) => a + w, 0) + G * (R.length - 1);
+          if(tot > bw){ const k = (bw - G * (R.length - 1)) / ws.reduce((a, w) => a + w, 0); ws = ws.map(w => w * k); }
+          let hs = R.map((r, k) => ws[k] * r.P.h / r.P.w);
+          const maxH = Math.max(30, BOTTOM - TOP - 16), big = Math.max(...hs); if(big > maxH){ ws = ws.map(w => w * maxH / big); hs = hs.map(h => h * maxH / big); }
+          const rowW = ws.reduce((a, w) => a + w, 0) + G * (R.length - 1), rowH = Math.max(...hs);
+          const off = b.align === "left" ? 0 : b.align === "right" ? bw - rowW : (bw - rowW) / 2;
+          add([{ h: rowH + 4, asc: TASC, draw(x, y){ let cx = x + off; R.forEach((r, k) => { doc.addImage(r.P.src, r.P.src.startsWith("data:image/png") ? "PNG" : "JPEG", cx, y + 2 + (rowH - hs[k]) / 2, ws[k], hs[k], "pic_" + r.x.id, "FAST"); cx += ws[k] + G; }); } }]);
+        }
+        continue;
+      }
+      // a picture with the text after it beside it: the picture and the paragraphs that start next to it are one block
+      if(b.type === "img" && b.mode === "wrap" && b.align !== "center"){
+        const P = picData(b.id); if(!P) continue;
+        const WG = 4; let w = Math.min(bw * b.size / 100, bw * .65), h = w * P.h / P.w;
+        const maxH = Math.max(30, BOTTOM - TOP - 16); if(h > maxH){ w *= maxH / h; h = maxH; }
+        const zone = { w: bw - w - WG, h: h + 3, dx: b.align === "left" ? w + WG : 0 };
+        const L = []; let zh = 0, j = bi + 1;
+        for(; j < BL.length && zh < zone.h; j++){
+          const c = BL[j];
+          if(c.type === "gap"){ L.push({ h: LH * .5, gap: true }); zh += LH * .5; continue; }
+          if(c.type !== "para" || (grouped && c.opt)) break;
+          layoutPara(c, bw, { narrow: zone, acc: zh }).forEach(l => { L.push(l); zh += l.h; });
+        }
+        if(L.length && L[L.length - 1].gap){ zh -= L.pop().h; j--; }
+        bi = j - 1;
+        const ix = b.align === "left" ? 0 : bw - w;
+        add([{ h: Math.max(h + 4, zh + 1), asc: L[0] && L[0].asc || TASC, draw(x, y){
+          doc.addImage(P.src, P.src.startsWith("data:image/png") ? "PNG" : "JPEG", x + ix, y + 2, w, h, "pic_" + b.id, "FAST");
+          let ly = y; L.forEach(l => { if(l.draw){ font(SANS, "normal", fs, INK); l.draw(x + (l.dx || 0), ly); } ly += l.h; });
+        } }]);
+        continue;
+      }
       if(b.type === "img"){
         const P = picData(b.id); if(!P) continue;
         let w = bw * b.size / 100, h = w * P.h / P.w;
@@ -975,19 +1014,23 @@ function buildPDF(opt){
       // a question that fits on a page but not in the space left: rather than leave a big gap, it may start here and
       // carry on over the page — only between paragraphs or answer options (never inside one, never before its answer
       // space), with the whole question text and at least one more block here, and at least one block over the page
+      // (a multiple-choice question also counts its options C, D… as parts: when its first part — the question, its
+      // pictures, options A and B — doesn't fit here, it may still start here, breaking between paragraphs or pictures)
+      const subsFit = splitSubs && y + blk.groupH[0] + blk.groupH[1] <= BOTTOM;
       const cut = (() => {
-        if(it.type !== "q" || leadIn || splitSubs || blk.h > pageAvail || y <= TOP + 1 || y + blk.h <= BOTTOM) return 0;
+        if(it.type !== "q" || leadIn || subsFit || blk.h > pageAvail || y <= TOP + 1 || y + blk.h <= BOTTOM) return 0;
         const room = BOTTOM - y; if(room < pageAvail * .15) return 0;
         const P = blk.parts, stemEnd = P.findIndex(p => p.bk !== P[0].bk);
-        let best = 0, acc = 0;
+        let best = 0, whole = 0, acc = 0;
         for(let k = 1; k < P.length; k++){
           acc += P[k - 1].h; if(acc > room) break;
           if(P[k].bk == null || P[k - 1].bk == null || P[k].bk === P[k - 1].bk || P[k].g !== P[k - 1].g) continue;   // inside a block, or text → answer space
           if(stemEnd < 0 || k <= stemEnd) continue;
           const rest = P.slice(k); if(!rest.some(p => p.bk != null)) continue;
           best = k;
+          if(!(P[k].opt != null && P[k - 1].opt != null)) whole = k;       // a break that keeps the answer options together
         }
-        return best;
+        return whole || best;
       })();
       if(cut){
         pageOf[it.id] = doc.getNumberOfPages();
@@ -998,7 +1041,7 @@ function buildPDF(opt){
         y += QGAP; continue;
       }
       if(leadIn) newPage();
-      else if(splitSubs){ if(y + blk.groupH[0] + blk.groupH[1] > BOTTOM) newPage(); }
+      else if(splitSubs){ if(!subsFit) newPage(); }
       else if(flowNote){ if(y + blk.first > BOTTOM) newPage(); }
       else if(blk.h <= pageAvail ? y + blk.h > BOTTOM : y + blk.first > BOTTOM) newPage();
       pageOf[it.id] = doc.getNumberOfPages();

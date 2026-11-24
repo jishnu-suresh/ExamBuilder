@@ -215,3 +215,10 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
 @media (max-width:820px){.credit.corner{display:none}}   /* the paper fills the screen there: no corner text over the questions */
 .credit .faint{opacity:.45}   /* the BEE name shows; the © stays in the background */
 #scrStart{flex-direction:column}   /* the credit sits under the card */
+/* pictures side by side, and pictures with the text beside them */
+.picrow{display:flex;gap:12px;align-items:center;margin:6px 0}
+.picrow .picwrap{margin:0}
+.picwrap.wrap-left{float:left;margin:4px 16px 8px 0}
+.picwrap.wrap-right{float:right;margin:4px 0 8px 16px}
+@media (max-width:600px){.picwrap.wrap-left,.picwrap.wrap-right{float:none;width:auto!important;margin:6px 0}.picrow{flex-wrap:wrap}}
+.picrow .drawon,.picwrap.wrap-left .drawon,.picwrap.wrap-right .drawon{white-space:normal;max-width:100%}

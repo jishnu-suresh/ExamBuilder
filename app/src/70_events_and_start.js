@@ -65,7 +65,9 @@ $("#list").addEventListener("input", onListInput);
 $("#list").addEventListener("change", e => {
   const ch = e.target.closest("[data-pic]"); if(!ch || !(e.target.matches("[data-picsize],[data-picalign]"))) return;
   const card = ch.closest(".card"), it = S.items.find(x => x.id === card.dataset.id); if(!it) return;
-  setPicTag(it, ch.dataset.pic, t => ({ size: +ch.querySelector("[data-picsize]").value, align: ch.querySelector("[data-picalign]").value }));
+  const pos = ch.querySelector("[data-picalign]").value, wrapped = pos.startsWith("wrap-");
+  setPicTag(it, ch.dataset.pic, t => ({ size: +ch.querySelector("[data-picsize]").value, align: wrapped ? pos.slice(5) : pos, mode: wrapped ? "wrap" : t.mode === "row" ? "row" : "" }));
+  if(wrapped) render();
   const ta = card.querySelector("textarea[data-f=text]"); if(ta) ta.value = it.text;
   card.querySelectorAll("textarea[data-sf=text]").forEach(x => { const sb = (it.subs || []).find(s => s.id === x.dataset.sub); if(sb) x.value = sb.text; });
   updateRich(card, it); lastEdited = it.id; changed();
@@ -74,6 +76,16 @@ $("#list").addEventListener("click", e => {
   const sv = e.target.closest("[data-picsvg]"); if(sv){ openSvgEdit(sv.closest(".card").dataset.id, sv.closest("[data-pic]").dataset.pic); return; }
   const g = e.target.closest("[data-picgraph]"); if(!g) return;
   const card = g.closest(".card"); openGraph(card.dataset.id, g.closest("[data-pic]").dataset.pic);
+});
+// ⇆ side by side with the next picture (they share the width: sizes that add up to more than a row are halved)
+$("#list").addEventListener("click", e => {
+  const b = e.target.closest("[data-picrow]"); if(!b) return;
+  const ch = b.closest("[data-pic]"), card = b.closest(".card"), it = S.items.find(x => x.id === card.dataset.id); if(!it) return;
+  const T = picTags(it), k = T.findIndex(t => t.id === ch.dataset.pic); if(k < 0) return;
+  const t = T[k], n = T[k + 1], on = t.mode !== "row";
+  setPicTag(it, t.id, x => ({ size: x.size, align: x.align, mode: on ? "row" : "" }));
+  if(on && n && t.size + n.size > 96){ setPicTag(it, t.id, x => Object.assign(x, { size: 46 })); setPicTag(it, n.id, x => Object.assign(x, { size: 46, mode: x.mode === "wrap" ? "" : x.mode })); }
+  render(); changed(); lastEdited = it.id;
 });
 $("#list").addEventListener("click", e => {
   const b = e.target.closest("[data-picdel]"); if(!b) return;

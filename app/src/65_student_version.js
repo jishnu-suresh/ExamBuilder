@@ -227,8 +227,18 @@ function studentRich(text, q, pics){
     let h = esc(r.s); if(r.b) h = "<b>" + h + "</b>"; if(r.i) h = "<i>" + h + "</i>"; if(r.u) h = "<u>" + h + "</u>"; if(r.x) h = "<s>" + h + "</s>"; if(r.c) h = `<span style="color:${esc(cssHex(r.c))}">` + h + "</span>"; return h;
   }).join("");
   const pic = (id, P, size, align) => { pics[id] = { src: P.src, w: P.w, h: P.h }; plain.push(SAY.lang === "fr" ? " (image) " : " (picture) "); return `<div class="picwrap" style="text-align:${align || "center"}"><img class="pic" data-pic="${esc(id)}" src="${P.src}" alt="Picture" style="width:${size || 100}%"></div>`; };
-  const html = parseRich(text, fmtOf(q)).map(b => {
+  let floated = false;
+  const html = parseRich(text, fmtOf(q)).map((b, bi, BL) => {
+    if(b.skip) return "";
     if(b.type === "gap"){ plain.push(". "); return "<div style='height:.6em'></div>"; }
+    if(b.type === "img" && b.mode === "row"){      // ⇆ side by side
+      const R = picRow(BL, bi).filter(x => picData(x.id));
+      return `<div class="picrow" style="justify-content:${{ left: "flex-start", right: "flex-end" }[b.align] || "center"}">` + R.map(x => `<div class="picwrap" style="width:${x.size}%">` + pic(x.id, picData(x.id), 100, "center").replace(/^<div class="picwrap"[^>]*>|<\/div>$/g, "") + "</div>").join("") + "</div>";
+    }
+    if(b.type === "img" && b.mode === "wrap" && b.align !== "center"){     // the text after it flows beside it
+      const P = picData(b.id); if(!P) return ""; floated = true;
+      return `<div class="picwrap wrap-${b.align}" style="width:${Math.min(65, b.size)}%">` + pic(b.id, P, 100, "center").replace(/^<div class="picwrap"[^>]*>|<\/div>$/g, "") + "</div>";
+    }
     if(b.type === "img"){ const P = picData(b.id); return P ? pic(b.id, P, b.size, b.align) : ""; }
     if(b.type === "pic"){ plain.push((SAY.lang === "fr" ? " (image : " : " (picture: ") + b.desc + ") "); return `<div class="picmiss">Picture: ${esc(b.desc)}</div>`; }
     if(b.type === "mol"){ const m = MOLS[b.smi]; plain.push((SAY.lang === "fr" ? " (molécule " : " (molecule ") + (b.cap || "") + ") "); return m && m.png ? `<div class="molbox"><img src="${m.png}" alt="Molecule ${esc(b.cap || b.smi)}">${b.cap ? `<div>${esc(b.cap)}</div>` : ""}</div>` : esc(b.smi); }
@@ -237,7 +247,7 @@ function studentRich(text, q, pics){
       const x = !head && blankCell(c) ? `<td class="blank" data-cell="${ti}:${i}:${k}"></td>` : `<${t}>` + runsH(c) + `</${t}>`; plain.push(", "); return x; }).join("") + "</tr>").join("") + "</table>"; plain.push(". "); return h; }
     const x = `<div style="padding-left:${b.ind ? 1.2 : 0}em${b.align ? ";text-align:" + b.align : ""}${b.scale && b.scale !== 1 ? ";font-size:" + b.scale + "em" : ""}">${b.bullet ? "• " : ""}${runsH(b.runs) || "&nbsp;"}</div>`;
     plain.push(". "); return x;
-  }).join("");
+  }).join("") + (floated ? '<div style="clear:both"></div>' : "");
   return { html, plain: plain.join("").replace(/\s*\.\s*(\.\s*)+/g, ". ").replace(/\s+/g, " ").replace(/^[\s.]+|[\s.]+$/g, "") };
 }
 function attachedPic(it, pics){

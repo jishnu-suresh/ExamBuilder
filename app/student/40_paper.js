@@ -65,7 +65,7 @@ function renderPaper(){
     if(!area) return;
     const b = document.createElement("button"); b.className = "btn drawon"; b.textContent = "✏️ Draw or label on this picture";
     b.onclick = () => addBlock(area.dataset.area, { t: "draw", bg: { pic: img.dataset.pic } }, true);
-    (img.closest(".picwrap") || img).after(b);
+    const pw = img.closest(".picwrap"); if(pw) pw.appendChild(b); else img.after(b);     // under the picture, also when it sits beside text or another picture
   });
   $$("#paper .q").forEach(q => { const f = q.querySelector("[data-flag]"); if(f && ST.flags[q.dataset.q]) f.classList.add("on"); });
   renderNav();
