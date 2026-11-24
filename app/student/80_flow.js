@@ -97,7 +97,7 @@ function startExam(){
   ["#bMathKb", "#bAccents", "#bEnd"].forEach(s => $(s).classList.toggle("hidden", RO));
   ["#bFinish", "#bReadAll"].forEach(s => $(s).classList.toggle("hidden", !RO));
   $(".nav .key").classList.toggle("hidden", RO);
-  show("#scrExam"); if(!RO) setupMathKeyboard(); renderPaper(); applyPrefs(); setupReading(); if(ST.prefs.accents && !RO){ accBar(); $("#accBar").classList.remove("hidden"); }
+  show("#scrExam"); if(!RO) setupMathKeyboard(); renderPaper(); applyPrefs(); setupReading(); setupCalc(); if(ST.prefs.accents && !RO){ accBar(); $("#accBar").classList.remove("hidden"); }
   guardStart(); tick(); changed(); saveNow();
   window.scrollTo(0, 0);
   if(ST.breakAt) showBreak();          // carried on during a rest break: still paused

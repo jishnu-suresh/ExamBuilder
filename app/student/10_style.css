@@ -222,3 +222,71 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
 .picwrap.wrap-right{float:right;margin:4px 0 8px 16px}
 @media (max-width:600px){.picwrap.wrap-left,.picwrap.wrap-right{float:none;width:auto!important;margin:6px 0}.picrow{flex-wrap:wrap}}
 .picrow .drawon,.picwrap.wrap-left .drawon,.picwrap.wrap-right .drawon{white-space:normal;max-width:100%}
+/* 🧮 the Desmos calculator: a panel the student can move and resize */
+.calcpanel{position:fixed;right:18px;bottom:18px;width:min(420px,92vw);height:min(520px,70vh);background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.18);z-index:40;display:flex;flex-direction:column;resize:both;overflow:hidden;min-width:280px;min-height:300px}
+.calchead{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 12px;border-bottom:1px solid var(--line);cursor:move;user-select:none}
+.calchead .muted{flex:1;font-size:.85em}
+#calcBox{flex:1;min-height:0}
+.calcmsg{padding:18px;text-align:center;line-height:1.5}
+.calcpanel.graph{width:min(980px,96vw);height:min(640px,86vh)}
+/* BEEcalc Basic / Scientific */
+.bc{display:flex;flex-direction:column;height:100%;padding:8px;gap:8px;box-sizing:border-box}
+.bc-hist{flex:1;min-height:40px;overflow:auto;font-size:.9em}
+.bc-h{display:flex;justify-content:space-between;gap:10px;padding:3px 6px;border-radius:6px;cursor:pointer}
+.bc-h:hover{background:var(--gold-l)}
+.bc-h .bc-hq{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bc-h .bc-ha{font-weight:600}
+.bc-line{border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:var(--paper)}
+.bc-in{width:100%;border:0;outline:0;font:inherit;font-size:1.25em;background:transparent;color:var(--ink);padding:2px 0}
+.bc-out{min-height:1.4em;text-align:right;font-weight:600;color:var(--blue)}
+.bc-out.err{color:var(--red);font-weight:500;font-size:.9em}
+.bc-keys{display:grid;gap:5px}
+.bc-k{font:inherit;font-size:.95em;padding:8px 2px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);cursor:pointer}
+.bc-k:hover{filter:brightness(.97)}
+.bc-k.d{background:var(--paper);font-weight:600;font-size:1.05em}
+.bc-k.eq{background:var(--gold);color:#fff;border-color:var(--gold-d);font-weight:700}
+.bc-k.c{color:var(--red)}
+.bc-k.on{background:var(--gold-l);border-color:var(--gold)}
+/* BEEcalc Graphing */
+.bg{display:flex;height:100%}
+.bg-side{width:310px;max-width:45%;display:flex;flex-direction:column;border-right:1px solid var(--line);min-height:0}
+.bg-tools{display:flex;gap:6px;padding:6px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.bg-tools .bg-deg{margin-left:auto}
+.bg-sym{display:flex;flex-wrap:wrap;gap:3px;padding:5px 6px;border-bottom:1px solid var(--line)}
+.bg-sym button{font:inherit;font-size:.82em;padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);cursor:pointer}
+.bg-list{flex:1;overflow:auto;min-height:0}
+.bg-it{display:flex;gap:6px;align-items:flex-start;padding:7px 6px;border-bottom:1px solid var(--line)}
+.bg-it.sel{background:var(--blue-l)}
+.bg-it.bad .bg-in{color:var(--red)}
+.bg-dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--c);background:var(--c);margin-top:6px;flex:none;cursor:pointer;padding:0}
+.bg-dot.off{background:transparent}
+.bg-main{flex:1;min-width:0}
+.bg-in{width:100%;box-sizing:border-box;font:inherit;font-size:1.02em;border:1px solid transparent;border-radius:6px;padding:4px 6px;background:transparent;color:var(--ink)}
+.bg-in:focus{border-color:var(--gold);outline:0;background:var(--paper)}
+.bg-st{font-size:.82em;padding:2px 6px;color:var(--muted)}
+.bg-st .e{color:var(--red)}
+.bg-st .pr{display:inline-block;margin-right:8px;color:var(--ink)}
+.bg-st .r2{color:var(--muted)}
+.bg-sl{display:flex;gap:6px;align-items:center}
+.bg-sl input[type=range]{flex:1;min-width:60px}
+.bg-sl input[type=number]{width:52px;font:inherit;font-size:.95em;border:1px solid var(--line);border-radius:5px;padding:1px 3px;background:var(--paper);color:var(--ink)}
+.bg-acts{display:flex;flex-direction:column;gap:2px}
+.bg-acts button{font:inherit;font-size:.8em;border:0;background:transparent;color:var(--muted);cursor:pointer;padding:2px 4px}
+.bg-tbl table{border-collapse:collapse;width:100%;font-size:.9em}
+.bg-tbl th{font-weight:600;text-align:left;padding:2px 4px;border-bottom:2px solid var(--line)}
+.bg-tbl th small{font-weight:400;color:var(--muted)}
+.bg-tbl td{border:1px solid var(--line);padding:0}
+.bg-tbl td.ref{padding:3px 6px;color:var(--muted)}
+.bg-tbl td input{width:100%;box-sizing:border-box;border:0;padding:3px 6px;font:inherit;background:transparent;color:var(--ink)}
+.bg-fit{display:flex;gap:6px;margin-top:5px}
+.bg-fit select{font:inherit;font-size:.88em}
+.bg-plot{flex:1;position:relative;min-width:0;touch-action:none}
+.bg-plot canvas{position:absolute;inset:0;cursor:crosshair}
+.bg-zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:4px}
+.bg-zoom button{width:32px;height:32px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);font-size:1.05em;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+@media (max-width:700px){.bg{flex-direction:column}.bg-side{width:auto;max-width:none;height:42%;border-right:0;border-bottom:1px solid var(--line)}}
+.calcpanel.basic{width:min(380px,94vw);height:min(600px,86vh)}
+.calcpanel.scientific{width:min(460px,94vw);height:min(700px,90vh)}
+.bc-hist{min-height:72px}
+.bc.scientific .bc-k{padding:6px 2px;font-size:.9em}
+.bc.scientific .bc-keys{gap:4px}

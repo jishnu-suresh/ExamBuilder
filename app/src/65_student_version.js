@@ -319,7 +319,7 @@ $("#stuGo").onclick = async () => {
       bee: "student-exam", v: 1, examId: BC.b64e(BC.rnd(12)).replace(/[+/=]/g, "x"), title: S.d.title || "Exam", subject: S.d.subject || "", version: ver,
       nq, total: total ? fmt(total) : "", timeMin: noTime ? 0 : Math.round(base * (1 + extraPct / 100)), baseMin: base, extraPct,
       acc: { overlay: $("#accOverlay").checked, ruler: $("#accRuler").checked, spacing: $("#accSpacing").checked, highlight: $("#accHigh").checked, breaks: $("#accBreaks").checked, clock: $("#accClock").value },
-      mode, accent, readAloud: mode === "read" || $("#stuRead").checked, drawing: mode !== "read" && $("#stuDraw").checked, lang: S.d.lang || "en",
+      mode, accent, readAloud: mode === "read" || $("#stuRead").checked, drawing: mode !== "read" && $("#stuDraw").checked, calc: $("#stuCalc").value || "", lang: S.d.lang || "en",
       kid: key.kid, pub: key.pub, salt, iter, paper: await BC.lock(await BC.codeKey(code, salt, iter), paper),
       unlock: { salt: salt2, iter: iter2, hash: await BC.codeHash(tcode, salt2, iter2) },
       teacher: await BC.seal({ snap, startCode: code, teacherCode: tcode }, key.pub)

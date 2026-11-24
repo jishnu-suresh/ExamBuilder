@@ -46,6 +46,7 @@
     <button class="btn" id="bMathKb" title="Show the maths keyboard when you type maths">√x Maths keyboard</button>
     <button class="btn" id="bAccents" title="French accents: é è ê à ç …">é Accents</button>
     <button class="btn" id="bView" title="Text size, spacing, colours, easy-read fonts">Aa</button>
+    <button class="btn hidden" id="bCalc" title="Calculator">🧮 Calculator</button>
     <button class="btn hidden" id="bRuler" title="Reading ruler: a band that follows the line you are reading">📏 Ruler</button>
     <button class="btn hidden" id="bHigh" title="Highlighter: select words in a question to highlight them">🖍 Highlight</button>
     <button class="btn" id="bTeacher" title="For the teacher">👩‍🏫</button>
@@ -120,6 +121,7 @@
     <p class="muted" id="tSaveInfo"></p>
     <div class="row hidden" id="tBreakRow" style="margin:0 0 10px"><button class="btn" id="tBreak">☕ Start a rest break (pauses the clock)</button></div>
     <label>Add time</label><div class="seg"><button data-add="5">+5 min</button><button data-add="10">+10 min</button><button data-add="15">+15 min</button><button data-add="30">+30 min</button></div>
+    <label for="tCalc" style="margin-top:10px">🧮 Calculator</label><select id="tCalc"><option value="">None</option><option value="basic">BEEcalc Basic</option><option value="scientific">BEEcalc Scientific</option><option value="graphing">BEEcalc Graphing</option><option value="desmos">Desmos Graphing (needs internet)</option></select>
     <div class="row" style="margin-top:6px"><button class="btn" id="tSave">📁 Change where answers are saved</button></div>
     <div class="row"><button class="btn danger" id="tEnd">End the test for this student</button><span style="flex:1"></span><button class="btn primary" data-close>Close</button></div>
   </div>
@@ -136,6 +138,10 @@
   <div class="row"><button class="btn primary" id="brkGo">Carry on with the test</button></div>
 </div></div>
 <div class="overlay hidden" id="ovl" aria-hidden="true"></div>
+<div class="calcpanel hidden" id="calcPanel" role="dialog" aria-label="Calculator">
+  <div class="calchead" id="calcHead"><b>🧮 Calculator</b><span class="muted" id="calcKind"></span><button class="btn sm" type="button" id="calcClose" aria-label="Close the calculator">✕</button></div>
+  <div id="calcBox"></div><div class="calcmsg hidden" id="calcMsg"></div>
+</div>
 <div class="ruler hidden" id="rulerTop" aria-hidden="true"></div><div class="ruler hidden" id="rulerBot" aria-hidden="true"></div>
 
 <!-- locked: the student left the test -->

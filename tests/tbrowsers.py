@@ -66,6 +66,17 @@ async def main():
             ok("🎙️ after the recording ends, the computer voice does not read it again", not v2["tts"] or v["bad"], v2)
             await sp.evaluate("stopReading()")
         else: ok("🎙️ the student file has the teacher's recording", False, "no unit with audio")
+        # 🧮 the teacher switches on BEEcalc Graphing during the exam; a graph is drawn; a sum is worked out
+        await sp.click("#bTeacher"); await sp.fill("#tCode", "135790"); await sp.click("#tOk"); await sp.wait_for_timeout(300)
+        if await sp.is_visible("#tCalc"):
+            await sp.select_option("#tCalc", "graphing"); await sp.click("#tMenu [data-close]"); await sp.wait_for_timeout(200)
+            await sp.click("#bCalc"); await sp.wait_for_timeout(500)
+            await sp.fill(".bg-it:nth-child(1) .bg-in", "y = x^2 - 4"); await sp.wait_for_timeout(400)
+            red = await sp.evaluate("""(() => { const c = document.querySelector('.bg-plot canvas'), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for(let i = 0; i < d.length; i += 4) if(d[i] > 150 && d[i+1] < 110 && d[i+2] < 110) n++; return n; })()""")
+            ok("🧮 the teacher switches on BEEcalc Graphing; a graph is drawn", red > 200, red)
+            ok("🧮 BEEcalc works out sums (sin 30° + 2³ = 8.5)", await sp.evaluate("BCalc.evaluate('sin(30)+2^3', { deg: true })") == 8.5)
+            await sp.click("#calcClose")
+        else: ok("🧮 the teacher's calculator switch is there", False, "no #tCalc")
         qs = await sp.evaluate("PAPER.items.filter(i => i.k === 'q').map(q => q.id)")
         await sp.fill(f"[data-area='{qs[0]}|main'] textarea", "27")
         pq = await sp.evaluate("PAPER.items.find(i => i.k === 'q' && /Pisum/.test(i.plain)).id")

@@ -11,5 +11,8 @@
 60_guard.js
 70_access.js
 75_support.js
+76_calc.js
+77_beecalc.js
+78_beegraph.js
 80_flow.js
 99_end.html

@@ -186,6 +186,7 @@ function teacherInfo(){
   const lefts = ST.log.filter(l => l.kind === "left").length;
   $("#tSaveInfo").innerHTML = "💾 Answers and backups are saved in: <b>" + esc(saveWhere()) + "</b>";
   $("#tSave").classList.toggle("hidden", !("showDirectoryPicker" in window) || READ_ONLY());
+  if($("#tCalc")) $("#tCalc").value = (ST.calcKind != null ? ST.calcKind : EXAM.calc) || "";
   $("#tInfo").innerHTML = `${esc(ST.name)} · started ${hm(ST.startedAt)}${EXAM.timeMin ? ` · time allowed ${EXAM.timeMin + (ST.extraMin || 0)} min` : ""} · left the test ${lefts} time${lefts === 1 ? "" : "s"}`;
 }
 document.querySelectorAll("#tMenu [data-add]").forEach(b => b.onclick = () => {
