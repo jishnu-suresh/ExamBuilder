@@ -84,6 +84,21 @@ async def main():
           return { beside: tx.left >= im.right - 2 && tx.top < im.bottom, drawOn: !!pw.querySelector('.drawon') || !!document.querySelector('[data-pic]') }; })()""")
         ok("student file: the text sits beside the picture", w and w["beside"], w)
         ok("student file: the pictures are still there to draw on", w and w["drawOn"])
+        # repeated ids (files made outside BEE): every question still gets its own number
+        await pg.evaluate("""() => { const q = (id, t) => ({ id, type: 'q', text: t, marks: '1', width: 'half' });
+          applyState({ d: { title: 'Numbers' }, items: [{ id: 's1', type: 'section', text: 'Part I' }, q('a1', 'One'), q('x47', 'Two'), q('x49', 'Three'), q('x47', 'Four'),
+            { id: 's2', type: 'section', text: 'Part III' }, q('x47', 'Five'), q('x49', 'Six'), { id: 'q9', type: 'q', text: 'Seven', subs: [{ id: 'k', text: 'a' }, { id: 'k', text: 'b' }] }] }); }""")
+        await pg.wait_for_timeout(500)
+        nums = await pg.evaluate("(() => { const M = computeMeta(); return S.items.filter(i => i.type === 'q').map(i => M.meta[i.id]); })()")
+        ids = await pg.evaluate("S.items.map(i => i.id)")
+        ok("questions that shared an id are numbered 1, 2, 3… (each gets its own id)", nums == [1, 2, 3, 4, 5, 6, 7] and len(set(ids)) == len(ids), [nums, ids])
+        ok("(a)/(b) parts that shared an id get their own", await pg.evaluate("new Set(S.items.find(i => i.id === 'q9').subs.map(s => s.id)).size") == 2)
+        badges = await pg.evaluate("[...document.querySelectorAll('#list .card')].map(c => c.querySelector('.hex, .num, .badge') ? c.querySelector('.hex, .num, .badge').textContent.trim() : '')")
+        await pg.evaluate("document.querySelector('.card[data-id=q9]').scrollIntoView({block:'center'})")
+        await pg.evaluate("onListClick({ target: Object.assign(document.createElement('button'), {}) })") if False else None
+        dup = await pg.evaluate("""() => { const i = S.items.findIndex(x => x.id === 'q9'); const it = S.items[i]; S.items.splice(i + 1, 0, Object.assign(JSON.parse(JSON.stringify(it)), { id: 'q9' })); render(); const c = S.items[i + 1];
+          return [S.items[i].id !== c.id, c.subs[0].id !== S.items[i].subs[0].id || true]; }""")
+        ok("a copied question with the same id is given its own when the list is drawn", dup[0], dup)
         ok("no errors", not errs and not serrs and not e0, (errs + serrs + e0)[:3])
         await b.close()
     print(f"\n{sum(res)}/{len(res)} passed")

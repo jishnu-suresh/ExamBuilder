@@ -57,6 +57,7 @@ document.addEventListener("click", e => {
   const f = e.target.closest(".foldable.folded"); if(f && !e.target.closest(".switch")) setFold(f.id, false, true);
 }, true);
 function render(){
+  uniqueIds(S.items);      // (repeated ids would share one question number)
   updateFolds();
   const { meta, auto, total, qCount, secs } = computeMeta();
   $("#autoTotalHint").textContent = "auto: " + fmt(auto);
@@ -261,7 +262,7 @@ async function onListClick(e){
   switch(b.dataset.act){
     case "up": if(i > 0){ [S.items[i - 1], S.items[i]] = [S.items[i], S.items[i - 1]]; } break;
     case "down": if(i < S.items.length - 1){ [S.items[i + 1], S.items[i]] = [S.items[i], S.items[i + 1]]; } break;
-    case "dup": S.items.splice(i + 1, 0, Object.assign(JSON.parse(JSON.stringify(it)), { id: nid() })); break;
+    case "dup": { const c = Object.assign(JSON.parse(JSON.stringify(it)), { id: nid() }); (c.subs || []).forEach(sb => { if(sb.id) sb.id = nid(); }); S.items.splice(i + 1, 0, c); break; }
     case "del": S.items.splice(i, 1); break;
     case "rmimg": it.img = null; delete it.graph; delete it.labels; break;
     case "align": it.imgAlign = b.dataset.v; break;

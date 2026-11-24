@@ -3851,7 +3851,7 @@ function renderPaper(){
     const pw = img.closest(".picwrap"); if(pw) pw.appendChild(b); else img.after(b);     // under the picture, also when it sits beside text or another picture
   });
   $$("#paper .q").forEach(q => { const f = q.querySelector("[data-flag]"); if(f && ST.flags[q.dataset.q]) f.classList.add("on"); });
-  renderNav();
+  renderNav(); creditFit();
 }
 function optsHTML(it){
   const sel = new Set(((ST.answers[it.id] || {}).choice) || []), type = it.mcq === "multi" ? "checkbox" : "radio";
@@ -3894,6 +3894,15 @@ function renderNav(){
   const RO = READ_ONLY();
   $("#navGrid").innerHTML = qs.map(it => `<a href="#q-${it.id}" class="${!RO && isAnswered(it) ? "done" : ""} ${ST.flags[it.id] ? "flag" : ""}" title="Question ${esc(it.no || "")}">${esc(it.no || "•")}</a>`).join("");
 }
+
+// the small corner credit steps aside when the Questions panel reaches the bottom-left corner (long papers)
+function creditFit(){
+  const c = document.querySelector(".credit.corner"), n = document.querySelector(".nav"); if(!c || !n) return;
+  c.style.visibility = "";
+  const r = n.getBoundingClientRect(), k = c.getBoundingClientRect();
+  if(k.width && r.bottom > k.top - 6 && r.left < k.right + 6 && r.top < k.bottom) c.style.visibility = "hidden";
+}
+["scroll", "resize"].forEach(ev => window.addEventListener(ev, creditFit, { passive: true }));
 
 /* ---- answer areas: each is a list of blocks — text, maths or a drawing ---- */
 const AREA_SPEC = {};      // "qid|key" → { kind, lines, range }

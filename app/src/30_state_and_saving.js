@@ -118,8 +118,21 @@ function mergeState(o){
     audio: o.audio && typeof o.audio === "object" && !Array.isArray(o.audio) ? o.audio : {} };
   if(out.logo && out.logo.isDefault) out.logo = base.logo;
   if(!out.d.accentChosen && /^#b5892e$/i.test(out.d.accent || "")) out.d.accent = defaults().d.accent;
-  out.items.forEach(it => { if(!it.id) it.id = nid(); });
+  uniqueIds(out.items);
   return out;
+}
+// Every question needs its own id: its number, answer, pictures and recordings are kept by id. Files made or
+// edited outside BEE (an AI, a copied file) can repeat ids, and then questions share one number (47, 47, 47…).
+// A repeated id gets a fresh one (the first keeps it); (a)/(b) parts get their own within their question.
+function uniqueIds(items){
+  const seen = new Set(); let fixed = 0;
+  for(const it of items){
+    if(!it || typeof it !== "object") continue;
+    if(!it.id || seen.has(it.id)){ it.id = nid(); fixed++; }
+    seen.add(it.id);
+    if(Array.isArray(it.subs)){ const ss = new Set(); for(const sb of it.subs){ if(!sb || typeof sb !== "object") continue; if(sb.id && ss.has(sb.id)){ sb.id = nid(); fixed++; } if(sb.id) ss.add(sb.id); } }
+  }
+  return fixed;
 }
 let saveT;
 // BEE open twice (two tabs, or a tab and the installed app): both copies are told, so one can be saved and closed
