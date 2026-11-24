@@ -70,8 +70,21 @@ document.addEventListener("keydown", e => {
   if(e.key === "F12" || ((e.ctrlKey || e.metaKey) && (e.shiftKey || e.altKey) && ["i", "j", "c", "ˆ", "∆", "ç"].includes(k)) || ((e.ctrlKey || e.metaKey) && k === "u")){
     e.preventDefault(); e.stopPropagation(); logEv("tried to open the developer tools", { key: e.key }); beep(); toast("Developer tools are switched off during the test."); return;
   }
-  if((e.altKey && (e.key === "Tab" || e.key === "F4")) || e.key === "Meta" || e.key === "OS" || (e.metaKey && /^(tab|h|m|q|w)$/i.test(e.key))){
-    e.preventDefault(); logEv("tried to leave with the keyboard", { key: (e.altKey ? "Alt+" : e.metaKey ? "Cmd+" : "") + e.key }); beep(); toast("Stay on the test, please.");
+  // Students only type. Cmd (Mac) / the Windows key locks at once (Cmd+Space, Cmd+Tab…), and so does Ctrl + any key
+  // (undo, copy, paste included). Shift and Option/AltGr are for typing (capitals, symbols, é, @, €) and never lock;
+  // Ctrl+Alt is AltGr on Windows keyboards (and VoiceOver on a Mac), so it is left alone too.
+  const altGr = !!(e.getModifierState && e.getModifierState("AltGraph"));
+  const meta = e.key === "Meta" || e.key === "OS" || e.metaKey, ctrl = e.ctrlKey && !e.altKey && e.key !== "Control";
+  if(!altGr && (meta || ctrl)){
+    e.preventDefault(); e.stopPropagation();
+    if(ST.locked || ST.timeUpAt) return;
+    const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+    const mod = meta ? (mac ? "Cmd" : "the Windows key") : "Ctrl", alone = ["Meta", "OS", "Control"].includes(e.key);
+    left("pressed " + mod + (alone ? "" : " + " + (e.key === " " ? "Space" : e.key.length === 1 ? e.key.toUpperCase() : e.key)));
+    return;
+  }
+  if(e.altKey && (e.key === "Tab" || e.key === "F4")){
+    e.preventDefault(); logEv("tried to leave with the keyboard", { key: "Alt+" + e.key }); beep(); toast("Stay on the test, please.");
   }
 }, true);
 // the lock covers everything: the paper, the maths keyboard, the reading bar, a drawing in progress
@@ -103,8 +116,9 @@ $("#lkGo").onclick = async () => {
 $("#lkCode").addEventListener("keydown", e => { if(e.key === "Enter") $("#lkGo").click(); });
 
 /* no pasting answers in, no copying questions out, no printing */
-["paste", "drop"].forEach(ev => document.addEventListener(ev, e => { if(running && !(e.target.closest && e.target.closest(".txtin"))){ e.preventDefault(); toast("Pasting is switched off during the test."); logEv("tried to paste"); } }, true));
-["copy", "cut"].forEach(ev => document.addEventListener(ev, e => { if(running && !(e.target.closest && e.target.closest("textarea, math-field"))) e.preventDefault(); }, true));
+// (nothing goes in or out: not even inside an answer, so text copied before the test can't be pasted in)
+["paste", "drop"].forEach(ev => document.addEventListener(ev, e => { if(running){ e.preventDefault(); e.stopPropagation(); toast("Pasting is switched off during the test."); logEv("tried to paste"); } }, true));
+["copy", "cut"].forEach(ev => document.addEventListener(ev, e => { if(running){ e.preventDefault(); e.stopPropagation(); } }, true));
 document.addEventListener("contextmenu", e => { if(running) e.preventDefault(); });
 document.addEventListener("keydown", e => {
   if(!running) return;
