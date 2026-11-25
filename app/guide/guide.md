@@ -2,6 +2,8 @@
 
 Nov 21, 2026 · Jishnu
 
+**📺 [The illustrated guide](https://jishnu-suresh.github.io/ExamBuilder/guide/)** shows every feature with short moving pictures. This page is the short version, for when you're offline.
+
 BEE turns your questions into a clean, printable exam paper (PDF) with an answer key. It runs in your web browser, and your exams stay on your own computer.
 
 ## Open BEE

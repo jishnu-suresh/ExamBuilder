@@ -16,7 +16,11 @@ async def main():
         await pg.goto("http://127.0.0.1:8765/"); await pg.wait_for_timeout(1500)
         async with ctx.expect_page() as np: await pg.click("#stGuide")
         gp = await np.value; await gp.wait_for_load_state()
-        ok("📖 Teacher guide on the start screen opens the guide in a new window", "guide.html" in gp.url and "Your first exam in 5 steps" in await gp.text_content("main"), gp.url)
+        ok("📖 Teacher guide on the start screen opens the illustrated guide in a new window", "/guide/" in gp.url and "Welcome" in await gp.text_content("main h1") and await gp.locator("nav.side a").count() >= 12, gp.url)
+        gt = await ctx.new_page(); await gt.goto("http://127.0.0.1:8765/guide.html"); await gt.wait_for_timeout(1200)
+        ok("📖 the old guide.html link goes to the illustrated guide", "/guide/" in gt.url, gt.url)
+        await gt.goto("http://127.0.0.1:8765/guide.html?text"); await gt.wait_for_timeout(600)
+        ok("…and the short text guide is still there (offline)", "Your first exam in 5 steps" in await gt.text_content("main")); await gt.close()
         await gp.close()
         # start screen: two demos; ✨ What's new
         ok("start screen: 📝 Simple quiz and ✨ Every feature demos", await pg.is_visible("#stDemoSimple") and await pg.is_visible("#stDemo"))

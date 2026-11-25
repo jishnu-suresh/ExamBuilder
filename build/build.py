@@ -250,7 +250,11 @@ pwa.update({
 })
 index_html = fill(src, pwa)
 open(os.path.join(OUT, "index.html"), "w").write(index_html)
-open(os.path.join(OUT, "guide.html"), "w").write(GUIDE_HTML)          # a link teachers can share
+# 📖 the illustrated guide (docs/guide/) — guide.html, the old link, goes there when online and is the short text guide offline
+import guide_site
+_ver = re.search(r'BEE_VERSION = "([^"]+)"', src).group(1)
+guide_site.build(OUT, _ver)
+open(os.path.join(OUT, "guide.html"), "w").write(GUIDE_HTML.replace("<head>", '<head><script>if(navigator.onLine !== false && !/[?&]text\\b/.test(location.search)) location.replace("guide/" + location.hash);</script>', 1))
 os.makedirs(os.path.join(OUT, "download"))
 # the offline file carries its own bee tab icon (no icons folder next to it)
 import base64

@@ -172,11 +172,14 @@ $("#btnRefresh").onclick = preview;
 document.addEventListener("click", e => {
   document.querySelectorAll("details.qmenu[open]").forEach(d => { if(!d.contains(e.target) || e.target.closest(".qm-item, .open-prompt")) d.open = false; });
 });
-// 📖 the teacher guide opens in a new window: the website's guide.html, or (offline file) the copy built into BEE
+// 📖 the teacher guide opens in a new window: the illustrated guide (guide/) online; offline, the short text guide (guide.html, or the copy built into the offline file)
+const GUIDE_URL = "https://jishnu-suresh.github.io/ExamBuilder/guide/";
 document.addEventListener("click", e => {
   const a = e.target.closest("[data-guide]"); if(!a) return;
-  if(window.__PWA__) return;                       // website / installed app: the link opens guide.html itself
+  const online = navigator.onLine !== false;
+  if(window.__PWA__){ if(!online){ e.preventDefault(); window.open("guide.html?text", "_blank", "noopener"); } return; }   // website / installed app
   e.preventDefault();
+  if(online){ window.open(GUIDE_URL, "_blank", "noopener"); return; }
   const w = window.open(URL.createObjectURL(new Blob([GUIDE_HTML], { type: "text/html" })), "_blank");
   if(!w) toast("Your browser blocked the new window: allow pop-ups for BEE to open the guide.");
 });

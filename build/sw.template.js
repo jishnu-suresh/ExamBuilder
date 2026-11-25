@@ -19,6 +19,7 @@ self.addEventListener("message", e => { if(e.data === "skipWaiting") self.skipWa
 self.addEventListener("fetch", e => {
   const req = e.request;
   if(req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
+  if(/\/guide\//.test(new URL(req.url).pathname)) return;     // 📖 the illustrated guide (pages + clips): straight from the website
   e.respondWith((async () => {
     const hit = await caches.match(req, { ignoreSearch: true });
     if(hit) return hit;
