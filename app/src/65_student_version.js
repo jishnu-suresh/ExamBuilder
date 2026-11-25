@@ -207,7 +207,7 @@ async function openStudentDialog(){
   if(!S.items.some(it => it.type === "q")){ toast("Add some questions first."); return; }
   if(!(window.crypto && crypto.subtle)){ toast("This browser can't make sealed files. Please use Chrome, Edge, Firefox or Safari."); return; }
   $("#stuForm").classList.remove("hidden"); $("#stuDone").classList.add("hidden");
-  $("#stuMin").value = parseDur(S.d.duration) || 60; $("#stuExtra").value = "0"; $("#stuNoTime").checked = false; $("#stuVer").value = "";
+  $("#stuMin").value = parseDur(S.d.duration) || 60; $("#stuExtra").value = "0"; $("#stuNoTime").checked = false; $("#stuVer").value = ""; $("#stuCalc").value = "";   // the calculator starts at None each time: the teacher chooses it for this exam
   $("#stuCode").value = BC.newCode(8); $("#stuTCode").value = BC.newCode(6, true);
   stuTotal(); keyRow(); stuModeUI(); openModal("#stuModal");
 }

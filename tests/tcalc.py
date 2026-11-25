@@ -16,7 +16,11 @@ FAKE_DESMOS = """window.Desmos = { GraphingCalculator: (el, o) => { el.innerHTML
 
 async def make(b, kind, name):
     c, pg, errs, d = await make_student_file(b, code="CALC-2345", tcode="246802", setup=f"() => {{ document.querySelector('#stuCalc').value = '{kind}'; }}")
-    f = os.path.join(OUT, f"calc_{name}.html"); await d.save_as(f); await c.close(); return f, errs
+    f = os.path.join(OUT, f"calc_{name}.html"); await d.save_as(f)
+    if kind == "graphing":       # the next exam starts again at None
+        await pg.evaluate("document.querySelectorAll('.modal.open').forEach(m => m.classList.remove('open')); openStudentDialog()"); await pg.wait_for_timeout(300)
+        ok("the calculator starts at None each time the window opens", await pg.evaluate("$('#stuCalc').value") == "" and await pg.evaluate("$('#stuCalc').selectedOptions[0].textContent") == "None")
+    await c.close(); return f, errs
 
 async def begin(b, f, online=True):
     sc, sp, e = await student(b, f)

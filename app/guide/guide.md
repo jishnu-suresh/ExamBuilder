@@ -70,6 +70,14 @@ Students can also answer on a laptop, offline. You make the exam in BEE as usual
 
 **🔊 Read aloud in your own voice.** In the 💻 Computer version window, press **🎙️ Record…** and read each question once (● Record, then ■ Stop). Students then hear you instead of the computer voice, on every laptop and iPad, even offline. Don't say the question number, and read multiple-choice options too. If you change a question afterwards, BEE marks its recording **⚠ text changed**: record it again, or press ✓ Still right. Anything you don't record is read by the computer voice (most natural in Microsoft Edge with internet).
 
+**🧮 Calculator.** In the 💻 Computer version window, choose a calculator for this exam (it starts at **None**):
+
+- **BEEcalc Basic** or **Scientific**: work offline and start in degrees. Scientific has fractions, powers, roots, trigonometry, and mean and standard deviation.
+- **BEEcalc Graphing**: works offline. It draws functions, circles and other curves (x² + y² = 25), shaded regions, polar graphs and sliders. It also has tables of values, data plots with regression, box plots, histograms and statistics.
+- **Desmos Graphing**: needs the internet in the exam room.
+
+During the exam, the 👩‍🏫 teacher menu (with the teacher code) can switch the calculator on, change it or take it away for one student. On a phone-sized screen, graphing is replaced by Scientific; on an iPad it works fully.
+
 ## Printing
 
 Print at **100% (“Actual size”)**, not “Fit to page”: otherwise the answer lines and margins shrink.

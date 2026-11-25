@@ -406,6 +406,15 @@ if(window.__PWA__){
 /* ---------------- ✨ what's new (newest first; add an entry at the top for each update teachers should know about) ---------------- */
 document.querySelectorAll(".ver").forEach(e => { e.textContent = BEE_VERSION; });   // the corner pill and the start screen always show the real version
 const NEWS = [
+  { id: "2026-11-25-v3", title: "v3 · November 2026", items: [
+    "🧮 <b>A calculator in the computer version.</b> In ⬇ Download → 👩‍🏫 Teacher → 💻 Computer version, choose <b>🧮 Calculator</b>: None (the default), BEEcalc Basic, Scientific or Graphing, or Desmos Graphing.",
+    "<b>BEEcalc works offline</b> and starts in degrees. Scientific has fractions, powers, roots, trigonometry, and mean and standard deviation of a list.",
+    "<b>BEEcalc Graphing:</b> y = …, x = …, circles and other curves (x² + y² = 25), shaded regions (y < 2x + 1), polar graphs (r = 4cos 2θ), sliders, tables of values, data plots with regression (linear, quadratic, exponential…), box plots, histograms and statistics.",
+    "<b>Desmos Graphing</b> needs the internet in the exam room. Without it, the student sees a message and the test carries on.",
+    "<b>During the exam</b>, the 👩‍🏫 teacher menu (with the teacher code) can switch the calculator on, change it or take it away for one student. Each change is noted in the report.",
+    "On a phone-sized screen, graphing is replaced by BEEcalc Scientific. On an iPad it works fully.",
+    "🔊 The computer version now has a <b>🔊 Read aloud</b> button in the top bar too. It reads from the part on the screen."
+  ] },
   { id: "2026-11-23-v2.2", title: "v2.2 · November 2026", items: [
     "🎙️ <b>Read aloud in your own voice.</b> In ⬇ Download → 👩‍🏫 Teacher → 💻 Computer version, press <b>🎙️ Record…</b> and read each question once. Students hear you instead of the computer voice, on every laptop and iPad, even offline.",
     "<b>Don't say the question number</b>, because versions A–D can change it. For multiple choice, read the options too.",
