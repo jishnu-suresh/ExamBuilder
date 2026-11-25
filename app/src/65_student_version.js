@@ -409,6 +409,7 @@ function renderAnswers(){
     <p class="hint">Blue in the PDF = what the student typed or chose. Mark it like any paper.</p>` : "<p>No files yet.</p>";
   $("#ansZip").classList.toggle("hidden", ANS.filter(r => r.P).length < 2);   // one student: their own ⬇ PDF is enough
 }
+const CALC_LABEL = { basic: "Basic", scientific: "Scientific", graphing: "Graphing", desmos: "Desmos Graphing", none: "none" };
 const leftCount = P => (P.log || []).filter(l => l.kind === "left").length;
 $("#ansList").addEventListener("click", async e => {
   const b = e.target.closest("[data-anspdf]"); if(!b) return;
@@ -542,6 +543,7 @@ function respRecord(doc, R, h){
   if(R.hlCount) used2.push("highlighter");
   const reads = (R.log || []).filter(l => l.kind === "read aloud").length; if(reads) used2.push("read aloud (" + reads + "×)");
   if(p.accents) used2.push("French accents");
+  const calcs = [...new Set((R.log || []).filter(l => l.kind === "calculator opened" && l.calc).map(l => CALC_LABEL[l.calc] || l.calc))]; if(calcs.length) used2.push("calculator (" + calcs.join(", ") + ")");
   if(used2.length){
     font(SANS, "normal", 10, MUTED); doc.text("Used", ML, y);
     font(SANS, "bold", 10, INK); doc.splitTextToSize(used2.join(" · "), PW - ML - MR - 34).forEach(l => { doc.text(l, ML + 34, y); y += 5.2; }); y += .8;
@@ -551,7 +553,7 @@ function respRecord(doc, R, h){
   const lefts = (R.log || []).filter(l => l.kind === "left");
   font(SANS, "bold", 11.5, INK); doc.text(lefts.length ? `Left the test screen: ${lefts.length} time${lefts.length === 1 ? "" : "s"}` : "Left the test screen: never", ML, y); y += 6;
   const shown = (R.log || []).filter(l => !/^(read aloud|reading ruler on|used the highlighter)$/.test(l.kind));
-  const say = l => l.kind === "rest break ended" ? "rest break ended (" + Math.max(1, Math.round((l.ms || 0) / 60000)) + " min)" : l.kind === "left" ? "left the test — " + (l.how || "") : l.kind === "back" ? "came back after " + Math.max(1, Math.round((l.ms || 0) / 1000)) + " s" : l.kind === "time added by teacher" ? "teacher added " + l.min + " minutes" : l.kind === "ended" ? "ended" : l.kind === "tried to leave with the keyboard" ? "tried to leave with the keyboard (" + (l.key || "") + ")" : l.kind === "test reopened" || /backup/.test(l.kind) ? l.kind + (l.ms ? " (" + Math.round(l.ms / 60000) + " min after the last save)" : "") : l.kind;
+  const say = l => l.kind === "rest break ended" ? "rest break ended (" + Math.max(1, Math.round((l.ms || 0) / 60000)) + " min)" : l.kind === "left" ? "left the test — " + (l.how || "") : l.kind === "back" ? "came back after " + Math.max(1, Math.round((l.ms || 0) / 1000)) + " s" : l.kind === "time added by teacher" ? "teacher added " + l.min + " minutes" : l.kind === "ended" ? "ended" : l.kind === "calculator opened" ? "opened the calculator (" + (CALC_LABEL[l.calc] || l.calc || "") + (l.why ? " — " + (CALC_LABEL[l.chosen] || l.chosen) + " needs a bigger screen" : "") + ")" : l.kind === "calculator changed by the teacher" ? "teacher changed the calculator: " + (CALC_LABEL[l.from] || l.from) + " → " + (CALC_LABEL[l.to] || l.to) : l.kind === "tried to leave with the keyboard" ? "tried to leave with the keyboard (" + (l.key || "") + ")" : l.kind === "test reopened" || /backup/.test(l.kind) ? l.kind + (l.ms ? " (" + Math.round(l.ms / 60000) + " min after the last save)" : "") : l.kind;
   if(lefts.length || shown.some(l => /paste|reopened|backup|wrong|tried|rest break/.test(l.kind))){
     const list = shown.slice(0, 40);
     list.forEach(l => { if(y > PH - 60) return; font(SANS, "normal", 9, /left|paste|wrong|tried/.test(l.kind) ? [180, 69, 47] : INK); doc.text(T(l.t), ML + 2, y); doc.text(say(l), ML + 18, y); y += 4.6; });

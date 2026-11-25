@@ -20,15 +20,18 @@ function loadDesmos(){
   }).catch(e => { CALC.loading = null; throw e; });
   return CALC.loading;
 }
+// a phone screen is too small for a graphing calculator: it gets BEEcalc Scientific instead (screen size, so turning the phone or resizing a window doesn't change it)
+const smallScreen = () => Math.min(screen.width || innerWidth, screen.height || innerHeight) < 600;
+const shownCalc = k => (k === "graphing" || k === "desmos") && smallScreen() ? "scientific" : k;
 function calcMsg(t){ const m = $("#calcMsg"); m.textContent = t || ""; m.classList.toggle("hidden", !t); $("#calcBox").classList.toggle("hidden", !!t); }
 async function openCalc(){
-  const k = calcKind(); if(!CALC_NAMES[k]) return;
-  const P = $("#calcPanel");
-  P.classList.remove("hidden"); P.classList.toggle("graph", k === "graphing" || k === "desmos"); P.classList.toggle("basic", k === "basic"); P.classList.toggle("scientific", k === "scientific"); $("#calcKind").textContent = CALC_NAMES[k];
+  const chosen = calcKind(); if(!CALC_NAMES[chosen]) return;
+  const k = shownCalc(chosen), P = $("#calcPanel");
+  P.classList.remove("hidden"); P.classList.toggle("graph", k === "graphing" || k === "desmos"); P.classList.toggle("basic", k === "basic"); P.classList.toggle("scientific", k === "scientific"); $("#calcKind").textContent = CALC_NAMES[k] + (k !== chosen ? " · graphing needs a bigger screen" : "");
   if(CALC.kind === k && CALC.ui) return;
   CALC.kind = k; CALC.ui = null; $("#calcBox").innerHTML = "";
   ST.calc = ST.calc || {};
-  logEv("calculator opened", { kind: k });
+  logEv("calculator opened", k !== chosen ? { calc: k, chosen, why: "small screen" } : { calc: k });
   if(k !== "desmos"){
     calcMsg("");
     CALC.ui = k === "graphing" ? beeGraphUI($("#calcBox"), ST.calc.graphing = ST.calc.graphing || {}) : beeCalcUI($("#calcBox"), k, ST.calc[k] = ST.calc[k] || {});
