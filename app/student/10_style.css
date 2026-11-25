@@ -300,3 +300,7 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
 .bg-fit{flex-wrap:wrap;align-items:center}
 .bg-fit .btn{font-size:.8em;padding:3px 8px;white-space:nowrap}
 .bg-fit select{font-size:.82em;padding:2px 4px;height:auto}
+.bg-st .btn.sm{font-size:.78em;padding:2px 7px;margin-left:4px}
+.bg-st .btn.on{background:var(--gold-l);border-color:var(--gold)}
+.bg-tbl th.res{font-style:italic}
+.bg-tbl td.res{color:var(--muted);font-style:italic}

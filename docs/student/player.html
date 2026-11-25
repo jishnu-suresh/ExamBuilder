@@ -3547,6 +3547,10 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
 .bg-fit{flex-wrap:wrap;align-items:center}
 .bg-fit .btn{font-size:.8em;padding:3px 8px;white-space:nowrap}
 .bg-fit select{font-size:.82em;padding:2px 4px;height:auto}
+.bg-st .btn.sm{font-size:.78em;padding:2px 7px;margin-left:4px}
+.bg-st .btn.on{background:var(--gold-l);border-color:var(--gold)}
+.bg-tbl th.res{font-style:italic}
+.bg-tbl td.res{color:var(--muted);font-style:italic}
 
 </style>
 </head>
@@ -5200,7 +5204,7 @@ function beeGraphUI(box, S){
       <div class="bg-list"></div>
     </div>
     <div class="bg-plot"><canvas aria-label="Graph"></canvas>
-      <div class="bg-zoom"><button type="button" data-z="in" title="Zoom in">＋</button><button type="button" data-z="out" title="Zoom out">－</button><button type="button" data-z="home" title="Back to the start">⌂</button></div>
+      <div class="bg-zoom"><button type="button" data-z="in" title="Zoom in">＋</button><button type="button" data-z="out" title="Zoom out">－</button><button type="button" data-z="home" title="Back to the start">⌂</button><button type="button" data-z="fit" title="Zoom to fit all the points">🔍</button></div>
       <div class="bg-tip" hidden></div>
     </div>
   </div>`;
@@ -5357,7 +5361,7 @@ function beeGraphUI(box, S){
     if(!dataVars.length) throw new BCalc.CalcError("Use a table column on the right, like x1");
     if(!params.length) throw new BCalc.CalcError("There are no letters left to find: " + used.filter(v => v in R.vars).join(", ") + " already have values. Use other letters.");
     const tbl = Object.keys(R.rows).find(id => R.rows[id].length && yName in R.rows[id][0] && dataVars.every(v => v in R.rows[id][0]));
-    const rows = tbl ? R.rows[tbl].filter(rw => [yName, ...dataVars].every(k => Number.isFinite(rw[k]))) : [];
+    const rows = tbl ? R.rows[tbl].filter(rw => [yName, ...dataVars].every(k => Number.isFinite(rw[k]))) : [];   // (the same row objects as the table's, so its residuals line up)
     if(rows.length < Math.max(2, params.length)) throw new BCalc.CalcError("Type at least " + Math.max(2, params.length) + " rows of data");
     const model = (p, rw) => g(env({ vars: Object.assign({}, R.vars, rw, p) }));
     const best = { p: null, sse: Infinity };
@@ -5382,7 +5386,8 @@ function beeGraphUI(box, S){
     Object.assign(R.vars, best.p);
     const mean = rows.reduce((a, rw) => a + rw[yName], 0) / rows.length, sst = rows.reduce((a, rw) => a + (rw[yName] - mean) ** 2, 0);
     const xVar = dataVars[0];
-    return { kind: "fit", params: best.p, r2: sst > 0 ? 1 - best.sse / sst : 1, fx: x => model(best.p, { [xVar]: x }) };
+    const resid = rows.map(rw => [rw[xVar], rw[yName] - model(best.p, rw)]);
+    return { kind: "fit", params: best.p, r2: sst > 0 ? 1 - best.sse / sst : 1, fx: x => model(best.p, { [xVar]: x }), resid, tbl: +tbl, yName, rowsUsed: rows };
   }
   function corr(a, b){ const n = Math.min(a.length, b.length), ma = BC_STATS.mean(a.slice(0, n)), mb = BC_STATS.mean(b.slice(0, n)); let sab = 0, saa = 0, sbb = 0; for(let i = 0; i < n; i++){ sab += (a[i] - ma) * (b[i] - mb); saa += (a[i] - ma) ** 2; sbb += (b[i] - mb) ** 2; } return sab / Math.sqrt(saa * sbb); }
   function solve(M, v){
@@ -5397,8 +5402,9 @@ function beeGraphUI(box, S){
 
   /* ---------- drawing ---------- */
   let W = 0, H = 0, dpr = 1;
-  const X = x => W / 2 + (x - V.cx) * V.s, Y = y => H / 2 - (y - V.cy) * V.s;
-  const ux = px => V.cx + (px - W / 2) / V.s, uy = py => V.cy - (py - H / 2) / V.s;
+  const SY = () => V.s * (V.r || 1);                 // y has its own scale after "zoom to fit" (V.r = y scale ÷ x scale)
+  const X = x => W / 2 + (x - V.cx) * V.s, Y = y => H / 2 - (y - V.cy) * SY();
+  const ux = px => V.cx + (px - W / 2) / V.s, uy = py => V.cy - (py - H / 2) / SY();
   function nice(raw){ const p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p; return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p; }
   function size(){ const r = plot.getBoundingClientRect(); dpr = window.devicePixelRatio || 1; W = Math.max(50, r.width); H = Math.max(50, r.height); cv.width = W * dpr; cv.height = H * dpr; cv.style.width = W + "px"; cv.style.height = H + "px"; }
   function draw(){
@@ -5406,16 +5412,16 @@ function beeGraphUI(box, S){
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const dark = document.body.classList.contains("c-dark");
     ctx.fillStyle = dark ? "#1c1c1c" : "#fff"; ctx.fillRect(0, 0, W, H);
-    const step = nice(90 / V.s), minor = step / 5;
+    const step = nice(90 / V.s), minor = step / 5, ystep = nice(90 / SY()), yminor = ystep / 5;
     const gx0 = ux(0), gx1 = ux(W), gy0 = uy(H), gy1 = uy(0);
     ctx.lineWidth = 1;
     ctx.strokeStyle = dark ? "#2a2a2a" : "#eef0f3"; ctx.beginPath();
     for(let x = Math.ceil(gx0 / minor) * minor; x <= gx1; x += minor){ ctx.moveTo(Math.round(X(x)) + .5, 0); ctx.lineTo(Math.round(X(x)) + .5, H); }
-    for(let y = Math.ceil(gy0 / minor) * minor; y <= gy1; y += minor){ ctx.moveTo(0, Math.round(Y(y)) + .5); ctx.lineTo(W, Math.round(Y(y)) + .5); }
+    for(let y = Math.ceil(gy0 / yminor) * yminor; y <= gy1; y += yminor){ ctx.moveTo(0, Math.round(Y(y)) + .5); ctx.lineTo(W, Math.round(Y(y)) + .5); }
     ctx.stroke();
     ctx.strokeStyle = dark ? "#3a3a3a" : "#d5d9e0"; ctx.beginPath();
     for(let x = Math.ceil(gx0 / step) * step; x <= gx1; x += step){ ctx.moveTo(Math.round(X(x)) + .5, 0); ctx.lineTo(Math.round(X(x)) + .5, H); }
-    for(let y = Math.ceil(gy0 / step) * step; y <= gy1; y += step){ ctx.moveTo(0, Math.round(Y(y)) + .5); ctx.lineTo(W, Math.round(Y(y)) + .5); }
+    for(let y = Math.ceil(gy0 / ystep) * ystep; y <= gy1; y += ystep){ ctx.moveTo(0, Math.round(Y(y)) + .5); ctx.lineTo(W, Math.round(Y(y)) + .5); }
     ctx.stroke();
     // axes and numbers
     const ax = Math.min(Math.max(Y(0), 0), H), ay = Math.min(Math.max(X(0), 0), W);
@@ -5424,7 +5430,7 @@ function beeGraphUI(box, S){
     const lbl = v => BCalc.fmt(+v.toPrecision(10), 6);
     for(let x = Math.ceil(gx0 / step) * step; x <= gx1; x += step){ if(Math.abs(x) < step / 2) continue; const t = lbl(x), py = Math.min(Math.max(ax + 4, 2), H - 16); ctx.fillText(t, X(x), py); }
     ctx.textAlign = "right"; ctx.textBaseline = "middle";
-    for(let y = Math.ceil(gy0 / step) * step; y <= gy1; y += step){ if(Math.abs(y) < step / 2) continue; const t = lbl(y); ctx.fillText(t, Math.min(Math.max(ay - 5, ctx.measureText(t).width + 2), W - 4), Y(y)); }
+    for(let y = Math.ceil(gy0 / ystep) * ystep; y <= gy1; y += ystep){ if(Math.abs(y) < ystep / 2) continue; const t = lbl(y); ctx.fillText(t, Math.min(Math.max(ay - 5, ctx.measureText(t).width + 2), W - 4), Y(y)); }
     if(gx0 < 0 && gx1 > 0 && gy0 < 0 && gy1 > 0){ ctx.textAlign = "right"; ctx.textBaseline = "top"; ctx.fillText("0", ay - 4, ax + 3); }
     if(!A) return;
     // inequalities first (under the lines), then lines, then points
@@ -5440,6 +5446,7 @@ function beeGraphUI(box, S){
     for(const it of S.items){ const a = A.items[it.id]; if(it.hidden || !a) continue;
       if(a.kind === "pts") a.pts.forEach(p => dot(p[0], p[1], it.color, 5));
       if(a.kind === "table") a.sets.forEach(s => s.pts.forEach(p => dot(p[0], p[1], s.color, 4.5)));
+      if(a.kind === "fit" && it.resid) a.resid.forEach(p => ring(p[0], p[1], it.color));
     }
     // key points of the graph you're working on
     KP = []; const sa = sel != null && A.items[sel];
@@ -5529,6 +5536,7 @@ function beeGraphUI(box, S){
     ctx.strokeStyle = color; ctx.lineWidth = 1.6;
     a.bins.forEach(b => { if(!b.c) return; ctx.fillStyle = color; ctx.globalAlpha = .25; ctx.fillRect(X(b.a), Y(b.c), X(b.b) - X(b.a), Y(0) - Y(b.c)); ctx.globalAlpha = 1; ctx.strokeRect(X(b.a), Y(b.c), X(b.b) - X(b.a), Y(0) - Y(b.c)); });
   }
+  function ring(x, y, color){ const px = X(x), py = Y(y); if(!Number.isFinite(px) || !Number.isFinite(py)) return; ctx.fillStyle = "#fff"; ctx.strokeStyle = color; ctx.lineWidth = 2.2; ctx.beginPath(); ctx.arc(px, py, 4.5, 0, 7); ctx.fill(); ctx.stroke(); }
   function dot(x, y, color, r){ const px = X(x), py = Y(y); if(!Number.isFinite(px) || !Number.isFinite(py)) return; ctx.fillStyle = color; ctx.beginPath(); ctx.arc(px, py, r, 0, 7); ctx.fill(); }
   // roots, highest/lowest points, crossings with the other graphs, where it meets the y-axis
   function keyPoints(f, id){
@@ -5564,14 +5572,16 @@ function beeGraphUI(box, S){
       <div class="bg-acts"><button type="button" data-act="tbl" title="Table of values">▦</button><button type="button" data-act="del" title="Delete">✕</button></div></div>`).join("");
     status();
   }
+  // the fits of a table that show their residuals (each adds a column e1, e1b…)
+  const residFits = it => S.items.filter(f => f.resid && A && A.items[f.id] && A.items[f.id].kind === "fit" && A.items[f.id].tbl === it.id);
   function tableHTML(it){
-    const n = Math.max(...it.cols.map(c => (c.vals || []).length), 0);
+    const n = Math.max(...it.cols.map(c => (c.vals || []).length), 0), RF = residFits(it);
     const rows = []; for(let i = 0; i <= n; i++) rows.push(i);
     return `<div class="bg-it bg-tbl" data-id="${it.id}">
       <button type="button" class="bg-dot ${it.hidden ? "off" : ""}" style="--c:${it.color}" data-act="hide" title="Show or hide the points" aria-label="Show or hide"></button>
-      <div class="bg-main"><table><tr>${it.cols.map(c => `<th>${esc(c.name)}${c.ref ? `<small> = graph ${S.items.findIndex(x => x.id === c.ref) + 1}</small>` : ""}</th>`).join("")}</tr>
-        ${rows.map(i => `<tr>${it.cols.map((c, ci) => c.ref ? `<td class="ref" data-r="${i}" data-c="${ci}"></td>` : `<td><input data-r="${i}" data-c="${ci}" value="${esc((c.vals || [])[i] ?? "")}" inputmode="decimal" aria-label="${esc(c.name)} row ${i + 1}"></td>`).join("")}</tr>`).join("")}</table>
-        <div class="bg-fit">${it.cols.some(c => c.ref) ? "" : `<select data-act="fit" aria-label="Fit a model"><option value="">Fit ▾</option>${BG_FITS.map(([nm]) => `<option>${nm}</option>`).join("")}</select>`}<button type="button" class="btn sm" data-act="col">＋ column</button><button type="button" class="btn sm ${it.stats ? "on" : ""}" data-act="stats" aria-pressed="${!!it.stats}">📊 Statistics</button></div>
+      <div class="bg-main"><table><tr>${it.cols.map(c => `<th>${esc(c.name)}${c.ref ? `<small> = graph ${S.items.findIndex(x => x.id === c.ref) + 1}</small>` : ""}</th>`).join("")}${RF.map((f, k) => `<th class="res" style="color:${f.color}" title="Residuals: ${esc(A.items[f.id].yName)} − the fitted value">e${it.n || 1}${k ? String.fromCharCode(97 + k) : ""}</th>`).join("")}</tr>
+        ${rows.map(i => `<tr>${it.cols.map((c, ci) => c.ref ? `<td class="ref" data-r="${i}" data-c="${ci}"></td>` : `<td><input data-r="${i}" data-c="${ci}" value="${esc((c.vals || [])[i] ?? "")}" inputmode="decimal" aria-label="${esc(c.name)} row ${i + 1}"></td>`).join("")}${RF.map(f => `<td class="ref res" data-res="${f.id}" data-r="${i}"></td>`).join("")}</tr>`).join("")}</table>
+        <div class="bg-fit">${it.cols.some(c => c.ref) ? "" : `<select data-act="fit" aria-label="Fit a model"><option value="">Fit ▾</option>${BG_FITS.map(([nm]) => `<option>${nm}</option>`).join("")}</select>`}<button type="button" class="btn sm" data-act="col">＋ column</button><button type="button" class="btn sm" data-act="zfit" title="Move and zoom the graph to these points">🔍 Zoom to fit</button><button type="button" class="btn sm ${it.stats ? "on" : ""}" data-act="stats" aria-pressed="${!!it.stats}">📊 Statistics</button></div>
         <div class="bg-stats"></div></div>
       <div class="bg-acts"><button type="button" data-act="del" title="Delete">✕</button></div></div>`;
   }
@@ -5585,7 +5595,9 @@ function beeGraphUI(box, S){
           const R2 = [["n", L => L.length], ["mean", L => BC_STATS.run("mean", L)], ["median", L => BC_STATS.run("median", L)], ["min", L => BC_STATS.run("min", L)], ["Q1", L => BC_STATS.quartile(L, 1)], ["Q3", L => BC_STATS.quartile(L, 3)], ["max", L => BC_STATS.run("max", L)], ["s", L => BC_STATS.run("stdev", L)], ["σ", L => BC_STATS.run("stdevp", L)]];
           sb.innerHTML = `<table><tr><th></th>${C.map(c => `<th>${esc(c.n)}</th>`).join("")}</tr>${R2.map(([nm, f]) => `<tr><th>${nm}</th>${C.map(c => `<td>${c.L.length ? esc(BCalc.fmt(f(c.L), 5)) : ""}</td>`).join("")}</tr>`).join("")}</table>`
             + (C.length >= 2 && C[0].L.length > 1 && C[1].L.length === C[0].L.length ? `<div class="hint">r (correlation of ${esc(C[0].n)} and ${esc(C[1].n)}) = ${esc(BCalc.fmt(corr(C[0].L, C[1].L), 4))}</div>` : ""); } }
-        el.querySelectorAll("td.ref").forEach(td => { const c = it.cols[+td.dataset.c], rows = A && A.rows[it.id], rw = rows && rows[+td.dataset.r]; td.textContent = rw && Number.isFinite(rw[c.name]) ? fmt4(rw[c.name]) : ""; }); continue; }
+        el.querySelectorAll("td.ref:not(.res)").forEach(td => { const c = it.cols[+td.dataset.c], rows = A && A.rows[it.id], rw = rows && rows[+td.dataset.r]; td.textContent = rw && Number.isFinite(rw[c.name]) ? fmt4(rw[c.name]) : ""; });
+        el.querySelectorAll("td.res").forEach(td => { const f = A && A.items[+td.dataset.res], rw = A && (A.rows[it.id] || [])[+td.dataset.r], k = f && f.rowsUsed ? f.rowsUsed.indexOf(rw) : -1; td.textContent = k >= 0 ? fmt4(f.resid[k][1]) : ""; });
+        continue; }
       el.classList.toggle("bad", !!(a && a.kind === "err"));
       if(a && a.kind === "polar"){ const th = polarRange(it), u = S.deg ? "°" : "";
         if(!st.querySelector(".bg-th")) st.innerHTML = `<div class="bg-sl bg-th"><input type="number" class="tmn" value="${+th[0].toFixed(4)}" aria-label="Smallest θ"><span>≤ θ ≤</span><input type="number" class="tmx" value="${+th[1].toFixed(4)}" aria-label="Largest θ"><span>${u}</span></div>`; continue; }
@@ -5601,7 +5613,8 @@ function beeGraphUI(box, S){
           st.innerHTML = `<div class="bg-sl"><input type="number" class="mn" value="${sl.min}" aria-label="Smallest ${esc(a.name)}"><input type="range" min="${sl.min}" max="${sl.max}" step="${sl.step}" value="${a.v}" aria-label="Slider ${esc(a.name)}"><input type="number" class="mx" value="${sl.max}" aria-label="Largest ${esc(a.name)}"></div>`; }
         else st.innerHTML = `<b>= ${esc(BCalc.fmt(a.v))}</b>`;
       }
-      else if(a.kind === "fit") st.innerHTML = Object.entries(a.params).map(([k, v]) => `<span class="pr">${esc(k)} = ${esc(BCalc.fmt(v, 6))}</span>`).join(" ") + ` <span class="pr r2">R² = ${esc(BCalc.fmt(a.r2, 4))}</span>`;
+      else if(a.kind === "fit") st.innerHTML = Object.entries(a.params).map(([k, v]) => `<span class="pr">${esc(k)} = ${esc(BCalc.fmt(v, 6))}</span>`).join(" ") + ` <span class="pr r2">R² = ${esc(BCalc.fmt(a.r2, 4))}</span>`
+        + ` <button type="button" class="btn sm ${it.resid ? "on" : ""}" data-act="resid" aria-pressed="${!!it.resid}" title="Residuals: how far each point is from the fitted graph (y − the fitted value)">📉 Residuals${it.resid ? " ✓" : ""}</button>`;
     }
   }
   function update(rebuild){ A = analyse(); if(rebuild) renderList(); else status(); draw(); save(); }
@@ -5615,7 +5628,8 @@ function beeGraphUI(box, S){
     if(e.target.classList.contains("mn") || e.target.classList.contains("mx")){ const sl = it.sl; sl[e.target.classList.contains("mn") ? "min" : "max"] = +e.target.value; const r = el.querySelector("input[type=range]"); r.min = sl.min; r.max = sl.max; sl.step = Math.max((sl.max - sl.min) / 200, 1e-6); r.step = sl.step; save(); return; }
     if(e.target.dataset.r != null){ const c = it.cols[+e.target.dataset.c], r = +e.target.dataset.r; c.vals = c.vals || []; c.vals[r] = e.target.value;
       const n = Math.max(...it.cols.map(x => (x.vals || []).length)); if(r === n - 1 && e.target.value){ update(false); const tb = el.querySelector("table"); if(!tb.querySelector(`input[data-r="${n}"]`)){ const tr = document.createElement("tr"); tr.innerHTML = it.cols.map((cc, ci) => cc.ref ? `<td class="ref" data-r="${n}" data-c="${ci}"></td>` : `<td><input data-r="${n}" data-c="${ci}" inputmode="decimal" aria-label="${esc(cc.name)} row ${n + 1}"></td>`).join(""); tb.appendChild(tr); } }
-      else update(false); }
+      else update(false);
+      autoFit(it); }
   });
   list.addEventListener("focusin", e => { if(e.target.matches("input")) lastInput = e.target; const el = e.target.closest(".bg-it"); if(el && e.target.classList.contains("bg-in")){ sel = +el.dataset.id; list.querySelectorAll(".bg-it").forEach(x => x.classList.toggle("sel", x === el)); draw(); } });
   list.addEventListener("keydown", e => {
@@ -5637,6 +5651,10 @@ function beeGraphUI(box, S){
     else if(act === "del"){ S.items.splice(S.items.indexOf(it), 1); if(!S.items.length) S.items.push({ id: S.nid++, type: "expr", text: "", color: BG_COLORS[0] }); if(sel === it.id) sel = null; update(true); }
     else if(act === "tbl"){ const a = A && A.items[it.id]; if(!a || a.kind !== "fx"){ toast("Type a graph of x first (like y = 2x + 1)."); return; } const n = tableNum(); S.items.splice(S.items.indexOf(it) + 1, 0, { id: S.nid++, type: "table", n, color: it.color, cols: [{ name: "x" + n, vals: ["-2", "-1", "0", "1", "2"] }, { name: "y" + n, ref: it.id }] }); update(true); }
     else if(act === "stats"){ it.stats = !it.stats; update(true); }
+    else if(act === "zfit"){ zoomFit(tablePts(it)); }
+    else if(act === "resid"){ it.resid = !it.resid; update(true); const a = A.items[it.id];
+      if(a && a.kind === "fit"){ const t = S.items.find(x => x.id === a.tbl); zoomFit(it.resid ? a.resid : tablePts(t)); }
+      toast(it.resid ? "Residuals: the column e" + ((S.items.find(x => x.id === (a && a.tbl)) || {}).n || 1) + " in the table, and the hollow dots on the graph." : "Residuals hidden."); }
     else if(act === "col"){ const n = it.n || tableNum(), k = it.cols.length, L = ["x", "y", "z", "w", "u", "v"][k]; if(!L){ toast("A table can have up to 6 columns."); return; } it.cols.push({ name: L + n, vals: [] }); update(true); }
   });
   list.addEventListener("change", e => {
@@ -5644,7 +5662,7 @@ function beeGraphUI(box, S){
     const el = e.target.closest(".bg-it"), it = S.items.find(i => i.id === +el.dataset.id), f = BG_FITS.find(x => x[0] === e.target.value);
     if(it && f && it.cols.length >= 2){
       // the model's letters (m, b, a, c) — any already in use get the next free letter
-      const taken = new Set([...Object.keys((A && A.vars) || {}), ...Object.keys((A && A.fns) || {}), "x", "y", "e"]), free = [..."mbacdkpqrstuvwnhgj"].filter(c => !taken.has(c));
+      const taken = new Set([...Object.keys((A && A.vars) || {}), ...Object.keys((A && A.fns) || {}), "x", "y", "e"]), free = [..."mbacdkpqstuvwnhgj"].filter(c => !taken.has(c) && !RESERVED.has(c));   // never r (polar graphs), e or θ
       const map = {}; const model = f[1].replace(/\b([mbac])\b/g, L => { if(!taken.has(L) && !Object.values(map).includes(L)){ map[L] = L; return L; } if(!map[L]){ map[L] = free.find(c => !Object.values(map).includes(c) && !"mbac".includes(c)) || free.shift(); } return map[L]; });
       const xs = it.cols[0].name, ys = it.cols[1].name;
       S.items.splice(S.items.indexOf(it) + 1, 0, { id: S.nid++, type: "expr", text: ys + " ~ " + model.replace(/X/g, xs), color: nextColor() }); sel = S.nid - 1; update(true);
@@ -5668,6 +5686,41 @@ function beeGraphUI(box, S){
   });
 
   /* ---------- moving around the graph ---------- */
+  // one redraw per screen frame, however many wheel / pointer events arrive
+  let frame = 0; const redraw = () => { if(!frame) frame = requestAnimationFrame(() => { frame = 0; draw(); }); };
+  // glide to a view (buttons, zoom to fit)
+  let glide = 0;
+  function goTo(t){
+    cancelAnimationFrame(glide); const f = { cx: V.cx, cy: V.cy, s: V.s, r: V.r || 1 }, t0 = performance.now(), D = 220;
+    const step = now => { const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 3);
+      V.cx = f.cx + (t.cx - f.cx) * e; V.cy = f.cy + (t.cy - f.cy) * e; V.s = f.s * Math.pow(t.s / f.s, e); V.r = f.r * Math.pow((t.r || 1) / f.r, e);
+      draw(); if(k < 1) glide = requestAnimationFrame(step); else { if(Math.abs(V.r - 1) < 1e-9) delete V.r; status(); save(); } };
+    glide = requestAnimationFrame(step);
+  }
+  const tablePts = it => { const a = it && A && A.items[it.id]; return a && a.kind === "table" ? a.sets.flatMap(s => s.pts) : []; };
+  // every point on the screen with a margin; x and y get their own scales when they need very different ones (years against marks)
+  function zoomFit(pts){
+    pts = (pts || []).filter(p => Number.isFinite(p[0]) && Number.isFinite(p[1]));
+    if(!pts.length){ toast("Type some points in the table first."); return; }
+    if(!W) size();
+    let x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0])), y0 = Math.min(...pts.map(p => p[1])), y1 = Math.max(...pts.map(p => p[1]));
+    const pad = (a, b) => { const d = b - a || Math.max(1, Math.abs(a) * .2); return [a - d * .15, b + d * .15]; };
+    [x0, x1] = pad(x0, x1); [y0, y1] = pad(y0, y1);
+    // keep 0 in view when the data is close to it, as a person would
+    if(x0 > 0 && x0 < (x1 - x0) * .6) x0 = -(x1 - x0) * .05; if(x1 < 0 && -x1 < (x1 - x0) * .6) x1 = (x1 - x0) * .05;
+    if(y0 > 0 && y0 < (y1 - y0) * .6) y0 = -(y1 - y0) * .05; if(y1 < 0 && -y1 < (y1 - y0) * .6) y1 = (y1 - y0) * .05;
+    const sx = W / (x1 - x0), sy = H / (y1 - y0), q = sy / sx;
+    const same = q > .4 && q < 2.5, s = same ? Math.min(sx, sy) : sx;
+    goTo({ cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, s: Math.min(1e6, Math.max(1e-6, s)), r: same ? 1 : q });
+  }
+  // typing data far from what's on the screen: the graph moves there by itself (once you pause)
+  let autoT = null;
+  function autoFit(it){
+    clearTimeout(autoT);
+    autoT = setTimeout(() => { const pts = tablePts(it); if(pts.length < 2 || !W) return;
+      const seen = pts.filter(p => { const px = X(p[0]), py = Y(p[1]); return px >= 0 && px <= W && py >= 0 && py <= H; }).length;
+      if(seen < pts.length / 2) zoomFit(pts); }, 900);
+  }
   const P = new Map(); let drag = null, pinch = null;
   function hitCurve(px, py){
     let best = null;
@@ -5685,6 +5738,7 @@ function beeGraphUI(box, S){
   cv.addEventListener("pointerdown", e => {
     cv.setPointerCapture(e.pointerId); const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top;
     P.set(e.pointerId, { x: px, y: py });
+    cancelAnimationFrame(glide);
     if(P.size === 2){ const [a, b] = [...P.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: V.s, cx: V.cx, cy: V.cy, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 }; drag = null; return; }
     const hp = hitPoint(px, py); if(hp){ label = hp; drag = { mode: "none", x0: px, y0: py }; draw(); return; }
     const hc = hitCurve(px, py);
@@ -5693,18 +5747,23 @@ function beeGraphUI(box, S){
   });
   cv.addEventListener("pointermove", e => {
     if(!P.has(e.pointerId)) return; const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top; P.set(e.pointerId, { x: px, y: py });
-    if(pinch && P.size === 2){ const [a, b] = [...P.values()], d = Math.hypot(a.x - b.x, a.y - b.y); const ns = Math.min(1e6, Math.max(1e-4, pinch.s * d / pinch.d)); const mx = pinch.cx + (pinch.mx - W / 2) / pinch.s, my = pinch.cy - (pinch.my - H / 2) / pinch.s; V.s = ns; V.cx = mx - (pinch.mx - W / 2) / ns; V.cy = my + (pinch.my - H / 2) / ns; draw(); return; }
+    if(pinch && P.size === 2){ const [a, b] = [...P.values()], d = Math.hypot(a.x - b.x, a.y - b.y); const ns = Math.min(1e6, Math.max(1e-4, pinch.s * d / pinch.d)); const r = V.r || 1, mx = pinch.cx + (pinch.mx - W / 2) / pinch.s, my = pinch.cy - (pinch.my - H / 2) / (pinch.s * r); V.s = ns; V.cx = mx - (pinch.mx - W / 2) / ns; V.cy = my + (pinch.my - H / 2) / (ns * r); redraw(); return; }
     if(!drag) return;
-    if(drag.mode === "pan"){ V.cx = drag.cx - (px - drag.x0) / V.s; V.cy = drag.cy + (py - drag.y0) / V.s; if(Math.abs(px - drag.x0) + Math.abs(py - drag.y0) > 3) drag.moved = true; draw(); }
+    if(drag.mode === "pan"){ V.cx = drag.cx - (px - drag.x0) / V.s; V.cy = drag.cy + (py - drag.y0) / SY(); if(Math.abs(px - drag.x0) + Math.abs(py - drag.y0) > 3) drag.moved = true; redraw(); }
     else if(drag.mode === "trace"){ const x = ux(px), y = drag.a.fx(x); if(Number.isFinite(y)){ label = { x, y, color: drag.color }; draw(); } }
   });
   const up = e => { P.delete(e.pointerId); if(P.size < 2) pinch = null; if(drag && drag.mode === "pan" && !drag.moved){ label = null; draw(); } if(!P.size){ drag = null; save(); } };
   cv.addEventListener("pointerup", up); cv.addEventListener("pointercancel", up);
-  cv.addEventListener("wheel", e => { e.preventDefault(); const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, mx = ux(px), my = uy(py); V.s = Math.min(1e6, Math.max(1e-4, V.s * Math.exp(-e.deltaY * .0015))); V.cx = mx - (px - W / 2) / V.s; V.cy = my + (py - H / 2) / V.s; draw(); save(); }, { passive: false });
+  // wheel / trackpad: a notch zooms about ×1.35; lines (Firefox) and pages are turned into pixels; a trackpad pinch (Ctrl + wheel) is quicker
+  cv.addEventListener("wheel", e => { e.preventDefault(); cancelAnimationFrame(glide);
+    const r = cv.getBoundingClientRect(), px = e.clientX - r.left, py = e.clientY - r.top, mx = ux(px), my = uy(py);
+    const d = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? H : 1), k = Math.exp(-Math.max(-300, Math.min(300, d)) * (e.ctrlKey ? .01 : .003));
+    V.s = Math.min(1e6, Math.max(1e-6, V.s * k)); V.cx = mx - (px - W / 2) / V.s; V.cy = my + (py - H / 2) / SY(); redraw(); save(); }, { passive: false });
   box.querySelector(".bg-zoom").addEventListener("click", e => {
     const z = e.target.closest("[data-z]"); if(!z) return;
-    if(z.dataset.z === "home"){ V.cx = 0; V.cy = 0; V.s = 40; } else V.s *= z.dataset.z === "in" ? 1.5 : 1 / 1.5;
-    status(); draw(); save();
+    if(z.dataset.z === "home") goTo({ cx: 0, cy: 0, s: 40, r: 1 });
+    else if(z.dataset.z === "fit"){ const pts = S.items.filter(i => !i.hidden).flatMap(i => { const a = A && A.items[i.id]; return !a ? [] : a.kind === "table" ? a.sets.flatMap(s => s.pts) : a.kind === "pts" ? a.pts : []; }); if(pts.length) zoomFit(pts); else goTo({ cx: 0, cy: 0, s: 40, r: 1 }); }
+    else goTo({ cx: V.cx, cy: V.cy, s: V.s * (z.dataset.z === "in" ? 1.6 : 1 / 1.6), r: V.r || 1 });
   });
   new ResizeObserver(() => { size(); draw(); }).observe(plot);
   update(true);
