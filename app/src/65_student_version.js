@@ -342,35 +342,45 @@ $("#stuGo").onclick = async () => {
 $("#stuSheet").onclick = () => {
   const X = lastExport; if(!X) return;
   const { jsPDF } = window.jspdf, doc = new jsPDF({ unit: "mm", format: S.d.paper === "letter" ? "letter" : "a4" });
-  const PW = doc.internal.pageSize.getWidth(); let y = 20;
+  const PW = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight(); let y = 20;
+  const room = h => { if(y + h > PH - 17){ doc.addPage(); y = 20; } };     // a long sheet carries on, on a second page
   const T = (s, size, style, col, x, opt) => { doc.setFont("helvetica", style || "normal"); doc.setFontSize(size); doc.setTextColor(...(col || [38, 34, 28])); doc.text(s, x || 20, y, opt); };
-  const para = (s, size) => { doc.setFont("helvetica", "normal"); doc.setFontSize(size || 10.5); doc.setTextColor(38, 34, 28); doc.splitTextToSize(s, PW - 46).forEach(l => { doc.text(l, 26, y); y += 5; }); };
+  const para = (s, size) => { doc.setFont("helvetica", "normal"); doc.setFontSize(size || 10.5); doc.setTextColor(38, 34, 28); doc.splitTextToSize(s, PW - 46).forEach(l => { room(4.7); doc.text(l, 26, y); y += 4.7; }); };
   T(X.mode === "read" ? "INVIGILATOR SHEET - READ-ALOUD VERSION" : "INVIGILATOR SHEET - COMPUTER VERSION", 9, "bold", [140, 102, 32]); y += 7;
   T(X.title, 17, "bold"); y += 6;
   T([X.subject, X.ver ? "Version " + X.ver : "", X.nq + " questions"].filter(Boolean).join("   |   "), 10.5, "normal", [118, 110, 98]); y += 6;
-  T(X.timeMin ? `Time: ${X.timeMin} minutes` + (X.extraPct ? `  (${X.base} min + ${X.extraPct}% extra time)` : "") : "Time: no limit", 10.5, "bold"); y += 9;
+  T(X.timeMin ? `Time: ${X.timeMin} minutes` + (X.extraPct ? `  (${X.base} min + ${X.extraPct}% extra time)` : "") : "Time: no limit", 10.5, "bold"); y += 7;
   const box = (x, label, code, note) => {
-    doc.setDrawColor(181, 137, 46); doc.setLineWidth(.6); doc.setLineDashPattern([2, 1.4], 0); doc.roundedRect(x, y, 80, 30, 3, 3, "S"); doc.setLineDashPattern([], 0);
-    doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(118, 110, 98); doc.text(label, x + 40, y + 7, { align: "center" });
-    doc.setFont("courier", "bold"); doc.setFontSize(21); doc.setTextColor(38, 34, 28); doc.text(code, x + 40, y + 18, { align: "center" });
-    doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(118, 110, 98); doc.text(note, x + 40, y + 25, { align: "center" });
+    doc.setDrawColor(181, 137, 46); doc.setLineWidth(.6); doc.setLineDashPattern([2, 1.4], 0); doc.roundedRect(x, y, 80, 26, 3, 3, "S"); doc.setLineDashPattern([], 0);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(9); doc.setTextColor(118, 110, 98); doc.text(label, x + 40, y + 6.5, { align: "center" });
+    doc.setFont("courier", "bold"); doc.setFontSize(21); doc.setTextColor(38, 34, 28); doc.text(code, x + 40, y + 16, { align: "center" });
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(118, 110, 98); doc.text(note, x + 40, y + 22.5, { align: "center" });
   };
-  box(20, "START CODE", X.code, "to start, or carry on after a problem"); box(PW - 100, "TEACHER CODE", X.tcode, "unlocks a locked test - teacher menu");
-  y += 40;
-  const step = (n, title, body) => { T(n + "  " + title, 11.5, "bold"); y += 6; body.forEach(b => para("•  " + b)); y += 3; };
+  box(20, "START CODE", X.code, "you may share it with the class"); box(PW - 100, "TEACHER CODE", X.tcode, "NEVER share it - keep it to yourself");
+  y += 32;
+  // the two things everyone in the room must know, in bold
+  const notice = (lines, col, fill) => {
+    doc.setFont("helvetica", "bold"); doc.setFontSize(10.5);
+    const L = lines.flatMap(t => doc.splitTextToSize(t, PW - 52)), h = L.length * 5.2 + 7;
+    doc.setDrawColor(...col); doc.setFillColor(...fill); doc.setLineWidth(.7); doc.roundedRect(20, y, PW - 40, h, 2.5, 2.5, "FD");
+    doc.setTextColor(...col); L.forEach((l, i) => doc.text(l, 26, y + 7.5 + i * 5.2)); y += h + 5;
+  };
+  notice(["You may share the START CODE with the whole class (say it, or write it on the board).", "NEVER share the TEACHER CODE: it unlocks tests, adds time and ends them."], [138, 100, 24], [251, 243, 223]);
+  notice(["TELL STUDENTS: DON'T PRESS Cmd, Ctrl OR THE WINDOWS KEY.", "Any of them LOCKS THE TEST until you type the teacher code. Shift and Option/AltGr (capitals, accents) are fine."], [176, 58, 46], [252, 237, 234]);
+  const step = (n, title, body) => { room(14); T(n + "  " + title, 11.5, "bold"); y += 5.5; body.forEach(b => para("•  " + b)); y += 2.5; };
   if(X.mode === "read"){
     step("1", "Before the test", ["Copy \u201C" + X.name + "\u201D to the student's laptop. The questions stay locked inside it until you type the start code.", "Give the student the printed paper as usual: they write their answers on paper. The laptop only shows and reads the questions.", "Open the file with Chrome or Edge (Firefox and Safari also work). No internet is needed. Plug in the charger and give the student headphones.", "Voices: the most natural ones (marked with a star) are Edge\u2019s \u201CNatural\u201D voices and Chrome\u2019s Google voices, but they need the internet. With no internet, Windows uses its standard voices (clear, a little robotic). On a Mac, download an Enhanced or Premium voice beforehand (System Settings > Accessibility > Spoken Content > System voice > Manage voices) for a natural voice offline."]);
     step("2", "Starting", ["Type the START CODE and press Open the paper. It goes full screen."]);
-    step("3", "During the test", ["The student clicks the speaker next to a question. The reading bar can pause, stop, go back or forward, slow down, change the voice and keep reading by itself.", "If the student leaves the screen, the laptop beeps and the paper LOCKS. Type the TEACHER CODE to unlock it.", "If the file closes by mistake, open it again and type the START CODE."]);
+    step("3", "During the test", ["The student clicks the speaker next to a question. The reading bar can pause, stop, go back or forward, slow down, change the voice and keep reading by itself.", "If the student leaves the screen, or presses Cmd, Ctrl or the Windows key, the laptop beeps and the paper LOCKS. Type the TEACHER CODE to unlock it.", "If the file closes by mistake, open it again and type the START CODE."]);
     step("4", "At the end", ["The student presses Finish (or time runs out). Collect the printed paper as usual: there is nothing to collect from the laptop."]);
   }else{
     step("1", "Before the test", ["Copy “" + X.name + "” to each student's laptop (USB stick or shared folder). The questions stay locked inside it until you type the start code.", "Open it with Chrome or Edge (Firefox and Safari also work). No internet is needed.", "Plug in the chargers. Close other programs and switch off notifications if you can.", "Chrome/Edge: press “Choose a folder or USB stick” on the start screen. Backup copies (every minute) and the final answers file are saved there. Without it, the answers file goes to the laptop’s Downloads folder."]);
-    step("2", "Starting", ["The student types their name. You type the START CODE and press Start. The test goes full screen and the clock starts."]);
-    step("3", "During the test", ["If the student leaves the test screen (another window, Alt+Tab, Esc), the laptop beeps and the test LOCKS. Type the TEACHER CODE to unlock it. Every time is recorded on the answer PDF.", "Teacher menu (the teacher button at the top, then the TEACHER CODE): add time, or end the test for this student.", "Rest break (if allowed): teacher menu, then “Start a rest break”. The paper is covered and the clock stops; type the TEACHER CODE to carry on. Breaks are on the answer record.", "If the laptop crashes or the file closes: open the same file again and type the START CODE. The student carries on where they were; the clock kept running (add time if needed).", "On another laptop: copy the same file there, press “Carry on from a backup”, choose the backup file from the save folder, type the START CODE."]);
-    step("4", "At the end", ["The student presses End the test (or time runs out). A sealed answers file is saved in the folder you chose, or in Downloads: “<title> - <name>.bee-answers”. Collect these files.", "In BEE: the small arrow next to Download PDF, then Open student answers. BEE makes a PDF of each paper with the answers in blue, ready to mark, plus the record of times and exits.", "Only a BEE with the school key (" + X.kid.slice(0, 6) + ") and its password can open these files."]);
+    step("2", "Starting", ["The student types their name and the START CODE (you can type it, or share it with the class), then presses Start. The test goes full screen and the clock starts."]);
+    step("3", "During the test", ["If the student leaves the test screen (another window, Alt+Tab, Esc) or presses Cmd, Ctrl or the Windows key, the laptop beeps and the test LOCKS. Type the TEACHER CODE to unlock it. Every time is recorded on the answer PDF.", "Teacher menu (the teacher button at the top, then the TEACHER CODE): add time, change the calculator, or end the test for this student.", "Rest break (if allowed): teacher menu, then “Start a rest break”. The paper is covered and the clock stops; type the TEACHER CODE to carry on. Breaks are on the answer record.", "If the laptop crashes or the file closes: open the same file again and type the START CODE. The student carries on where they were; the clock kept running (add time if needed).", "On another laptop: copy the same file there, press “Carry on from a backup”, choose the backup file from the save folder, type the START CODE."]);
+    step("4", "At the end", ["The student presses End the test (or time runs out). A sealed answers file is saved in the folder you chose, or in Downloads: “<title> - <name>.bee-answers”. Collect these files.", "In BEE: Download, then Student answers. BEE makes a PDF of each paper with the answers in blue, ready to mark, plus the record of times and exits.", "Only a BEE with the school key (" + X.kid.slice(0, 6) + ") and its password can open these files."]);
   }
   doc.setFont("helvetica", "italic"); doc.setFontSize(8.5); doc.setTextColor(118, 110, 98);
-  doc.text("Keep this sheet away from students. Made with BEE - " + new Date().toLocaleDateString(), PW / 2, doc.internal.pageSize.getHeight() - 12, { align: "center" });
+  for(let pg = 1; pg <= doc.getNumberOfPages(); pg++){ doc.setPage(pg); doc.text("Keep this sheet away from students: it has the TEACHER CODE. Made with BEE - " + new Date().toLocaleDateString() + (doc.getNumberOfPages() > 1 ? "  -  page " + pg + " of " + doc.getNumberOfPages() : ""), PW / 2, PH - 12, { align: "center" }); }
   doc.save(fileStem(X.title, X.ver && "Version " + X.ver, X.mode === "read" ? "read-aloud" : "", "invigilator sheet") + ".pdf");
 };
 
