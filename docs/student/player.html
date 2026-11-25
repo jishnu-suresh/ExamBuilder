@@ -3551,6 +3551,8 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
 .bg-st .btn.on{background:var(--gold-l);border-color:var(--gold)}
 .bg-tbl th.res{font-style:italic}
 .bg-tbl td.res{color:var(--muted);font-style:italic}
+.bg-res{margin-top:3px;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.bg-res .pr{color:var(--muted)}
 
 </style>
 </head>
@@ -5239,6 +5241,8 @@ function beeGraphUI(box, S){
       tn++; it.n = it.n || tn;
       it.cols.forEach(c => R.known.add(c.name));
     }
+    // every fit (y1 ~ …) has its residuals: e1 for the first fit, e2 for the next… usable anywhere, like a table column
+    R.resName = {}; S.items.filter(it => it.type === "expr" && splitRel((it.text || "").trim())[1] === "~").forEach((it, k) => { R.resName[it.id] = "e" + (k + 1); R.known.add("e" + (k + 1)); });
     const env = (extra) => Object.assign({ deg: S.deg, vars: R.vars, fns: R.fns, known: R.known }, extra || {});
     const comp = (src) => BCalc.compile(BCalc.parse(src, R.known));
     // 2. constants/sliders and function definitions (two passes so they can use each other)
@@ -5276,8 +5280,15 @@ function beeGraphUI(box, S){
     for(const it of S.items) if(it.type === "table") R.rows[it.id] = rowsOf(it);
     const colLists = () => { for(const it of S.items) if(it.type === "table") for(const c of it.cols) R.vars[c.name] = (R.rows[it.id] || []).map(r => r[c.name]).filter(Number.isFinite); };
     colLists();
-    // 3. graphs, points, inequalities, fits
+    // 3. fits first (their letters and residuals can then be used by any line, above or below), then graphs, points, inequalities
     for(const it of S.items){
+      if(it.type !== "expr" || !R.resName[it.id]) continue;
+      const [l, , r] = splitRel((it.text || "").trim());
+      try{ R.items[it.id] = fit(l.trim(), (r || "").trim(), R, env); R.items[it.id].eName = R.resName[it.id]; R.vars[R.resName[it.id]] = R.items[it.id].resid.map(p => p[1]); }
+      catch(e){ R.items[it.id] = { kind: "err", msg: e instanceof BCalc.CalcError ? e.message : "I don't understand this" }; }
+    }
+    for(const it of S.items){
+      if(it.type === "expr" && R.resName[it.id]) continue;
       if(it.type !== "expr") continue;
       const t = (it.text || "").trim(); if(!t) { R.items[it.id] = { kind: "empty" }; continue; }
       if(R.items[it.id] && (R.items[it.id].kind === "const" || R.items[it.id].kind === "list")) continue;
@@ -5579,7 +5590,7 @@ function beeGraphUI(box, S){
     const rows = []; for(let i = 0; i <= n; i++) rows.push(i);
     return `<div class="bg-it bg-tbl" data-id="${it.id}">
       <button type="button" class="bg-dot ${it.hidden ? "off" : ""}" style="--c:${it.color}" data-act="hide" title="Show or hide the points" aria-label="Show or hide"></button>
-      <div class="bg-main"><table><tr>${it.cols.map(c => `<th>${esc(c.name)}${c.ref ? `<small> = graph ${S.items.findIndex(x => x.id === c.ref) + 1}</small>` : ""}</th>`).join("")}${RF.map((f, k) => `<th class="res" style="color:${f.color}" title="Residuals: ${esc(A.items[f.id].yName)} − the fitted value">e${it.n || 1}${k ? String.fromCharCode(97 + k) : ""}</th>`).join("")}</tr>
+      <div class="bg-main"><table><tr>${it.cols.map(c => `<th>${esc(c.name)}${c.ref ? `<small> = graph ${S.items.findIndex(x => x.id === c.ref) + 1}</small>` : ""}</th>`).join("")}${RF.map(f => `<th class="res" style="color:${f.color}" title="Residuals: ${esc(A.items[f.id].yName)} − the fitted value">${esc(A.items[f.id].eName)}</th>`).join("")}</tr>
         ${rows.map(i => `<tr>${it.cols.map((c, ci) => c.ref ? `<td class="ref" data-r="${i}" data-c="${ci}"></td>` : `<td><input data-r="${i}" data-c="${ci}" value="${esc((c.vals || [])[i] ?? "")}" inputmode="decimal" aria-label="${esc(c.name)} row ${i + 1}"></td>`).join("")}${RF.map(f => `<td class="ref res" data-res="${f.id}" data-r="${i}"></td>`).join("")}</tr>`).join("")}</table>
         <div class="bg-fit">${it.cols.some(c => c.ref) ? "" : `<select data-act="fit" aria-label="Fit a model"><option value="">Fit ▾</option>${BG_FITS.map(([nm]) => `<option>${nm}</option>`).join("")}</select>`}<button type="button" class="btn sm" data-act="col">＋ column</button><button type="button" class="btn sm" data-act="zfit" title="Move and zoom the graph to these points">🔍 Zoom to fit</button><button type="button" class="btn sm ${it.stats ? "on" : ""}" data-act="stats" aria-pressed="${!!it.stats}">📊 Statistics</button></div>
         <div class="bg-stats"></div></div>
@@ -5607,14 +5618,15 @@ function beeGraphUI(box, S){
       if(!a || a.kind === "empty" || a.kind === "fx" && !a.shade || a.kind === "fy" || a.kind === "pts" || a.kind === "def" || a.kind === "imp"){ st.innerHTML = a && a.kind === "fx" && S.deg && /sin|cos|tan/.test(it.text) && V.s > 2 ? `<span class="hint">Degrees: zoom out (－) to see the wave, or switch to RAD.</span>` : ""; continue; }
       if(a.kind === "fx" && a.shade){ st.innerHTML = ""; continue; }
       if(a.kind === "err") st.innerHTML = `<span class="e">${esc(a.msg)}</span>${(a.free || []).map(v => ` <button type="button" class="btn sm" data-slider="${esc(v)}">＋ slider ${esc(v)}</button>`).join("")}`;
-      else if(a.kind === "value") st.innerHTML = `<b>= ${esc(BCalc.fmt(a.v))}</b>`;
+      else if(a.kind === "value") st.innerHTML = Array.isArray(a.v) ? `<b>= [${a.v.slice(0, 8).map(v => esc(BCalc.fmt(v, 4))).join(", ")}${a.v.length > 8 ? ", …" : ""}]</b> <span class="pr r2">list of ${a.v.length}</span>` : `<b>= ${esc(BCalc.fmt(a.v))}</b>`;
       else if(a.kind === "const"){
         if(a.slider){ const sl = it.sl || (it.sl = { min: -10, max: 10, step: .1 });
           st.innerHTML = `<div class="bg-sl"><input type="number" class="mn" value="${sl.min}" aria-label="Smallest ${esc(a.name)}"><input type="range" min="${sl.min}" max="${sl.max}" step="${sl.step}" value="${a.v}" aria-label="Slider ${esc(a.name)}"><input type="number" class="mx" value="${sl.max}" aria-label="Largest ${esc(a.name)}"></div>`; }
         else st.innerHTML = `<b>= ${esc(BCalc.fmt(a.v))}</b>`;
       }
       else if(a.kind === "fit") st.innerHTML = Object.entries(a.params).map(([k, v]) => `<span class="pr">${esc(k)} = ${esc(BCalc.fmt(v, 6))}</span>`).join(" ") + ` <span class="pr r2">R² = ${esc(BCalc.fmt(a.r2, 4))}</span>`
-        + ` <button type="button" class="btn sm ${it.resid ? "on" : ""}" data-act="resid" aria-pressed="${!!it.resid}" title="Residuals: how far each point is from the fitted graph (y − the fitted value)">📉 Residuals${it.resid ? " ✓" : ""}</button>`;
+        + `<div class="bg-res"><span class="pr" title="Residuals: how far each point is from the fitted graph (y − the fitted value). Use ${esc(a.eName)} in other lines, e.g. mean(${esc(a.eName)})">residuals <b><i>${esc(a.eName)}</i></b> = [${a.resid.slice(0, 4).map(p => esc(BCalc.fmt(p[1], 3))).join(", ")}${a.resid.length > 4 ? ", …" : ""}]</span>`
+        + ` <button type="button" class="btn sm ${it.resid ? "on" : ""}" data-act="resid" aria-pressed="${!!it.resid}" title="Plot the residuals, and show them as a column of the table">📉 Plot${it.resid ? " ✓" : ""}</button></div>`;
     }
   }
   function update(rebuild){ A = analyse(); if(rebuild) renderList(); else status(); draw(); save(); }
@@ -5654,7 +5666,7 @@ function beeGraphUI(box, S){
     else if(act === "zfit"){ zoomFit(tablePts(it)); }
     else if(act === "resid"){ it.resid = !it.resid; update(true); const a = A.items[it.id];
       if(a && a.kind === "fit"){ const t = S.items.find(x => x.id === a.tbl); zoomFit(it.resid ? a.resid : tablePts(t)); }
-      toast(it.resid ? "Residuals: the column e" + ((S.items.find(x => x.id === (a && a.tbl)) || {}).n || 1) + " in the table, and the hollow dots on the graph." : "Residuals hidden."); }
+      toast(it.resid ? "Residuals " + ((a && a.eName) || "") + ": a column in the table, and the hollow dots on the graph." : "Residuals no longer plotted."); }
     else if(act === "col"){ const n = it.n || tableNum(), k = it.cols.length, L = ["x", "y", "z", "w", "u", "v"][k]; if(!L){ toast("A table can have up to 6 columns."); return; } it.cols.push({ name: L + n, vals: [] }); update(true); }
   });
   list.addEventListener("change", e => {

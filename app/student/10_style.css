@@ -304,3 +304,5 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
 .bg-st .btn.on{background:var(--gold-l);border-color:var(--gold)}
 .bg-tbl th.res{font-style:italic}
 .bg-tbl td.res{color:var(--muted);font-style:italic}
+.bg-res{margin-top:3px;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+.bg-res .pr{color:var(--muted)}
