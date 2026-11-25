@@ -3,8 +3,35 @@
    as code) shared by the Basic, Scientific and Graphing calculators. Degrees by default. */
 const BC_FN = {
   sin: 1, cos: 1, tan: 1, asin: 1, acos: 1, atan: 1, arcsin: 1, arccos: 1, arctan: 1, sinh: 1, cosh: 1, tanh: 1,
-  sec: 1, csc: 1, cot: 1, sqrt: 1, cbrt: 1, ln: 1, log: 1, exp: 1, abs: 1, floor: 1, ceil: 1, round: 1, sign: 1, nroot: 2, mod: 2, min: 2, max: 2
+  sec: 1, csc: 1, cot: 1, sqrt: 1, cbrt: 1, ln: 1, log: 1, exp: 1, abs: 1, floor: 1, ceil: 1, round: 1, sign: 1, nroot: 2, mod: 2, min: 1, max: 1,
+  // statistics: a list [1, 2, 3], a table column (x1) or numbers
+  mean: 1, median: 1, mode: 1, sum: 1, count: 1, range: 1, stdev: 1, stdevp: 1, var: 1, varp: 1, quartile: 2, total: 1,
+  boxplot: 1, histogram: 1
 };
+const BC_LISTFN = new Set(["mean", "median", "mode", "sum", "count", "range", "stdev", "stdevp", "var", "varp", "quartile", "total", "min", "max", "boxplot", "histogram"]);
+// the statistics, as taught at school (quartiles: median of each half, the middle value left out, like most calculators)
+const BC_STATS = (() => {
+  const sorted = L => L.slice().sort((a, b) => a - b);
+  const med = S => { const n = S.length; return n ? (n % 2 ? S[(n - 1) / 2] : (S[n / 2 - 1] + S[n / 2]) / 2) : NaN; };
+  const mean = L => L.length ? L.reduce((a, b) => a + b, 0) / L.length : NaN;
+  const ss = L => { const m = mean(L); return L.reduce((a, b) => a + (b - m) ** 2, 0); };
+  function quartile(L, q){ const S = sorted(L), n = S.length; if(!n) return NaN; if(q <= 0) return S[0]; if(q >= 4) return S[n - 1]; if(q === 2) return med(S);
+    const lo = S.slice(0, Math.floor(n / 2)), hi = S.slice(Math.ceil(n / 2)); return med(q === 1 ? lo : hi); }
+  function mode(L){ const c = new Map(); L.forEach(v => c.set(v, (c.get(v) || 0) + 1)); let best = NaN, n = 1; c.forEach((k, v) => { if(k > n){ n = k; best = v; } }); return best; }
+  return { sorted, med, mean, quartile, mode,
+    run(f, L, extra){
+      switch(f){
+        case "mean": return mean(L); case "median": return med(sorted(L)); case "mode": return mode(L);
+        case "sum": case "total": return L.reduce((a, b) => a + b, 0); case "count": return L.length;
+        case "min": return L.length ? Math.min(...L) : NaN; case "max": return L.length ? Math.max(...L) : NaN;
+        case "range": return L.length ? Math.max(...L) - Math.min(...L) : NaN;
+        case "stdev": return L.length > 1 ? Math.sqrt(ss(L) / (L.length - 1)) : NaN; case "stdevp": return L.length ? Math.sqrt(ss(L) / L.length) : NaN;
+        case "var": return L.length > 1 ? ss(L) / (L.length - 1) : NaN; case "varp": return L.length ? ss(L) / L.length : NaN;
+        case "quartile": return quartile(L, extra);
+      }
+      return NaN;
+    } };
+})();
 const BC_CONST = { pi: Math.PI, "π": Math.PI, tau: 2 * Math.PI, "τ": 2 * Math.PI };
 const BCalc = (() => {
   "use strict";
@@ -31,7 +58,7 @@ const BCalc = (() => {
         T.push({ t: "id", v: rest[0] }); i++; continue;
       }
       const op = s.slice(i).match(/^(<=|>=|[+\-*/^!%(),=<>~|\[\]])/);
-      if(op){ T.push({ t: "op", v: op[0] === "[" ? "(" : op[0] === "]" ? ")" : op[0] }); i += op[0].length; continue; }
+      if(op){ T.push({ t: "op", v: op[0] }); i += op[0].length; continue; }
       err("I don't understand “" + c + "”");
     }
     return T;
@@ -41,7 +68,7 @@ const BCalc = (() => {
     const T = tokenize(src, known); let p = 0, bars = 0;
     const peek = () => T[p], next = () => T[p++];
     const isOp = (t, v) => t && t.t === "op" && t.v === v;
-    const startsOperand = t => t && (t.t === "num" || t.t === "id" || t.t === "fn" || isOp(t, "(") || (isOp(t, "|") && bars === 0));
+    const startsOperand = t => t && (t.t === "num" || t.t === "id" || t.t === "fn" || isOp(t, "(") || isOp(t, "[") || (isOp(t, "|") && bars === 0));
     function primary(){
       const t = next(); if(!t) err("Something is missing at the end");
       if(t.t === "num") return { k: "num", v: t.v };
@@ -56,13 +83,18 @@ const BCalc = (() => {
         let args;
         if(isOp(peek(), "(")){ next(); args = [expr()]; while(isOp(peek(), ",")){ next(); args.push(expr()); } if(!isOp(next(), ")")) err("A bracket is missing"); }
         else args = [implicitTerm()];                                     // sin 30, √2
-        if(args.length < BC_FN[t.v] && !(t.v === "log" && args.length === 1)) err(t.v + " needs " + BC_FN[t.v] + " numbers");
+        if(args.length < BC_FN[t.v] && !(t.v === "log" && args.length === 1)) err(t.v + " needs " + BC_FN[t.v] + " numbers" + (t.v === "quartile" ? " (a list and 1, 2 or 3)" : ""));
         let n = { k: "fn", f: t.v, a: args };
         if(pow){ if(pow.k === "neg" && pow.a.k === "num" && pow.a.v === 1) n = { k: "fn", f: { sin: "asin", cos: "acos", tan: "atan" }[t.v] || t.v, a: args, inv: !{ sin: 1, cos: 1, tan: 1 }[t.v] }; else n = { k: "pow", a: n, b: pow }; }
         if(n.inv) n = { k: "pow", a: { k: "fn", f: t.v, a: args }, b: { k: "num", v: -1 } };
         return n;
       }
       if(isOp(t, "(")){ const e = expr(); if(isOp(peek(), ",")){ next(); const e2 = expr(); if(!isOp(next(), ")")) err("A bracket is missing"); return { k: "point", a: e, b: e2 }; } if(!isOp(next(), ")")) err("A bracket is missing"); return e; }
+      if(isOp(t, "[")){        // [1, 2, 3] is a list; [2 + 3] is just brackets
+        const items = [expr()]; while(isOp(peek(), ",")){ next(); items.push(expr()); }
+        if(!isOp(next(), "]")) err("A ] is missing");
+        return items.length > 1 ? { k: "list", items } : items[0];
+      }
       if(isOp(t, "|")){ bars++; const e = expr(); if(!isOp(next(), "|")) err("A | is missing"); bars--; return { k: "fn", f: "abs", a: [e] }; }
       if(isOp(t, "-")) return { k: "neg", a: power() };
       if(isOp(t, "+")) return power();
@@ -93,7 +125,7 @@ const BCalc = (() => {
       for(;;){ const t = peek(); if(isOp(t, "+") || isOp(t, "-")){ next(); n = { k: t.v === "+" ? "add" : "sub", a: n, b: term() }; } else return n; }
     }
     const tree = expr();
-    if(p < T.length){ const t = T[p]; err(t.t === "op" && t.v === ")" ? "There is an extra )" : "I don't understand “" + t.v + "” here"); }
+    if(p < T.length){ const t = T[p]; err(t.t === "op" && (t.v === ")" || t.v === "]") ? "There is an extra " + t.v : "I don't understand “" + t.v + "” here"); }
     return tree;
   }
   // ---- evaluation (closures over a small environment: vars, functions, degrees)
@@ -120,11 +152,20 @@ const BCalc = (() => {
       case "fact": { const a = compile(node.a); return env => fact(a(env)); }
       case "pct": { const a = compile(node.a); return env => a(env) / 100; }
       case "point": err("A point (x, y) can only be drawn on the graph");
+      case "list": { const I = node.items.map(compile); return env => I.map(f => f(env)); }
       case "fn": {
         const A = node.a.map(compile), f = node.f;
         const toR = env => env.deg ? Math.PI / 180 : 1, fromR = env => env.deg ? 180 / Math.PI : 1;
+        if(BC_LISTFN.has(f)){
+          if(f === "boxplot" || f === "histogram") return () => { err(f + " draws on the graph: use it in BEEcalc Graphing"); };
+          return env => {
+            const vals = (f === "quartile" ? [A[0]] : A).flatMap(a => { const v = a(env); return Array.isArray(v) ? v : [v]; }).filter(Number.isFinite);
+            return BC_STATS.run(f, vals, f === "quartile" ? A[1](env) : undefined);
+          };
+        }
         return env => {
           const x = A[0](env);
+          if(Array.isArray(x)) return NaN;
           switch(f){
             case "sin": { const r = Math.sin(x * toR(env)); return Math.abs(r) < 1e-15 ? 0 : r; }
             case "cos": { const r = Math.cos(x * toR(env)); return Math.abs(r) < 1e-15 ? 0 : r; }
@@ -145,7 +186,6 @@ const BCalc = (() => {
             case "floor": return Math.floor(x); case "ceil": return Math.ceil(x); case "round": return Math.round(x); case "sign": return Math.sign(x);
             case "nroot": { const n = A[1](env); return x < 0 && n % 2 === 1 ? -Math.pow(-x, 1 / n) : Math.pow(x, 1 / n); }
             case "mod": { const m = A[1](env); return ((x % m) + m) % m; }
-            case "min": return Math.min(x, A[1](env)); case "max": return Math.max(x, A[1](env));
           }
           return NaN;
         };
@@ -159,6 +199,7 @@ const BCalc = (() => {
     if(node.k === "var" || node.k === "call") out.add(node.v);
     for(const k of ["a", "b"]) if(node[k] && typeof node[k] === "object" && !Array.isArray(node[k])) letters(node[k], out);
     if(node.k === "call" && node.a) letters(node.a, out);
+    if(node.k === "list") node.items.forEach(n => letters(n, out));
     if(Array.isArray(node.a)) node.a.forEach(n => letters(n, out));
     return out;
   }
@@ -211,11 +252,12 @@ const BC_KEYS = {
     ["7", "8", "9", "÷", "×10ⁿ"],
     ["4", "5", "6", "×", "a/b"],
     ["1", "2", "3", "−", "(−)"],
-    ["0", ".", "eˣ", "+", "="]
+    ["0", ".", "eˣ", "+", "="],
+    ["[", "]", ",", "mean", "stdev"]
   ]
 };
 const BC_INS = { "÷": "÷", "×": "×", "−": "−", "+": "+", "%": "%", "√": "√(", "x²": "²", "xʸ": "^", "∛": "∛(", "ⁿ√": "nroot(", "|x|": "abs(", "n!": "!", "×10ⁿ": "E", "a/b": "/", "(−)": "−",
-  "sin": "sin(", "cos": "cos(", "tan": "tan(", "sin⁻¹": "sin⁻¹(", "cos⁻¹": "cos⁻¹(", "tan⁻¹": "tan⁻¹(", "ln": "ln(", "log": "log(", "eˣ": "e^(", "π": "π", "e": "e", "Ans": "Ans" };
+  "sin": "sin(", "cos": "cos(", "tan": "tan(", "sin⁻¹": "sin⁻¹(", "cos⁻¹": "cos⁻¹(", "tan⁻¹": "tan⁻¹(", "ln": "ln(", "log": "log(", "eˣ": "e^(", "π": "π", "e": "e", "Ans": "Ans", "[": "[", "]": "]", ",": ", ", "mean": "mean([", "stdev": "stdev([" };
 function beeCalcUI(box, kind, S){
   // S = saved state (in ST.calc): { hist: [{q, a}], ans, deg, frac }
   if(S.deg == null) S.deg = true;
@@ -249,12 +291,13 @@ function beeCalcUI(box, kind, S){
   }
   function insert(t){
     const a = inp.selectionStart ?? inp.value.length, b = inp.selectionEnd ?? a;
-    if(t === ")" && a === b && inp.value[a] === ")"){ inp.setSelectionRange(a + 1, a + 1); return; }      // step over a ) we added
+    if((t === ")" || t === "]") && a === b && inp.value[a] === t){ inp.setSelectionRange(a + 1, a + 1); return; }      // step over a ) or ] we added
     // after an answer, an operator carries on from Ans (like a real calculator)
     if(!inp.value && /^[+−×÷^²!%E/]/.test(t) && S.ans != null) t = "Ans" + t;
     inp.value = inp.value.slice(0, a) + t + inp.value.slice(b);
     let c = a + t.length;
-    if(/\($/.test(t) && !/\)/.test(inp.value.slice(c))){ inp.value = inp.value.slice(0, c) + ")" + inp.value.slice(c); }
+    if(/\(\[$/.test(t)){ inp.value = inp.value.slice(0, c) + "])" + inp.value.slice(c); }
+    else if(/\($/.test(t) && !/\)/.test(inp.value.slice(c))){ inp.value = inp.value.slice(0, c) + ")" + inp.value.slice(c); }
     inp.setSelectionRange(c, c); live();
   }
   box.querySelector(".bc-keys").addEventListener("click", e => {

@@ -45,7 +45,7 @@ function beeGraphUI(box, S){
     return [t, null, null];
   }
   function splitTop(t){ const out = []; let d = 0, s = 0; for(let i = 0; i < t.length; i++){ const c = t[i]; if(c === "(") d++; else if(c === ")") d--; else if(c === "," && d === 0){ out.push(t.slice(s, i)); s = i + 1; } } out.push(t.slice(s)); return out; }
-  const RESERVED = new Set(["x", "y", "e", "π", "pi", "θ", "ans", "tau", "τ"]);
+  const RESERVED = new Set(["x", "y", "r", "e", "π", "pi", "θ", "ans", "tau", "τ"]);
   function analyse(){
     const R = { vars: {}, fns: {}, known: new Set(), rows: {}, items: {}, deg: S.deg };
     // 1. data tables: columns x1, y1… (a column can also be the values of a graph: a table of values)
@@ -68,7 +68,9 @@ function beeGraphUI(box, S){
         if(/^[a-zA-Z]$/.test(L) && !RESERVED.has(L)){
           const tree = BCalc.parse(r, R.known), uses = BCalc.letters(tree);
           if(uses.has("x") || uses.has("y")) continue;
-          const v = BCalc.compile(tree)(env()); if(Number.isFinite(v)){ R.vars[L] = v; if(pass) R.items[it.id] = { kind: "const", name: L, v, slider: tree.k === "num" || (tree.k === "neg" && tree.a.k === "num") }; }
+          const v = BCalc.compile(tree)(env());
+          if(Array.isArray(v)){ R.vars[L] = v; if(pass) R.items[it.id] = { kind: "list", name: L, v }; }
+          else if(Number.isFinite(v)){ R.vars[L] = v; if(pass) R.items[it.id] = { kind: "const", name: L, v, slider: tree.k === "num" || (tree.k === "neg" && tree.a.k === "num") }; }
         }
       }catch(_){}
     }
@@ -87,34 +89,61 @@ function beeGraphUI(box, S){
       return rows;
     };
     for(const it of S.items) if(it.type === "table") R.rows[it.id] = rowsOf(it);
+    const colLists = () => { for(const it of S.items) if(it.type === "table") for(const c of it.cols) R.vars[c.name] = (R.rows[it.id] || []).map(r => r[c.name]).filter(Number.isFinite); };
+    colLists();
     // 3. graphs, points, inequalities, fits
     for(const it of S.items){
       if(it.type !== "expr") continue;
       const t = (it.text || "").trim(); if(!t) { R.items[it.id] = { kind: "empty" }; continue; }
-      if(R.items[it.id] && R.items[it.id].kind === "const") continue;
+      if(R.items[it.id] && (R.items[it.id].kind === "const" || R.items[it.id].kind === "list")) continue;
       let [l, op, r] = splitRel(t); l = l.trim(); r = r == null ? null : r.trim();
       R.items[it.id] = one(it, t, l, op, r);
       // letters nobody defined → offer sliders
       const ri = R.items[it.id];
       if(ri && ri.kind === "fx" && ri.src){ try{ const u = [...BCalc.letters(BCalc.parse(ri.src, R.known))].filter(v => !RESERVED.has(v) && !(v in R.vars) && !R.fns[v] && !R.known.has(v) && !BC_FN[v]); if(u.length) R.items[it.id] = { kind: "err", msg: "Add a slider for " + u.join(", "), free: u }; }catch(_){} }
     }
+    // an equation or a region in x and y (x² + y² = 25, x² + y² < 25): drawn by looking at the whole screen
+    function implicit(l, r, op){
+      const L = comp(l), Rr = comp(r);
+      return { kind: "imp", op, F: (x, y) => { const e = env({ vars: Object.assign({}, R.vars, { x, y }) }); return L(e) - Rr(e); } };
+    }
     function one(it, t, l, op, r){
       try{
         if(op === "~") return fit(l, r, R, env);
         if(op && op !== "=" && op !== "~"){
           // y > f(x) (or f(x) < y)
-          let f, dir = op;
-          if(l === "y") f = r; else if(r === "y"){ f = l; dir = { "<": ">", ">": "<", "<=": ">=", ">=": "<=" }[op]; } else throw new BCalc.CalcError("Write it as y > … or y < …");
-          const g = comp(f); return { kind: "fx", fx: x => g(env({ vars: Object.assign({}, R.vars, { x }) })), shade: dir, src: f };
+          let f = null, dir = op;
+          const usesY = s => BCalc.letters(BCalc.parse(s, R.known)).has("y");
+          if(l === "y" && !usesY(r)) f = r; else if(r === "y" && !usesY(l)){ f = l; dir = { "<": ">", ">": "<", "<=": ">=", ">=": "<=" }[op]; }
+          if(f != null){ const g = comp(f); return { kind: "fx", fx: x => g(env({ vars: Object.assign({}, R.vars, { x }) })), shade: dir, src: f }; }
+          return implicit(l, r, op);
         }
         if(op === "="){
           const fm = l.match(/^([a-zA-Z])\s*\(\s*x\s*\)$/);
           if(fm && fm[1] !== "y"){ const g = comp(r); return { kind: "fx", fx: x => g(env({ vars: Object.assign({}, R.vars, { x }) })), src: r }; }
           if(/^[a-zA-Z]\s*\(\s*[a-zA-Z]\s*\)$/.test(l)){ return { kind: "def" }; }
-          if(l === "y" || r === "y"){ const g = comp(l === "y" ? r : l); return { kind: "fx", fx: x => g(env({ vars: Object.assign({}, R.vars, { x }) })), src: l === "y" ? r : l }; }
-          if(l === "x" || r === "x"){ const g = comp(l === "x" ? r : l); return { kind: "fy", fy: y => g(env({ vars: Object.assign({}, R.vars, { y }) })) }; }
+          const lu = BCalc.letters(BCalc.parse(l, R.known)), ru = BCalc.letters(BCalc.parse(r, R.known));
+          // polar: r = f(θ)
+          if(l === "r" && !ru.has("x") && !ru.has("y") && !ru.has("r")){ const g = comp(r); return { kind: "polar", fr: th => g(env({ vars: Object.assign({}, R.vars, { "θ": th }) })), src: r }; }
+          if(l === "y" && !ru.has("y")){ const g = comp(r); return { kind: "fx", fx: x => g(env({ vars: Object.assign({}, R.vars, { x }) })), src: r }; }
+          if(r === "y" && !lu.has("y")){ const g = comp(l); return { kind: "fx", fx: x => g(env({ vars: Object.assign({}, R.vars, { x }) })), src: l }; }
+          if(l === "x" && !ru.has("x")){ const g = comp(r); return { kind: "fy", fy: y => g(env({ vars: Object.assign({}, R.vars, { y }) })) }; }
+          if(r === "x" && !lu.has("x")){ const g = comp(l); return { kind: "fy", fy: y => g(env({ vars: Object.assign({}, R.vars, { y }) })) }; }
+          if(lu.has("x") || lu.has("y") || ru.has("x") || ru.has("y")) return implicit(l, r, "=");
           if(/^[a-zA-Z]$/.test(l)){ const u = [...BCalc.letters(BCalc.parse(r, R.known))].filter(v => !RESERVED.has(v) && !(v in R.vars) && !R.fns[v] && !R.known.has(v)); return { kind: "err", msg: u.length ? "Add a slider for " + u.join(", ") : "BEEcalc can't draw this one yet", free: u }; }
-          return { kind: "err", msg: "BEEcalc draws y = …, x = …, points and inequalities (not curves like x² + y² = 25 yet)" };
+          return { kind: "err", msg: "BEEcalc draws equations in x and y, r = … (polar), points and inequalities" };
+        }
+        // statistics plots: boxplot(L), histogram(L, width)
+        const sp = t.match(/^(boxplot|histogram)\s*\(/);
+        if(sp){
+          const tr = BCalc.parse(t, R.known); if(tr.k !== "fn") throw new BCalc.CalcError("Write it as " + sp[1] + "(L)");
+          const vals = BCalc.compile(tr.a[0])(env()), L = (Array.isArray(vals) ? vals : [vals]).filter(Number.isFinite);
+          if(L.length < 1) throw new BCalc.CalcError("The list is empty");
+          if(sp[1] === "boxplot"){ const S2 = BC_STATS.sorted(L); return { kind: "box", n: L.length, q: [S2[0], BC_STATS.quartile(L, 1), BC_STATS.med(S2), BC_STATS.quartile(L, 3), S2[S2.length - 1]] }; }
+          const w = tr.a[1] ? BCalc.compile(tr.a[1])(env()) : 1; if(!(w > 0)) throw new BCalc.CalcError("The bar width must be more than 0");
+          const lo = Math.floor(Math.min(...L) / w) * w, bins = [];
+          L.forEach(v => { const k = Math.floor((v - lo) / w + 1e-9); bins[k] = (bins[k] || 0) + 1; });
+          return { kind: "hist", n: L.length, w, bins: [...bins].map((c, k) => ({ a: lo + k * w, b: lo + (k + 1) * w, c: c || 0 })) };
         }
         // no = : a point list, a graph of x, or a value
         if(/^\(/.test(t) && /,/.test(t)){
@@ -122,6 +151,7 @@ function beeGraphUI(box, S){
           return { kind: "pts", pts };
         }
         const tree = BCalc.parse(t, R.known), uses = BCalc.letters(tree), g = BCalc.compile(tree);
+        if(uses.has("y")) throw new BCalc.CalcError("Write an equation, like x^2 + y^2 = 25");
         if(uses.has("x")){ return { kind: "fx", fx: x => g(env({ vars: Object.assign({}, R.vars, { x }) })), src: t }; }
         const free = new Set(); const v = g(env({ free }));
         const fr = [...free].filter(x => !RESERVED.has(x));
@@ -130,6 +160,7 @@ function beeGraphUI(box, S){
     }
     // tables: their points
     for(const it of S.items) if(it.type === "table" && it.cols.some(c => c.ref)) R.rows[it.id] = rowsOf(it);
+    colLists();
     for(const it of S.items) if(it.type === "table"){
       const rows = R.rows[it.id] || [], xs = it.cols[0];
       R.items[it.id] = { kind: "table", sets: it.cols.slice(1).map((c, k) => ({ color: k === 0 ? it.color : BG_COLORS[(BG_COLORS.indexOf(it.color) + k) % BG_COLORS.length], pts: rows.map(r => [r[xs.name], r[c.name]]).filter(p => p.every(Number.isFinite)) })) };
@@ -172,6 +203,7 @@ function beeGraphUI(box, S){
     const xVar = dataVars[0];
     return { kind: "fit", params: best.p, r2: sst > 0 ? 1 - best.sse / sst : 1, fx: x => model(best.p, { [xVar]: x }) };
   }
+  function corr(a, b){ const n = Math.min(a.length, b.length), ma = BC_STATS.mean(a.slice(0, n)), mb = BC_STATS.mean(b.slice(0, n)); let sab = 0, saa = 0, sbb = 0; for(let i = 0; i < n; i++){ sab += (a[i] - ma) * (b[i] - mb); saa += (a[i] - ma) ** 2; sbb += (b[i] - mb) ** 2; } return sab / Math.sqrt(saa * sbb); }
   function solve(M, v){
     const n = v.length, A2 = M.map((r, i) => r.concat([v[i]]));
     for(let c = 0; c < n; c++){
@@ -217,6 +249,10 @@ function beeGraphUI(box, S){
     // inequalities first (under the lines), then lines, then points
     for(const it of S.items){ const a = A.items[it.id]; if(it.hidden || !a) continue; if((a.kind === "fx" || a.kind === "fit") && a.shade) shade(a, it.color); }
     for(const it of S.items){ const a = A.items[it.id]; if(it.hidden || !a) continue;
+      if(a.kind === "imp") implicitDraw(a, it.color, sel === it.id);
+      if(a.kind === "polar") polarDraw(a, it, sel === it.id);
+      if(a.kind === "box") boxDraw(a, it.color);
+      if(a.kind === "hist") histDraw(a, it.color);
       if(a.kind === "fx" || a.kind === "fit") curve(a.fx, it.color, a.shade && a.shade.length === 1, sel === it.id);
       if(a.kind === "fy") curveY(a.fy, it.color, sel === it.id);
     }
@@ -256,6 +292,61 @@ function beeGraphUI(box, S){
     ctx.fillStyle = color; ctx.globalAlpha = .16; const up = a.shade[0] === ">";
     for(let px = 0; px < W; px += 1){ const py = Y(a.fx(ux(px + .5))); if(Number.isNaN(py)) continue; const c = Math.min(Math.max(py, 0), H); if(up) ctx.fillRect(px, 0, 1, c); else ctx.fillRect(px, c, 1, H - c); }
     ctx.globalAlpha = 1;
+  }
+  // marching squares on a 3-pixel grid: the line where F = 0, and the region where the inequality holds
+  function implicitDraw(a, color, bold){
+    const c = 3, nx = Math.ceil(W / c) + 1, ny = Math.ceil(H / c) + 1, v = new Float64Array(nx * ny);
+    for(let j = 0; j < ny; j++){ const y = uy(j * c); for(let i = 0; i < nx; i++){ const f = a.F(ux(i * c), y); v[j * nx + i] = Number.isFinite(f) ? f : NaN; } }
+    if(a.op !== "="){
+      const ok = { "<": f => f < 0, "<=": f => f <= 0, ">": f => f > 0, ">=": f => f >= 0 }[a.op];
+      ctx.fillStyle = color; ctx.globalAlpha = .16;
+      for(let j = 0; j < ny - 1; j++) for(let i = 0; i < nx - 1; i++){ const f = (v[j * nx + i] + v[j * nx + i + 1] + v[(j + 1) * nx + i] + v[(j + 1) * nx + i + 1]) / 4; if(ok(f)) ctx.fillRect(i * c, j * c, c, c); }
+      ctx.globalAlpha = 1;
+    }
+    ctx.strokeStyle = color; ctx.lineWidth = bold ? 3.2 : 2.5; ctx.setLineDash(a.op === "<" || a.op === ">" ? [7, 6] : []); ctx.beginPath();
+    const lerp = (p, q) => p / (p - q);
+    for(let j = 0; j < ny - 1; j++) for(let i = 0; i < nx - 1; i++){
+      const f0 = v[j * nx + i], f1 = v[j * nx + i + 1], f2 = v[(j + 1) * nx + i + 1], f3 = v[(j + 1) * nx + i];
+      if(!(Number.isFinite(f0) && Number.isFinite(f1) && Number.isFinite(f2) && Number.isFinite(f3))) continue;
+      const P = [], x0 = i * c, y0 = j * c;
+      if((f0 < 0) !== (f1 < 0)) P.push([x0 + c * lerp(f0, f1), y0]);
+      if((f1 < 0) !== (f2 < 0)) P.push([x0 + c, y0 + c * lerp(f1, f2)]);
+      if((f3 < 0) !== (f2 < 0)) P.push([x0 + c * lerp(f3, f2), y0 + c]);
+      if((f0 < 0) !== (f3 < 0)) P.push([x0, y0 + c * lerp(f0, f3)]);
+      if(P.length < 2) continue;
+      const big = Math.max(Math.abs(f0), Math.abs(f1), Math.abs(f2), Math.abs(f3)), small = Math.min(Math.abs(f0), Math.abs(f1), Math.abs(f2), Math.abs(f3));
+      if(big > 1e6 && small > 1) continue;             // a jump across a gap (like 1/x), not a real crossing
+      ctx.moveTo(P[0][0], P[0][1]); ctx.lineTo(P[1][0], P[1][1]);
+      if(P.length === 4){ ctx.moveTo(P[2][0], P[2][1]); ctx.lineTo(P[3][0], P[3][1]); }
+    }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+  // polar: r = f(θ), θ from the item's range (0 to 360° or 0 to 2π)
+  function polarDraw(a, it, bold){
+    const th = polarRange(it), toR = S.deg ? Math.PI / 180 : 1, N = 2400;
+    ctx.strokeStyle = it.color; ctx.lineWidth = bold ? 3.2 : 2.5; ctx.beginPath(); let pen = false, lp = null;
+    for(let k = 0; k <= N; k++){
+      const t = th[0] + (th[1] - th[0]) * k / N, r = a.fr(t);
+      if(!Number.isFinite(r)){ pen = false; continue; }
+      const px = X(r * Math.cos(t * toR)), py = Y(r * Math.sin(t * toR));
+      if(pen && lp && Math.hypot(px - lp[0], py - lp[1]) > Math.max(W, H)){ pen = false; }
+      if(pen) ctx.lineTo(px, py); else { ctx.moveTo(px, py); pen = true; } lp = [px, py];
+    }
+    ctx.stroke();
+  }
+  const polarRange = it => it.th ? [it.th.min, it.th.max] : [0, S.deg ? 360 : 2 * Math.PI];
+  function boxDraw(a, color){
+    const [q0, q1, q2, q3, q4] = a.q, yc = 1, h = .5;
+    ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.fillStyle = color; ctx.globalAlpha = .18;
+    ctx.fillRect(X(q1), Y(yc + h), X(q3) - X(q1), Y(yc - h) - Y(yc + h)); ctx.globalAlpha = 1;
+    ctx.strokeRect(X(q1), Y(yc + h), X(q3) - X(q1), Y(yc - h) - Y(yc + h));
+    ctx.beginPath(); ctx.moveTo(X(q2), Y(yc + h)); ctx.lineTo(X(q2), Y(yc - h));
+    ctx.moveTo(X(q0), Y(yc)); ctx.lineTo(X(q1), Y(yc)); ctx.moveTo(X(q3), Y(yc)); ctx.lineTo(X(q4), Y(yc));
+    ctx.moveTo(X(q0), Y(yc + h / 2)); ctx.lineTo(X(q0), Y(yc - h / 2)); ctx.moveTo(X(q4), Y(yc + h / 2)); ctx.lineTo(X(q4), Y(yc - h / 2)); ctx.stroke();
+  }
+  function histDraw(a, color){
+    ctx.strokeStyle = color; ctx.lineWidth = 1.6;
+    a.bins.forEach(b => { if(!b.c) return; ctx.fillStyle = color; ctx.globalAlpha = .25; ctx.fillRect(X(b.a), Y(b.c), X(b.b) - X(b.a), Y(0) - Y(b.c)); ctx.globalAlpha = 1; ctx.strokeRect(X(b.a), Y(b.c), X(b.b) - X(b.a), Y(0) - Y(b.c)); });
   }
   function dot(x, y, color, r){ const px = X(x), py = Y(y); if(!Number.isFinite(px) || !Number.isFinite(py)) return; ctx.fillStyle = color; ctx.beginPath(); ctx.arc(px, py, r, 0, 7); ctx.fill(); }
   // roots, highest/lowest points, crossings with the other graphs, where it meets the y-axis
@@ -299,7 +390,8 @@ function beeGraphUI(box, S){
       <button type="button" class="bg-dot ${it.hidden ? "off" : ""}" style="--c:${it.color}" data-act="hide" title="Show or hide the points" aria-label="Show or hide"></button>
       <div class="bg-main"><table><tr>${it.cols.map(c => `<th>${esc(c.name)}${c.ref ? `<small> = graph ${S.items.findIndex(x => x.id === c.ref) + 1}</small>` : ""}</th>`).join("")}</tr>
         ${rows.map(i => `<tr>${it.cols.map((c, ci) => c.ref ? `<td class="ref" data-r="${i}" data-c="${ci}"></td>` : `<td><input data-r="${i}" data-c="${ci}" value="${esc((c.vals || [])[i] ?? "")}" inputmode="decimal" aria-label="${esc(c.name)} row ${i + 1}"></td>`).join("")}</tr>`).join("")}</table>
-        <div class="bg-fit">${it.cols.some(c => c.ref) ? "" : `<select data-act="fit" aria-label="Fit a model"><option value="">Fit ▾</option>${BG_FITS.map(([nm]) => `<option>${nm}</option>`).join("")}</select>`}<button type="button" class="btn sm" data-act="col">＋ column</button></div></div>
+        <div class="bg-fit">${it.cols.some(c => c.ref) ? "" : `<select data-act="fit" aria-label="Fit a model"><option value="">Fit ▾</option>${BG_FITS.map(([nm]) => `<option>${nm}</option>`).join("")}</select>`}<button type="button" class="btn sm" data-act="col">＋ column</button><button type="button" class="btn sm ${it.stats ? "on" : ""}" data-act="stats" aria-pressed="${!!it.stats}">📊 Statistics</button></div>
+        <div class="bg-stats"></div></div>
       <div class="bg-acts"><button type="button" data-act="del" title="Delete">✕</button></div></div>`;
   }
   // the line under each expression: errors, values, sliders, fits
@@ -307,9 +399,19 @@ function beeGraphUI(box, S){
     for(const it of S.items){
       const el = list.querySelector(`.bg-it[data-id="${it.id}"]`); if(!el) continue;
       const a = A && A.items[it.id], st = el.querySelector(".bg-st");
-      if(it.type === "table"){ el.querySelectorAll("td.ref").forEach(td => { const c = it.cols[+td.dataset.c], rows = A && A.rows[it.id], rw = rows && rows[+td.dataset.r]; td.textContent = rw && Number.isFinite(rw[c.name]) ? fmt4(rw[c.name]) : ""; }); continue; }
+      if(it.type === "table"){ const sb = el.querySelector(".bg-stats");
+        if(sb){ if(!it.stats || !A) sb.innerHTML = ""; else { const rows = A.rows[it.id] || [], C = it.cols.map(c => ({ n: c.name, L: rows.map(r => r[c.name]).filter(Number.isFinite) }));
+          const R2 = [["n", L => L.length], ["mean", L => BC_STATS.run("mean", L)], ["median", L => BC_STATS.run("median", L)], ["min", L => BC_STATS.run("min", L)], ["Q1", L => BC_STATS.quartile(L, 1)], ["Q3", L => BC_STATS.quartile(L, 3)], ["max", L => BC_STATS.run("max", L)], ["s", L => BC_STATS.run("stdev", L)], ["σ", L => BC_STATS.run("stdevp", L)]];
+          sb.innerHTML = `<table><tr><th></th>${C.map(c => `<th>${esc(c.n)}</th>`).join("")}</tr>${R2.map(([nm, f]) => `<tr><th>${nm}</th>${C.map(c => `<td>${c.L.length ? esc(BCalc.fmt(f(c.L), 5)) : ""}</td>`).join("")}</tr>`).join("")}</table>`
+            + (C.length >= 2 && C[0].L.length > 1 && C[1].L.length === C[0].L.length ? `<div class="hint">r (correlation of ${esc(C[0].n)} and ${esc(C[1].n)}) = ${esc(BCalc.fmt(corr(C[0].L, C[1].L), 4))}</div>` : ""); } }
+        el.querySelectorAll("td.ref").forEach(td => { const c = it.cols[+td.dataset.c], rows = A && A.rows[it.id], rw = rows && rows[+td.dataset.r]; td.textContent = rw && Number.isFinite(rw[c.name]) ? fmt4(rw[c.name]) : ""; }); continue; }
       el.classList.toggle("bad", !!(a && a.kind === "err"));
-      if(!a || a.kind === "empty" || a.kind === "fx" && !a.shade || a.kind === "fy" || a.kind === "pts" || a.kind === "def"){ st.innerHTML = a && a.kind === "fx" && S.deg && /sin|cos|tan/.test(it.text) && V.s > 2 ? `<span class="hint">Degrees: zoom out (－) to see the wave, or switch to RAD.</span>` : ""; continue; }
+      if(a && a.kind === "polar"){ const th = polarRange(it), u = S.deg ? "°" : "";
+        if(!st.querySelector(".bg-th")) st.innerHTML = `<div class="bg-sl bg-th"><input type="number" class="tmn" value="${+th[0].toFixed(4)}" aria-label="Smallest θ"><span>≤ θ ≤</span><input type="number" class="tmx" value="${+th[1].toFixed(4)}" aria-label="Largest θ"><span>${u}</span></div>`; continue; }
+      if(a && a.kind === "box"){ st.innerHTML = ["min", "Q1", "median", "Q3", "max"].map((n, k) => `<span class="pr">${n} ${esc(BCalc.fmt(a.q[k], 6))}</span>`).join(" ") + ` <span class="pr r2">n = ${a.n}</span>`; continue; }
+      if(a && a.kind === "hist"){ st.innerHTML = `<span class="pr">${a.bins.length} bars of width ${esc(BCalc.fmt(a.w, 6))}</span> <span class="pr r2">n = ${a.n}</span>`; continue; }
+      if(a && a.kind === "list"){ st.innerHTML = `<span class="pr">list of ${a.v.length}</span>`; continue; }
+      if(!a || a.kind === "empty" || a.kind === "fx" && !a.shade || a.kind === "fy" || a.kind === "pts" || a.kind === "def" || a.kind === "imp"){ st.innerHTML = a && a.kind === "fx" && S.deg && /sin|cos|tan/.test(it.text) && V.s > 2 ? `<span class="hint">Degrees: zoom out (－) to see the wave, or switch to RAD.</span>` : ""; continue; }
       if(a.kind === "fx" && a.shade){ st.innerHTML = ""; continue; }
       if(a.kind === "err") st.innerHTML = `<span class="e">${esc(a.msg)}</span>${(a.free || []).map(v => ` <button type="button" class="btn sm" data-slider="${esc(v)}">＋ slider ${esc(v)}</button>`).join("")}`;
       else if(a.kind === "value") st.innerHTML = `<b>= ${esc(BCalc.fmt(a.v))}</b>`;
@@ -328,6 +430,7 @@ function beeGraphUI(box, S){
     const el = e.target.closest(".bg-it"); if(!el) return; const it = S.items.find(i => i.id === +el.dataset.id); if(!it) return;
     if(e.target.classList.contains("bg-in")){ it.text = e.target.value.replace(/<=/g, "≤").replace(/>=/g, "≥"); if(it.text !== e.target.value){ const p = e.target.selectionStart - 1; e.target.value = it.text; e.target.setSelectionRange(p, p); } sel = it.id; label = null; update(false); return; }
     if(e.target.type === "range"){ const [l] = splitRel(it.text); it.text = l.trim() + " = " + (+e.target.value); el.querySelector(".bg-in").value = it.text; update(false); return; }
+    if(e.target.classList.contains("tmn") || e.target.classList.contains("tmx")){ const th = polarRange(it); it.th = { min: th[0], max: th[1] }; const v = +e.target.value; if(Number.isFinite(v)) it.th[e.target.classList.contains("tmn") ? "min" : "max"] = v; update(false); return; }
     if(e.target.classList.contains("mn") || e.target.classList.contains("mx")){ const sl = it.sl; sl[e.target.classList.contains("mn") ? "min" : "max"] = +e.target.value; const r = el.querySelector("input[type=range]"); r.min = sl.min; r.max = sl.max; sl.step = Math.max((sl.max - sl.min) / 200, 1e-6); r.step = sl.step; save(); return; }
     if(e.target.dataset.r != null){ const c = it.cols[+e.target.dataset.c], r = +e.target.dataset.r; c.vals = c.vals || []; c.vals[r] = e.target.value;
       const n = Math.max(...it.cols.map(x => (x.vals || []).length)); if(r === n - 1 && e.target.value){ update(false); const tb = el.querySelector("table"); if(!tb.querySelector(`input[data-r="${n}"]`)){ const tr = document.createElement("tr"); tr.innerHTML = it.cols.map((cc, ci) => cc.ref ? `<td class="ref" data-r="${n}" data-c="${ci}"></td>` : `<td><input data-r="${n}" data-c="${ci}" inputmode="decimal" aria-label="${esc(cc.name)} row ${n + 1}"></td>`).join(""); tb.appendChild(tr); } }
@@ -352,6 +455,7 @@ function beeGraphUI(box, S){
     if(act === "hide"){ it.hidden = !it.hidden; b.classList.toggle("off", it.hidden); update(false); }
     else if(act === "del"){ S.items.splice(S.items.indexOf(it), 1); if(!S.items.length) S.items.push({ id: S.nid++, type: "expr", text: "", color: BG_COLORS[0] }); if(sel === it.id) sel = null; update(true); }
     else if(act === "tbl"){ const a = A && A.items[it.id]; if(!a || a.kind !== "fx"){ toast("Type a graph of x first (like y = 2x + 1)."); return; } const n = tableNum(); S.items.splice(S.items.indexOf(it) + 1, 0, { id: S.nid++, type: "table", n, color: it.color, cols: [{ name: "x" + n, vals: ["-2", "-1", "0", "1", "2"] }, { name: "y" + n, ref: it.id }] }); update(true); }
+    else if(act === "stats"){ it.stats = !it.stats; update(true); }
     else if(act === "col"){ const n = it.n || tableNum(), k = it.cols.length, L = ["x", "y", "z", "w", "u", "v"][k]; if(!L){ toast("A table can have up to 6 columns."); return; } it.cols.push({ name: L + n, vals: [] }); update(true); }
   });
   list.addEventListener("change", e => {
@@ -371,7 +475,7 @@ function beeGraphUI(box, S){
     const b = e.target.closest("button"); if(!b) return;
     if(b.dataset.add === "expr"){ const it = { id: S.nid++, type: "expr", text: "", color: nextColor() }; S.items.push(it); sel = it.id; update(true); list.querySelector(`.bg-it[data-id="${it.id}"] .bg-in`).focus(); }
     else if(b.dataset.add === "table"){ const n = tableNum(); S.items.push({ id: S.nid++, type: "table", n, color: nextColor(), cols: [{ name: "x" + n, vals: [] }, { name: "y" + n, vals: [] }] }); update(true); const f = list.querySelector(`.bg-it[data-id="${S.nid - 1}"] input`); if(f) f.focus(); }
-    else if(b.classList.contains("bg-deg")){ S.deg = !S.deg; b.textContent = S.deg ? "DEG" : "RAD"; update(true); }
+    else if(b.classList.contains("bg-deg")){ S.deg = !S.deg; b.textContent = S.deg ? "DEG" : "RAD"; S.items.forEach(i => { if(i.th) i.th = { min: S.deg ? i.th.min * 180 / Math.PI : i.th.min * Math.PI / 180, max: S.deg ? i.th.max * 180 / Math.PI : i.th.max * Math.PI / 180 }; }); update(true); }
   });
   box.querySelector(".bg-sym").addEventListener("click", e => {
     const b = e.target.closest("[data-s]"); if(!b) return;

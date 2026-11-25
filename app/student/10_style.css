@@ -290,3 +290,13 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
 .bc-hist{min-height:72px}
 .bc.scientific .bc-k{padding:6px 2px;font-size:.9em}
 .bc.scientific .bc-keys{gap:4px}
+.calcpanel.scientific{height:min(760px,92vh)}
+.bg-stats table{border-collapse:collapse;margin-top:6px;font-size:.85em;width:100%}
+.bg-stats th,.bg-stats td{border:1px solid var(--line);padding:2px 5px;text-align:right}
+.bg-stats th{font-weight:600;color:var(--muted)}
+.bg-stats .hint{margin-top:4px;font-size:.85em;color:var(--muted)}
+.bg-fit .btn.on{background:var(--gold-l);border-color:var(--gold)}
+.bg-th span{font-size:.9em;color:var(--muted)}
+.bg-fit{flex-wrap:wrap;align-items:center}
+.bg-fit .btn{font-size:.8em;padding:3px 8px;white-space:nowrap}
+.bg-fit select{font-size:.82em;padding:2px 4px;height:auto}
