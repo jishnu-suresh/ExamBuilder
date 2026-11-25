@@ -13,7 +13,7 @@ a{color:var(--gold-d)}
 .top .open-bee{background:var(--gold);color:#fff;text-decoration:none;font-weight:600;padding:7px 14px;border-radius:9px;font-size:15px;white-space:nowrap}
 .top .menu{display:none;border:1px solid var(--line);background:#fff;border-radius:9px;padding:6px 11px;font:inherit;cursor:pointer}
 .wrap{display:grid;grid-template-columns:270px minmax(0,1fr);max-width:1320px;margin:0 auto;gap:28px;padding:22px}
-nav.side{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;padding-right:4px}
+nav.side{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 130px);overflow:auto;padding-right:4px}
 nav.side a{display:flex;gap:10px;align-items:center;padding:8px 11px;border-radius:10px;color:var(--ink);text-decoration:none;font-size:15.5px;line-height:1.3}
 nav.side a .e{width:24px;text-align:center;flex:none}
 nav.side a:hover{background:#fff}
@@ -74,6 +74,10 @@ ol.legend li.on{background:var(--gold-l);border-radius:6px}
 @media (max-width:980px){.wrap{grid-template-columns:1fr;padding:12px}nav.side{display:none;position:static;max-height:none}nav.side.open{display:block}.top .menu{display:block}main{padding:24px 20px}.step,.hero{grid-template-columns:1fr}ol.legend{columns:1}h1{font-size:30px}}
 @media print{.top,nav.side,.pager,.media .play,.media .badge{display:none!important}.wrap{display:block;padding:0}main{border:0;box-shadow:none;padding:0}video{display:none!important}.media img.poster{display:block!important}.step,figure{break-inside:avoid}}
 .media img.poster{display:none}
+.credit{position:fixed;left:14px;bottom:10px;z-index:15;font:600 12.5px system-ui;color:var(--muted);background:rgba(255,253,248,.85);padding:3px 8px;border-radius:8px;pointer-events:none}
+.credit .faint{font-weight:400;opacity:.75}
+@media (max-width:980px){.credit{display:none}}
+@media print{.credit{display:none}}
 </style></head><body>
 <header class="top"><button class="menu" aria-label="Chapters">☰</button><a class="brand" href="index.html">🐝 BEE <small>Teacher guide</small></a><span class="grow"></span><a class="open-bee" href="../" target="_blank" rel="noopener">Open BEE →</a></header>
 <div class="wrap"><nav class="side" aria-label="Chapters"><a href="index.html" class=""><span class="e">🐝</span>Welcome</a><a href="start.html" class=""><span class="e">🚀</span>Getting started</a><a href="first-exam.html" class=""><span class="e">✏️</span>Your first exam</a><a href="questions.html" class=""><span class="e">📝</span>Writing questions</a><a href="insert.html" class=""><span class="e">🖼</span>Tables, graphs & pictures</a><a href="ai-photos.html" class=""><span class="e">🤖</span>From AI, photos & files</a><a href="paper.html" class=""><span class="e">🎨</span>Make the paper yours</a><a href="saving.html" class=""><span class="e">💾</span>Saving & going back</a><a href="computer.html" class="on"><span class="e">💻</span>Exams on computers</a><div class="toc"><a href="#make">Make the student file</a><a href="#codes">Two codes</a><a href="#run">During the exam</a><a href="#end">The end of the test</a><a href="#mark">Mark the answers</a></div><a href="students.html" class=""><span class="e">🧑‍🎓</span>What students see</a><a href="read-aloud.html" class=""><span class="e">🔊</span>Read aloud</a><a href="calculator.html" class=""><span class="e">🧮</span>Calculator</a><a href="help.html" class=""><span class="e">🛟</span>Help & tips</a></nav>
@@ -89,9 +93,9 @@ ol.legend li.on{background:var(--gold-l);border-radius:6px}
 <li><b>Read aloud</b> (turn it off for reading tests), your <a href="read-aloud.html#own-voice">own voice</a>, the <b>drawing pad</b> and the <a href="calculator.html">calculator</a>.</li>
 <li>The <b>accommodations</b> students may switch on: coloured overlay, reading ruler, wider spacing, highlighter, rest breaks.</li>
 </ul>
-<p>Then <span class="btn">⬇ Download the student file</span>.</p>
+<p>Then click <span class="btn">⬇ Download the student file</span></p>
 </div><div><figure class="clip"><div class="media"><video src="media/stu_dialog.mp4" poster="media/stu_dialog.jpg" muted loop playsinline preload="none" aria-label=""></video><img class="poster" src="media/stu_dialog.jpg" alt="" loading="lazy"><button class="play" aria-label="Play">▶</button><span class="badge">▶ clip</span></div></figure></div></div>
-<div class="note"><div><b>The school key.</b> Answers come back sealed, so only teachers can open them. The first time on a computer, BEE asks for the <b>school key</b> file and its password: ask Jishnu.</div></div>
+<div class="note"><div><b>The school key.</b> Answers come back sealed, so only teachers can open them. The first time on a computer, BEE asks for the <b>school key</b> file and its password: <b>ask Jishnu</b>.</div></div>
 
 <h2 id="codes">Two codes</h2>
 <table>
@@ -108,7 +112,9 @@ ol.legend li.on{background:var(--gold-l);border-radius:6px}
 </div><div><figure class="clip"><div class="media"><video src="media/stu_start.mp4" poster="media/stu_start.jpg" muted loop playsinline preload="none" aria-label=""></video><img class="poster" src="media/stu_start.jpg" alt="" loading="lazy"><button class="play" aria-label="Play">▶</button><span class="badge">▶ clip</span></div></figure></div></div>
 <div class="step"><div class="txt"><span class="num">3</span><h3>Leaving the test locks it</h3>
 <p>If a student leaves the test window, it beeps and locks: <i>Put your hand up and call your teacher.</i> Type the teacher code to unlock it. The clock keeps running, and each exit is listed in the report.</p>
+<p><b>Shortcut keys lock it too.</b> Pressing <kbd>Cmd</kbd> (Mac), the <kbd>Windows</kbd> key or <kbd>Ctrl</kbd>, alone or with any other key, locks the test at once. So <kbd>Cmd</kbd>+<kbd>Space</kbd>, <kbd>Cmd</kbd>+<kbd>Tab</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd> and the like all lock it.</p>
 </div><div><figure class="clip"><div class="media"><video src="media/stu_lock.mp4" poster="media/stu_lock.jpg" muted loop playsinline preload="none" aria-label=""></video><img class="poster" src="media/stu_lock.jpg" alt="" loading="lazy"><button class="play" aria-label="Play">▶</button><span class="badge">▶ clip</span></div></figure></div></div>
+<div class="note"><div>Students only need to type, so <kbd>Shift</kbd> (capitals) and <kbd>Option</kbd>/<kbd>AltGr</kbd> (é, @, €) work as usual and never lock. Copy, cut, paste and dragging text in or out are switched off during the test. Tell students before the exam: <b>don't touch Cmd, Ctrl or the Windows key</b>.</div></div>
 <div class="step"><div class="txt"><span class="num">4</span><h3>The 👩‍🏫 teacher menu</h3>
 <p>Click <span class="btn">👩‍🏫</span> on the student's screen and type the teacher code to:</p>
 <ul><li><b>add time</b> (+5 to +30 minutes) or start a <b>rest break</b> (it pauses the clock),</li>
@@ -131,6 +137,7 @@ ol.legend li.on{background:var(--gold-l);border-radius:6px}
 
 <div class="pager"><a href="saving.html"><small>← Back</small>💾 Saving & going back</a><a class="next" href="students.html"><small>Next →</small>🧑‍🎓 What students see</a></div></main></div>
 <div class="foot">🐝 BEE v3 · Build • Edit • Evaluate · © Jishnu · <a href="https://forms.cloud.microsoft/r/KXXUcfCRvs" target="_blank" rel="noopener">💬 Feedback</a></div>
+<div class="credit" aria-hidden="true">🐝 BEE<span class="faint"> · © Jishnu</span></div>
 <div id="lb" aria-hidden="true"></div>
 <script>
 (() => {

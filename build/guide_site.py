@@ -40,7 +40,7 @@ a{color:var(--gold-d)}
 .top .open-bee{background:var(--gold);color:#fff;text-decoration:none;font-weight:600;padding:7px 14px;border-radius:9px;font-size:15px;white-space:nowrap}
 .top .menu{display:none;border:1px solid var(--line);background:#fff;border-radius:9px;padding:6px 11px;font:inherit;cursor:pointer}
 .wrap{display:grid;grid-template-columns:270px minmax(0,1fr);max-width:1320px;margin:0 auto;gap:28px;padding:22px}
-nav.side{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 96px);overflow:auto;padding-right:4px}
+nav.side{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 130px);overflow:auto;padding-right:4px}
 nav.side a{display:flex;gap:10px;align-items:center;padding:8px 11px;border-radius:10px;color:var(--ink);text-decoration:none;font-size:15.5px;line-height:1.3}
 nav.side a .e{width:24px;text-align:center;flex:none}
 nav.side a:hover{background:#fff}
@@ -101,6 +101,10 @@ ol.legend li.on{background:var(--gold-l);border-radius:6px}
 @media (max-width:980px){.wrap{grid-template-columns:1fr;padding:12px}nav.side{display:none;position:static;max-height:none}nav.side.open{display:block}.top .menu{display:block}main{padding:24px 20px}.step,.hero{grid-template-columns:1fr}ol.legend{columns:1}h1{font-size:30px}}
 @media print{.top,nav.side,.pager,.media .play,.media .badge{display:none!important}.wrap{display:block;padding:0}main{border:0;box-shadow:none;padding:0}video{display:none!important}.media img.poster{display:block!important}.step,figure{break-inside:avoid}}
 .media img.poster{display:none}
+.credit{position:fixed;left:14px;bottom:10px;z-index:15;font:600 12.5px system-ui;color:var(--muted);background:rgba(255,253,248,.85);padding:3px 8px;border-radius:8px;pointer-events:none}
+.credit .faint{font-weight:400;opacity:.75}
+@media (max-width:980px){.credit{display:none}}
+@media print{.credit{display:none}}
 """
 
 JS = r"""
@@ -207,6 +211,7 @@ def page(i, version):
 {body}
 <div class="pager">{prev}{nxt}</div></main></div>
 <div class="foot">🐝 BEE {version} · Build • Edit • Evaluate · © Jishnu · <a href="https://forms.cloud.microsoft/r/KXXUcfCRvs" target="_blank" rel="noopener">💬 Feedback</a></div>
+<div class="credit" aria-hidden="true">🐝 BEE<span class="faint"> · © Jishnu</span></div>
 <div id="lb" aria-hidden="true"></div>
 <script>{JS}</script></body></html>"""
 
