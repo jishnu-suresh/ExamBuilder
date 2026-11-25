@@ -4581,7 +4581,16 @@ document.addEventListener("click", e => {
   if(TTS.i === i && !TTS.paused && TTS.k < TTS.chunks.length) return stopReading();
   readUnit(i);
 });
-$("#bReadAll").onclick = () => readUnit(0);
+// the top-bar button: the read-aloud version reads from the start; the computer version reads from the part on screen
+function unitOnScreen(){
+  const top = $("#scrExam .bar").getBoundingClientRect().bottom + 8;
+  const k = UNITS.findIndex(u => u.el && u.el.getBoundingClientRect().bottom > top);
+  return k < 0 ? 0 : k;
+}
+$("#bReadAll").onclick = () => {
+  if(!READ_ONLY() && TTS.i >= 0 && !TTS.paused && TTS.k < TTS.chunks.length) return stopReading();
+  readUnit(READ_ONLY() ? 0 : unitOnScreen());
+};
 
 /* ---- accommodations the teacher allowed (EXAM.acc): coloured overlay, reading ruler, letter spacing,
         highlighter, supervised rest breaks — plus a big pointer and keyboard shortcuts for everyone ---- */
@@ -4781,7 +4790,10 @@ function startExam(){
   const RO = READ_ONLY();
   $("#bTitle").textContent = EXAM.title; $("#bWho").textContent = RO ? "· read-aloud version" : "· " + ST.name + (ST.cls ? " · " + ST.cls : "");
   ["#bMathKb", "#bAccents", "#bEnd"].forEach(s => $(s).classList.toggle("hidden", RO));
-  ["#bFinish", "#bReadAll"].forEach(s => $(s).classList.toggle("hidden", !RO));
+  $("#bFinish").classList.toggle("hidden", !RO);
+  $("#bReadAll").classList.toggle("hidden", !(RO || EXAM.readAloud));
+  $("#bReadAll").textContent = RO ? "▶ Read from the start" : "🔊 Read aloud";
+  $("#bReadAll").title = RO ? "Read the paper aloud from the beginning" : "Read aloud from the part on the screen (or press 🔊 next to any part)";
   $(".nav .key").classList.toggle("hidden", RO);
   show("#scrExam"); if(!RO) setupMathKeyboard(); renderPaper(); applyPrefs(); setupReading(); if(ST.prefs.accents && !RO){ accBar(); $("#accBar").classList.remove("hidden"); }
   guardStart(); tick(); changed(); saveNow();

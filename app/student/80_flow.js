@@ -95,7 +95,10 @@ function startExam(){
   const RO = READ_ONLY();
   $("#bTitle").textContent = EXAM.title; $("#bWho").textContent = RO ? "· read-aloud version" : "· " + ST.name + (ST.cls ? " · " + ST.cls : "");
   ["#bMathKb", "#bAccents", "#bEnd"].forEach(s => $(s).classList.toggle("hidden", RO));
-  ["#bFinish", "#bReadAll"].forEach(s => $(s).classList.toggle("hidden", !RO));
+  $("#bFinish").classList.toggle("hidden", !RO);
+  $("#bReadAll").classList.toggle("hidden", !(RO || EXAM.readAloud));
+  $("#bReadAll").textContent = RO ? "▶ Read from the start" : "🔊 Read aloud";
+  $("#bReadAll").title = RO ? "Read the paper aloud from the beginning" : "Read aloud from the part on the screen (or press 🔊 next to any part)";
   $(".nav .key").classList.toggle("hidden", RO);
   show("#scrExam"); if(!RO) setupMathKeyboard(); renderPaper(); applyPrefs(); setupReading(); if(ST.prefs.accents && !RO){ accBar(); $("#accBar").classList.remove("hidden"); }
   guardStart(); tick(); changed(); saveNow();

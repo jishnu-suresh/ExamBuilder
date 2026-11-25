@@ -174,4 +174,13 @@ document.addEventListener("click", e => {
   if(TTS.i === i && !TTS.paused && TTS.k < TTS.chunks.length) return stopReading();
   readUnit(i);
 });
-$("#bReadAll").onclick = () => readUnit(0);
+// the top-bar button: the read-aloud version reads from the start; the computer version reads from the part on screen
+function unitOnScreen(){
+  const top = $("#scrExam .bar").getBoundingClientRect().bottom + 8;
+  const k = UNITS.findIndex(u => u.el && u.el.getBoundingClientRect().bottom > top);
+  return k < 0 ? 0 : k;
+}
+$("#bReadAll").onclick = () => {
+  if(!READ_ONLY() && TTS.i >= 0 && !TTS.paused && TTS.k < TTS.chunks.length) return stopReading();
+  readUnit(READ_ONLY() ? 0 : unitOnScreen());
+};
