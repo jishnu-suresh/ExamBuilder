@@ -315,3 +315,5 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
 .box.pick #pkBtn{display:inline-flex;align-items:center;gap:8px;margin:14px 0 6px;cursor:pointer;position:relative;overflow:hidden}
 .box.pick #pkFile{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
 .box.pick .small{font-size:.88em;margin-top:14px}
+.pad .tb .lbl{font-size:.78em;color:var(--muted);margin-right:2px}
+.txtin.multi{position:fixed;z-index:80;min-width:220px;min-height:1.6em;resize:none;overflow:hidden;line-height:1.25;padding:4px 7px;border:2px dashed var(--gold,#B5892E);border-radius:6px;background:rgba(255,255,255,.95);font-family:system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.15)}

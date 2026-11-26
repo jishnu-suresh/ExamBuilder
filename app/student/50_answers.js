@@ -82,7 +82,7 @@ function blockEl(aid, b, i, spec){
   }else if(b.t === "draw"){
     const k = document.createElement("span"); k.className = "kind"; k.textContent = "drawing — click to draw"; d.appendChild(k);
     const img = document.createElement("img"); img.className = "drawn"; img.alt = "Your drawing (click to change it)";
-    if(!b.png) img.dataset.bg = JSON.stringify(b.bg);
+    if(!b.png) img.dataset.bg = JSON.stringify(padBg(b));
     img.src = b.png || padPreview(b); img.onclick = () => openPad(aid, b);
     d.appendChild(img);
   }

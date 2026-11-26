@@ -516,7 +516,8 @@ async def stu_draw(b):
     async with Clip(b, "stu_draw") as c:
         await student_in(c, f)
         await c.pg.evaluate("document.querySelectorAll('.q')[1].scrollIntoView({block:'start'}); scrollBy(0,-80)"); await c.wait(0.6); await c.go()
-        await c.click(".q >> nth=1 >> [data-add=draw]", wait=1200)
+        await c.click(".q >> nth=1 >> [data-add=draw]", wait=1000)
+        if await c.pg.locator(".pad [data-paper=grid]").count(): await c.click(".pad [data-paper=grid]", wait=700)
         bb = await c.pg.locator(".pad canvas").first.bounding_box()
         x, y, w, h = bb["x"], bb["y"], bb["width"], bb["height"]
         await c.moveto(x + w * .15, y + h * .75); await c.pg.mouse.down()
@@ -524,6 +525,10 @@ async def stu_draw(b):
         await c.pg.mouse.up(); await c.wait(0.4)
         await c.click(".pad [data-tool=line]", wait=300); await c.click(".pad [data-col] >> nth=2", wait=300)
         await c.moveto(x + w * .1, y + h * .78); await c.pg.mouse.down(); await c.pg.mouse.move(x + w * .9, y + h * .78, steps=25); await c.pg.mouse.up(); await c.wait(0.6)
+        await c.click(".pad [data-tool=text]", wait=300); await c.click(".pad [data-col] >> nth=0", wait=200)
+        await c.moveto(x + w * .55, y + h * .3); await c.pg.mouse.down(); await c.pg.mouse.up(); await c.wait(0.4)
+        await c.type("path of", delay=90); await c.pg.keyboard.press("Enter"); await c.type("the ball", delay=80, wait=500)
+        await c.moveto(x + w * .9, y + h * .9); await c.pg.mouse.down(); await c.pg.mouse.up(); await c.wait(0.6)
         await c.click(".pad [data-done]", wait=1500)
 
 @clip
