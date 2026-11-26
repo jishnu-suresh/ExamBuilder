@@ -5883,7 +5883,9 @@ $("#stClass").addEventListener("keydown", e => { if(e.key === "Enter") $("#stCod
 
 // developer tools docked in the window make the page much smaller than the window (browser zoom can look the same,
 // so the teacher code lets the test start anyway — and the log says so)
-const devtoolsLikely = () => outerWidth > 0 && (outerWidth - innerWidth > 200 || outerHeight - innerHeight > 260);
+// (not on iPads and phones: they have no developer tools here, and their on-screen keyboard changes the window's size)
+const touchOnly = () => navigator.maxTouchPoints > 0 && matchMedia("(pointer: coarse)").matches && !matchMedia("(any-pointer: fine)").matches;
+const devtoolsLikely = () => !touchOnly() && outerWidth > 0 && (outerWidth - innerWidth > 200 || outerHeight - innerHeight > 260);
 let devOK = false, devOverride = false;
 $("#stDevGo").onclick = async () => {
   if(!(await teacherOK($("#stDevCode").value))){ $("#stErr").textContent = "That's not the teacher code."; return; }
