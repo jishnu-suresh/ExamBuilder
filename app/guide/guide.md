@@ -66,12 +66,12 @@ Students can also answer on a laptop, offline. You make the exam in BEE as usual
 1. **Make the file:** ⬇ Download → 👩‍🏫 Teacher → **💻 Computer version** (switch off 🌱 Basic mode if you don't see it). Choose the time and options, then download. The first time on a computer, BEE asks for the **school key** file and its password: **ask Jishnu**.
 2. **Note the two codes** on the 🖨 invigilator sheet: the **start code** (give it to students when the exam starts) and the **teacher code** (keep it to yourself).
 3. **Put the file on each laptop**, for example with a USB stick. Students double-click it, type their name and the start code, and the test opens full screen.
-   - **iPads** (laptops are strongly recommended): Safari can't open the file on an iPad. Students open **jishnu-suresh.github.io/ExamBuilder/student/** in Microsoft Edge (best) or Safari and tap **Choose the exam file**.
+   - **Exams on iPads:** difficult to monitor, so I don't recommend them at all; use laptops. There is a workaround if you really need one: **ask Jishnu**.
 4. **During the test:** if a student leaves the test window, or presses **Cmd**, **Ctrl** or the **Windows** key (alone or with any key), it beeps and locks until you type the teacher code. Shift and Option/AltGr work as usual for typing; copy and paste are off. The teacher menu lets you add time or end the test for one student.
 5. **When time is up**, the screen asks the student to raise their hand. Type the teacher code, then add time or **Finish**: the answers are saved as one `.bee-answers` file.
 6. **Mark:** collect the answer files and open them with ⬇ Download → 👩‍🏫 Teacher → **📥 Student answers**. Each becomes a PDF of the paper with the student's answers in blue.
 
-**🔊 Read aloud in your own voice.** In the 💻 Computer version window, press **🎙️ Record…** and read each question once (● Record, then ■ Stop). Students then hear you instead of the computer voice, on every laptop and iPad, even offline. Don't say the question number, and read multiple-choice options too. If you change a question afterwards, BEE marks its recording **⚠ text changed**: record it again, or press ✓ Still right. Anything you don't record is read by the computer voice (most natural in Microsoft Edge with internet).
+**🔊 Read aloud in your own voice.** In the 💻 Computer version window, press **🎙️ Record…** and read each question once (● Record, then ■ Stop). Students then hear you instead of the computer voice, on every laptop, even offline. Don't say the question number, and read multiple-choice options too. If you change a question afterwards, BEE marks its recording **⚠ text changed**: record it again, or press ✓ Still right. Anything you don't record is read by the computer voice (most natural in Microsoft Edge with internet).
 
 **🧮 Calculator.** In the 💻 Computer version window, choose a calculator for this exam (it starts at **None**):
 
@@ -79,7 +79,7 @@ Students can also answer on a laptop, offline. You make the exam in BEE as usual
 - **BEEcalc Graphing**: works offline. It draws functions, circles and other curves (x² + y² = 25), shaded regions, polar graphs and sliders. It also has tables of values, data plots with regression, box plots, histograms and statistics.
 - **Desmos Graphing**: needs the internet in the exam room.
 
-During the exam, the 👩‍🏫 teacher menu (with the teacher code) can switch the calculator on, change it or take it away for one student. On a phone-sized screen, graphing is replaced by Scientific; on an iPad it works fully.
+During the exam, the 👩‍🏫 teacher menu (with the teacher code) can switch the calculator on, change it or take it away for one student. On a phone-sized screen, graphing is replaced by Scientific.
 
 ## Printing
 

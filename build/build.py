@@ -264,7 +264,24 @@ open(os.path.join(OUT, "download", "Exam_Builder_offline.html"), "w").write(sing
 open(os.path.join(OUT, ".nojekyll"), "w").write("")
 os.makedirs(os.path.join(OUT, "student"))
 open(os.path.join(OUT, "student", "player.html"), "w").write(player_html)
-open(os.path.join(OUT, "student", "index.html"), "w").write(player_html)      # 📂 the link for iPads: …/ExamBuilder/student/ — choose the exam file
+# …/ExamBuilder/student/ is no longer the student link (it sat inside BEE's own site): a plain notice
+open(os.path.join(OUT, "student", "index.html"), "w").write('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BEE</title><meta name="robots" content="noindex">'
+    '<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#F6F1E6;font:17px/1.5 system-ui,sans-serif;color:#24211C}div{background:#fff;border:1px solid #E8E0D0;border-radius:16px;padding:28px 34px;text-align:center;max-width:420px}</style>'
+    '</head><body><div><div style="font-size:40px">🐝</div><p><b>This page isn\'t here.</b><br>Ask your teacher how to open your test.</p></div></body></html>')
+# 📂 the student link, on a website of its own (Jishnu shares it when needed): the empty player + a small offline helper
+SS = os.path.join(ROOT, "student-site"); os.makedirs(SS, exist_ok=True)
+open(os.path.join(SS, "index.html"), "w").write(player_html.replace("</body>", '<script>if("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));</script></body>', 1))
+open(os.path.join(SS, "sw.js"), "w").write("""// the student page works offline after the first visit: the newest copy from the web, or the saved one
+const C = "bee-take-a-test";
+self.addEventListener("install", e => { self.skipWaiting(); e.waitUntil(caches.open(C).then(c => c.add("./"))); });
+self.addEventListener("activate", e => e.waitUntil(self.clients.claim()));
+self.addEventListener("fetch", e => {
+  if (e.request.method !== "GET" || new URL(e.request.url).origin !== location.origin) return;
+  e.respondWith(fetch(e.request).then(r => { if (r.ok && e.request.mode === "navigate") caches.open(C).then(c => c.put("./", r.clone())); return r; })
+    .catch(() => caches.match(e.request.mode === "navigate" ? "./" : e.request).then(r => r || Response.error())));
+});
+""")
+open(os.path.join(SS, "README.md"), "w").write("Made by BEE's build (build/build.py) — don't edit here. Published as its own website: the student link for exams outside laptops (ask Jishnu).\n")
 
 # service worker: core files cached on install; photo reader + extra fonts cached in the background
 def h(paths):

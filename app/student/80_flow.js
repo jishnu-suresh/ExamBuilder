@@ -10,7 +10,7 @@ function saveFile(text, name, type){
 
 let STORE_OK = true;
 
-/* ---- 📂 the link for iPads (and any browser): an empty player that opens a student file ----
+/* ---- 📂 the student link (any browser; the workaround for iPads, shared by Jishnu): an empty player that opens a student file ----
    iPad Safari can't open an HTML file from Files, so the student opens this page and chooses the file.
    The exam stays sealed: only the start code opens it, exactly as in the file itself. */
 function examFromFile(text){
@@ -47,7 +47,7 @@ function pickExam(){
   };
 }
 async function boot(){
-  if(!EXAM) return pickExam();          // the link (…/ExamBuilder/student/): the student chooses the exam file
+  if(!EXAM) return pickExam();          // the student link (a website of its own, see student-site/): the student chooses the exam file
   document.title = EXAM.title + " — computer version";
   if(!window.crypto || !crypto.subtle){ document.body.innerHTML = '<div class="screen"><div class="box"><h1>This browser can\'t open the test</h1><p>Please open this file with Chrome, Edge, Firefox or Safari.</p></div></div>'; return; }
   $("#stTitle").textContent = EXAM.title; $("#stSub").textContent = EXAM.subject || "";

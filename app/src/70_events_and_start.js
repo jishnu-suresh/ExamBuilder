@@ -410,9 +410,7 @@ if(window.__PWA__){
 document.querySelectorAll(".ver").forEach(e => { e.textContent = BEE_VERSION; });   // the corner pill and the start screen always show the real version
 const NEWS = [
   { id: "2026-11-26-v3.1", title: "v3.1 · November 2026", items: [
-    "💻 <b>Laptops are strongly recommended for exams on computers.</b> They give the full lock, the best saving and the easiest set-up. iPads work through a link (below), but use them only when you have to.",
-    "📂 <b>iPads: one link for every test.</b> Apple no longer lets Safari (or Firefox) open a web page saved on an iPad or iPhone: since iOS 18.5, it opens only as a preview, where the test can't run. So on an iPad, students open <b>jishnu-suresh.github.io/ExamBuilder/student/</b>, tap <b>Choose the exam file</b> and pick the usual student file. We recommend <b>Microsoft Edge</b> on iPads; Safari works through the link too.",
-    "⚠️ If a student file is opened in a preview anyway (an iPad's Files app, an app's attachment preview), the questions still appear, a red box explains what to do, and the bar says <b>NOT saved</b> instead of a false \"Saved\".",
+    "⚠️ If a student file is opened in a preview instead of a web browser (for example an app's attachment preview), the questions still appear, a red box explains what to do, and the bar says <b>NOT saved</b> instead of a false \"Saved\".",
     "🖨 <b>Invigilator sheet:</b> in bold, \"You may share the START CODE with the class; NEVER share the TEACHER CODE\" and \"Tell students: don't press Cmd, Ctrl or the Windows key\" (any of them locks the test). Still one page.",
     "🧮 <b>BEEcalc Graphing:</b> the graph moves to the data you type (🔍 Zoom to fit), x and y get their own scales when needed, every fit lists its <b>residuals e1</b> (📉 Plot draws them; use e1 in other lines), and zooming is smoother.",
     "📖 <b>The illustrated teacher guide:</b> every feature with short moving pictures. Open it with 📖 Teacher guide on the start screen."
