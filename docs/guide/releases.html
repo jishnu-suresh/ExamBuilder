@@ -1,0 +1,133 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Versions & release notes · BEE teacher guide</title><meta name="description" content="Every version of BEE so far, and what each one brought"><link rel="icon" href="../icons/bee-favicon-32.png">
+<style>
+:root{--ink:#24211C;--muted:#6E665A;--gold:#B5892E;--gold-d:#8A6418;--gold-l:#FBF3DF;--line:#E8E0D0;--paper:#FFFDF8;--bg:#F6F1E6}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:70px}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.65 system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+a{color:var(--gold-d)}
+.top{position:sticky;top:0;z-index:20;background:rgba(255,253,248,.94);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:10px 22px}
+.top .brand{font:700 21px Georgia,serif;color:var(--ink);text-decoration:none;display:flex;align-items:center;gap:8px}
+.top .brand small{font:600 11px system-ui;letter-spacing:.18em;color:var(--gold);text-transform:uppercase}
+.top .grow{flex:1}
+.top .open-bee{background:var(--gold);color:#fff;text-decoration:none;font-weight:600;padding:7px 14px;border-radius:9px;font-size:15px;white-space:nowrap}
+.top .menu{display:none;border:1px solid var(--line);background:#fff;border-radius:9px;padding:6px 11px;font:inherit;cursor:pointer}
+.wrap{display:grid;grid-template-columns:270px minmax(0,1fr);max-width:1320px;margin:0 auto;gap:28px;padding:22px}
+nav.side{position:sticky;top:76px;align-self:start;max-height:calc(100vh - 130px);overflow:auto;padding-right:4px}
+nav.side a{display:flex;gap:10px;align-items:center;padding:8px 11px;border-radius:10px;color:var(--ink);text-decoration:none;font-size:15.5px;line-height:1.3}
+nav.side a .e{width:24px;text-align:center;flex:none}
+nav.side a:hover{background:#fff}
+nav.side a.on{background:var(--gold-l);font-weight:650;box-shadow:inset 3px 0 0 var(--gold)}
+nav.side .toc{margin:2px 0 8px 45px;border-left:2px solid var(--line);padding-left:10px}
+nav.side .toc a{font-size:13.5px;padding:3px 6px;color:var(--muted)}
+main{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:38px 48px 46px;box-shadow:0 6px 24px rgba(60,45,20,.07);min-width:0}
+h1{font:700 36px/1.15 Georgia,serif;margin:0 0 6px;display:flex;align-items:center;gap:12px}
+h1 .e{font-size:34px}
+.lead{color:var(--muted);font-size:19px;margin:0 0 26px}
+h2{font:700 25px/1.25 Georgia,serif;margin:46px 0 12px;padding-top:18px;border-top:1px solid var(--line)}
+h3{font-size:19px;margin:26px 0 8px}
+p{margin:0 0 12px}
+code{background:#F3EDE0;border-radius:5px;padding:1px 6px;font-size:.9em}
+kbd{border:1px solid var(--line);border-bottom-width:2px;background:#fff;border-radius:6px;padding:0 6px;font:600 .88em system-ui}
+.btn{display:inline-block;border:1px solid var(--line);background:#fff;border-radius:7px;padding:0 7px;font-weight:600;white-space:nowrap;font-size:.92em}
+.tip,.note,.warn{border-radius:12px;padding:12px 16px;margin:16px 0;display:flex;gap:12px}
+.tip{background:#EEF6EC;border:1px solid #CFE3C9}.note{background:var(--gold-l);border:1px solid #EBDDBA}.warn{background:#FCEDEA;border:1px solid #F0CFC8}
+.tip::before{content:"💡"}.note::before{content:"🐝"}.warn::before{content:"⚠️"}
+.tip>div,.note>div,.warn>div{flex:1}
+table{border-collapse:collapse;width:100%;margin:12px 0 16px;font-size:15.5px}
+th,td{border:1px solid var(--line);padding:8px 11px;text-align:left;vertical-align:top}
+th{background:var(--gold-l)}
+figure.clip,figure.shot{margin:16px 0 22px}
+.media{position:relative;border-radius:12px;overflow:hidden;border:1px solid var(--line);background:#EEE8DA;box-shadow:0 8px 24px rgba(60,45,20,.12);cursor:zoom-in}
+.media video,.media img{display:block;width:100%;height:auto}
+.media .play{position:absolute;inset:0;margin:auto;width:64px;height:64px;border-radius:50%;background:rgba(36,33,28,.75);color:#fff;border:0;font-size:24px;display:none;cursor:pointer}
+.media.paused .play{display:block}
+.media .badge{position:absolute;left:10px;top:10px;background:rgba(36,33,28,.72);color:#fff;font:600 12px system-ui;padding:2px 8px;border-radius:20px;opacity:.85}
+figcaption{color:var(--muted);font-size:14.5px;margin-top:8px;text-align:center}
+.step{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,8fr);gap:26px;align-items:start;margin:24px 0 34px}
+.step .txt{position:relative;padding-left:52px}
+.step .num{position:absolute;left:0;top:0;width:38px;height:38px;border-radius:50%;background:var(--gold);color:#fff;font:700 18px Georgia,serif;display:flex;align-items:center;justify-content:center}
+.step h3{margin:4px 0 8px}
+.step figure{margin:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;margin:18px 0}
+.card{display:block;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden;color:var(--ink);text-decoration:none;transition:transform .15s,box-shadow .15s}
+.card:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(60,45,20,.12)}
+.card img{width:100%;aspect-ratio:16/10;object-fit:cover;object-position:top left;display:block;border-bottom:1px solid var(--line)}
+.card div{padding:10px 14px 13px}
+.card b{display:block;font-size:16.5px}
+.card span{color:var(--muted);font-size:14px;line-height:1.35;display:block;margin-top:2px}
+.map{position:relative;margin:14px 0 8px}
+.map .pin{position:absolute;transform:translate(-50%,-50%);width:30px;height:30px;border-radius:50%;background:#C0392B;color:#fff;font:700 15px system-ui;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px rgba(255,255,255,.85),0 4px 10px rgba(0,0,0,.25);cursor:pointer}
+.map .pin:hover,.map .pin.on{background:var(--gold-d)}
+ol.legend{columns:2;column-gap:30px;padding-left:22px;margin:10px 0 20px}
+ol.legend li{margin:0 0 8px;break-inside:avoid}
+ol.legend li.on{background:var(--gold-l);border-radius:6px}
+.pager{display:flex;justify-content:space-between;gap:14px;margin-top:46px;padding-top:20px;border-top:1px solid var(--line)}
+.pager a{flex:1;max-width:48%;border:1px solid var(--line);background:#fff;border-radius:12px;padding:12px 16px;text-decoration:none;color:var(--ink)}
+.pager a small{display:block;color:var(--muted);font-size:13px}
+.pager a.next{text-align:right;margin-left:auto}
+.hero{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,6fr);gap:30px;align-items:center;margin:6px 0 10px}
+.foot{max-width:1320px;margin:0 auto;padding:6px 22px 30px;color:var(--muted);font-size:14px;text-align:center}
+#lb{position:fixed;inset:0;z-index:100;background:rgba(20,18,14,.9);display:none;align-items:center;justify-content:center;padding:3vw;cursor:zoom-out}
+#lb.on{display:flex}
+#lb video,#lb img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+@media (max-width:980px){.wrap{grid-template-columns:1fr;padding:12px}nav.side{display:none;position:static;max-height:none}nav.side.open{display:block}.top .menu{display:block}main{padding:24px 20px}.step,.hero{grid-template-columns:1fr}ol.legend{columns:1}h1{font-size:30px}}
+@media print{.top,nav.side,.pager,.media .play,.media .badge{display:none!important}.wrap{display:block;padding:0}main{border:0;box-shadow:none;padding:0}video{display:none!important}.media img.poster{display:block!important}.step,figure{break-inside:avoid}}
+.media img.poster{display:none}
+.credit{position:fixed;left:14px;bottom:10px;z-index:15;font:600 12.5px system-ui;color:var(--muted);background:rgba(255,253,248,.85);padding:3px 8px;border-radius:8px;pointer-events:none}
+.credit .faint{font-weight:400;opacity:.75}
+@media (max-width:980px){.credit{display:none}}
+@media print{.credit{display:none}}
+</style></head><body>
+<header class="top"><button class="menu" aria-label="Chapters">☰</button><a class="brand" href="index.html">🐝 BEE <small>Teacher guide</small></a><span class="grow"></span><a class="open-bee" href="../" target="_blank" rel="noopener">Open BEE →</a></header>
+<div class="wrap"><nav class="side" aria-label="Chapters"><a href="index.html" class=""><span class="e">🐝</span>Welcome</a><a href="start.html" class=""><span class="e">🚀</span>Getting started</a><a href="first-exam.html" class=""><span class="e">✏️</span>Your first exam</a><a href="questions.html" class=""><span class="e">📝</span>Writing questions</a><a href="insert.html" class=""><span class="e">🖼</span>Tables, graphs & pictures</a><a href="ai-photos.html" class=""><span class="e">🤖</span>From AI, photos & files</a><a href="paper.html" class=""><span class="e">🎨</span>Make the paper yours</a><a href="saving.html" class=""><span class="e">💾</span>Saving & going back</a><a href="computer.html" class=""><span class="e">💻</span>Exams on computers</a><a href="students.html" class=""><span class="e">🧑‍🎓</span>What students see</a><a href="read-aloud.html" class=""><span class="e">🔊</span>Read aloud</a><a href="calculator.html" class=""><span class="e">🧮</span>Calculator</a><a href="help.html" class=""><span class="e">🛟</span>Help & tips</a><a href="releases.html" class="on"><span class="e">🗓</span>Versions & release notes</a><div class="toc"><a href="#v3-2">v3.2 (this version)</a><a href="#v3-1">v3.1</a><a href="#v3">v3</a><a href="#v2-2">v2.2</a><a href="#v2-1">v2.1</a><a href="#v2">v2</a><a href="#v1">v1</a></div></nav>
+<main><h1><span class="e">🗓</span>Versions & release notes</h1><p class="lead">Every version of BEE so far, and what each one brought</p>
+<p>BEE tells you what changed the first time you open a new version (✨ What's new). Here is every version so far, newest first. Your version is in BEE's bottom corner; this guide is for <b>v3.2</b>.</p>
+<h2 id="v3-2">v3.2 <small>(this version)</small></h2><p style="margin:-6px 0 4px;color:var(--muted);font-size:15px">November 2026</p>
+<ul><li>✏️ <b>A better drawing pad for students.</b> On a plain drawing they choose the <b>Paper</b>: Blank, ▦ Grid, ⋯ Dots or ☰ Lined. On grid and dotted paper, lines and shapes snap to the points.</li><li>➝ <b>Arrow</b>, ▭ <b>Box</b> and ◯ <b>Circle</b> tools.</li><li>🅃 <b>Text boxes</b> on the drawing: tap and type, Enter for a new line, tap to change. A symbol bar adds π, °, ±, ≤, θ, √ and more. <b>∑ Maths</b> shows 3/4 as a fraction, x^2 as a power and √(…) as a root.</li><li>✋ <b>Move:</b> tap anything drawn to drag it, change its colour or ✕ delete it. ↶ Undo takes back every change.</li></ul>
+<h2 id="v3-1">v3.1</h2><p style="margin:-6px 0 4px;color:var(--muted);font-size:15px">November 2026</p>
+<ul><li>⚠️ If a student file is opened in a preview instead of a web browser (for example an app's attachment preview), the questions still appear, a red box explains what to do, and the bar says <b>NOT saved</b> instead of a false "Saved".</li><li>🖨 <b>Invigilator sheet:</b> in bold, "You may share the START CODE with the class; NEVER share the TEACHER CODE" and "Tell students: don't press Cmd, Ctrl or the Windows key" (any of them locks the test). Still one page.</li><li>🧮 <b>BEEcalc Graphing:</b> the graph moves to the data you type (🔍 Zoom to fit), x and y get their own scales when needed, every fit lists its <b>residuals e1</b> (📉 Plot draws them; use e1 in other lines), and zooming is smoother.</li><li>📖 <b>The illustrated teacher guide:</b> every feature with short moving pictures. Open it with 📖 Teacher guide on the start screen.</li></ul>
+<h2 id="v3">v3</h2><p style="margin:-6px 0 4px;color:var(--muted);font-size:15px">November 2026</p>
+<ul><li>🧮 <b>A calculator in the computer version.</b> In ⬇ Download → 👩‍🏫 Teacher → 💻 Computer version, choose <b>🧮 Calculator</b>: None (the default), BEEcalc Basic, Scientific or Graphing, or Desmos Graphing.</li><li><b>BEEcalc works offline</b> and starts in degrees. Scientific has fractions, powers, roots, trigonometry, and mean and standard deviation of a list.</li><li><b>BEEcalc Graphing:</b> y = …, x = …, circles and other curves (x² + y² = 25), shaded regions (y < 2x + 1), polar graphs (r = 4cos 2θ), sliders, tables of values, data plots with regression (linear, quadratic, exponential…), box plots, histograms and statistics.</li><li><b>Desmos Graphing</b> needs the internet in the exam room. Without it, the student sees a message and the test carries on.</li><li><b>During the exam</b>, the 👩‍🏫 teacher menu (with the teacher code) can switch the calculator on, change it or take it away for one student. Each change is noted in the report.</li><li>On a phone-sized screen, graphing is replaced by BEEcalc Scientific. On an iPad it works fully.</li><li>🔊 The computer version now has a <b>🔊 Read aloud</b> button in the top bar too. It reads from the part on the screen.</li></ul>
+<h2 id="v2-2">v2.2</h2><p style="margin:-6px 0 4px;color:var(--muted);font-size:15px">November 2026</p>
+<ul><li>🎙️ <b>Read aloud in your own voice.</b> In ⬇ Download → 👩‍🏫 Teacher → 💻 Computer version, press <b>🎙️ Record…</b> and read each question once. Students hear you instead of the computer voice, on every laptop and iPad, even offline.</li><li><b>Don't say the question number</b>, because versions A–D can change it. For multiple choice, read the options too.</li><li>Anything you don't record is still read by the computer voice. If you change a question after recording it, BEE marks it <b>⚠ text changed</b> so the wrong words are never played.</li><li>Your recordings are saved with the exam, in its .exam.json file.</li><li>📂 Opening a saved exam no longer waits on the start screen for the browser's "Allow editing" question.</li></ul>
+<h2 id="v2-1">v2.1</h2><p style="margin:-6px 0 4px;color:var(--muted);font-size:15px">November 2026</p>
+<ul><li>🔊 <b>Read aloud sounds more like a teacher</b> in the 💻 computer version, in English and French.</li><li><b>Multiple-choice questions:</b> "Choose one answer", then a short pause before each option ("Option A…", "Option B…").</li><li><b>Maths:</b> absolute values, intervals, sets, matrices, "P of A given B", sin² x, f⁻¹(x), dy/dx, long fractions ("…all over…"), and 2.5 × 10³ said as "10 to the power 3".</li><li><b>Physics:</b> more units in words (nm, µF, kΩ, kJ mol⁻¹, m s⁻², "in km/h"), and F<sub>net</sub> said as "F net".</li><li><b>Chemistry:</b> Cu → "copper", Fe³⁺ → "iron 3 plus", Cl⁻ → "chloride", Ca(OH)₂ with its brackets, ¹⁴C → "carbon 14", [H⁺] → "the concentration of H plus".</li><li><b>French papers:</b> decimals with "virgule", "Consignes", "Partie", "points" and "Réponse A" in the reading.</li><li>💡 For the most natural voices, use <b>Microsoft Edge</b> with internet, or download a Premium voice on a Mac.</li></ul>
+<h2 id="v2">v2</h2><p style="margin:-6px 0 4px;color:var(--muted);font-size:15px">November 2026</p>
+<ul><li>🎉 <b>💻 Exams on computers.</b> ⬇ Download → 👩‍🏫 Teacher → <b>💻 Computer version</b> makes one offline file students answer on a laptop: maths keyboard, read aloud, accommodations, a timer, and a lock with an alarm if they leave the test.</li><li>Each file has a <b>start code</b> (you give it to the students) and a <b>teacher code</b> (for you only: unlock, add time, finish). 🖨 The invigilator sheet lists both.</li><li>When the test ends, the student's answers are saved as one sealed file. <b>📥 Student answers</b> turns them into PDFs to mark, with the answers in blue.</li><li>The first time on a computer, BEE asks for the <b>school key</b> file and its password (ask Jishnu).</li></ul>
+<h2 id="v1">v1</h2><p style="margin:-6px 0 4px;color:var(--muted);font-size:15px">November 2026</p>
+<ul><li>🎉 <b>BEE v1</b> — the first version for all teachers.</li><li>The <b>Questions</b> section is more compact: 🤖 Paste from AI, 📷 Add photos, 📄 Open .txt / .md and 💬 AI prompts sit in one row. 🔎 Find &amp; replace and ⓘ help are on the Questions heading.</li><li><b>📁 File</b> at the top holds New, Open and Save as…</li><li><b>Add a question anywhere:</b> point between two questions and choose ＋ Question, ＋ MCQ, ＋ Text or ＋ Part.</li><li>📷 Add photos asks whether you want <b>pictures</b> or the <b>text</b> (you can tell BEE to remember).</li><li><b>Subject subtitle</b> (optional) in Exam details, e.g. “Higher Level · Paper 2”.</li><li>🗑 <b>Delete all questions</b> is under ⋯ and always asks first.</li><li>Two demos to try: a 📝 simple quiz and ✨ every feature.</li><li>📖 Teacher guide on the start screen, and 💬 in the corner to report a problem or share an idea.</li></ul>
+<div class="pager"><a href="help.html"><small>← Back</small>🛟 Help & tips</a></div></main></div>
+<div class="foot">🐝 BEE v3.2 · Build • Edit • Evaluate · © Jishnu · <a href="https://forms.cloud.microsoft/r/KXXUcfCRvs" target="_blank" rel="noopener">💬 Feedback</a></div>
+<div class="credit" aria-hidden="true">🐝 BEE<span class="faint"> · © Jishnu</span></div>
+<div id="lb" aria-hidden="true"></div>
+<script>
+(() => {
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const vids = [...document.querySelectorAll(".media video")];
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    const v = e.target, m = v.parentElement;
+    if (e.isIntersecting && e.intersectionRatio > .45) { if (!still && !m.dataset.stopped) { v.play().catch(() => m.classList.add("paused")); } }
+    else v.pause();
+  }), { threshold: [0, .45, .9] });
+  vids.forEach(v => { if (still) v.parentElement.classList.add("paused"); io.observe(v); });
+  // ▶ on a paused clip plays it; a click on a playing clip opens it big
+  const lb = document.getElementById("lb");
+  document.addEventListener("click", e => {
+    const p = e.target.closest(".media .play");
+    if (p) { const m = p.parentElement, v = m.querySelector("video"); delete m.dataset.stopped; m.classList.remove("paused"); v.play(); return; }
+    const m = e.target.closest(".media");
+    if (m) {
+      const v = m.querySelector("video"), i = m.querySelector("img:not(.poster)");
+      lb.innerHTML = ""; const el = v ? Object.assign(document.createElement("video"), { src: v.currentSrc || v.src, muted: true, loop: true, autoplay: true, playsInline: true, controls: true }) : Object.assign(document.createElement("img"), { src: i.src, alt: i.alt });
+      if (v) { el.currentTime = v.currentTime; }
+      lb.appendChild(el); lb.classList.add("on"); return;
+    }
+    if (e.target === lb || e.target.closest("#lb") && e.target.tagName !== "VIDEO") { lb.classList.remove("on"); lb.innerHTML = ""; }
+    const pin = e.target.closest(".pin");
+    if (pin) { document.querySelectorAll(".pin,.legend li").forEach(x => x.classList.remove("on")); pin.classList.add("on"); const li = document.getElementById("pin-" + pin.dataset.n); if (li) { li.classList.add("on"); li.scrollIntoView({ block: "nearest", behavior: "smooth" }); } }
+  });
+  addEventListener("keydown", e => { if (e.key === "Escape") { lb.classList.remove("on"); lb.innerHTML = ""; } });
+  const mb = document.querySelector(".top .menu"); if (mb) mb.onclick = () => document.querySelector("nav.side").classList.toggle("open");
+})();
+</script></body></html>

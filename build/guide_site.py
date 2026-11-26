@@ -193,7 +193,7 @@ def _releases(version):
     """the release notes, taken from the same list as BEE's ✨ What's new (app/src/70_events_and_start.js), so they never fall behind"""
     js = open(os.path.join(ROOT, "app", "src", "70_events_and_start.js"), encoding="utf-8").read()
     a = js.index("const NEWS = ["); e = js.index("\n];", a)
-    out = [f'<p>BEE tells you what changed the first time you open a new version (✨ What\'s new). Here is every version so far, newest first. Your version is in BEE's bottom corner; this guide is for <b>{version}</b>.</p>']
+    out = [f'<p>BEE tells you what changed the first time you open a new version (✨ What\'s new). Here is every version so far, newest first. Your version is in BEE\'s bottom corner; this guide is for <b>{version}</b>.</p>']
     for m in re.finditer(r'\{ id: "([^"]+)", title: "([^"]+)", items: \[(.*?)\n  \] \}', js[a:e], re.S):
         vid, title, body = m.groups()
         items = [json.loads('"' + x + '"') for x in re.findall(r'"((?:[^"\\]|\\.)*)"', body)]
