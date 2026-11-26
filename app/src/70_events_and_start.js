@@ -409,6 +409,12 @@ if(window.__PWA__){
 /* ---------------- ✨ what's new (newest first; add an entry at the top for each update teachers should know about) ---------------- */
 document.querySelectorAll(".ver").forEach(e => { e.textContent = BEE_VERSION; });   // the corner pill and the start screen always show the real version
 const NEWS = [
+  { id: "2026-11-26-v3.2", title: "v3.2 · November 2026", items: [
+    "✏️ <b>A better drawing pad for students.</b> On a plain drawing they choose the <b>Paper</b>: Blank, ▦ Grid, ⋯ Dots or ☰ Lined. On grid and dotted paper, lines and shapes snap to the points.",
+    "➝ <b>Arrow</b>, ▭ <b>Box</b> and ◯ <b>Circle</b> tools.",
+    "🅃 <b>Text boxes</b> on the drawing: tap and type, Enter for a new line, tap to change. A symbol bar adds π, °, ±, ≤, θ, √ and more. <b>∑ Maths</b> shows 3/4 as a fraction, x^2 as a power and √(…) as a root.",
+    "✋ <b>Move:</b> tap anything drawn to drag it, change its colour or ✕ delete it. ↶ Undo takes back every change."
+  ] },
   { id: "2026-11-26-v3.1", title: "v3.1 · November 2026", items: [
     "⚠️ If a student file is opened in a preview instead of a web browser (for example an app's attachment preview), the questions still appear, a red box explains what to do, and the bar says <b>NOT saved</b> instead of a false \"Saved\".",
     "🖨 <b>Invigilator sheet:</b> in bold, \"You may share the START CODE with the class; NEVER share the TEACHER CODE\" and \"Tell students: don't press Cmd, Ctrl or the Windows key\" (any of them locks the test). Still one page.",

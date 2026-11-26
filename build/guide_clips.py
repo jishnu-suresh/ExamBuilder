@@ -529,6 +529,16 @@ async def stu_draw(b):
         await c.moveto(x + w * .55, y + h * .3); await c.pg.mouse.down(); await c.pg.mouse.up(); await c.wait(0.4)
         await c.type("path of", delay=90); await c.pg.keyboard.press("Enter"); await c.type("the ball", delay=80, wait=500)
         await c.moveto(x + w * .9, y + h * .9); await c.pg.mouse.down(); await c.pg.mouse.up(); await c.wait(0.6)
+        # v3.2: a box, a maths label from the symbol bar, then ✋ Move drags the box
+        await c.click(".pad [data-tool=rect]", wait=300); await c.click(".pad [data-col] >> nth=3", wait=200)
+        await c.moveto(x + w * .12, y + h * .2); await c.pg.mouse.down(); await c.pg.mouse.move(x + w * .34, y + h * .42, steps=20); await c.pg.mouse.up(); await c.wait(0.4)
+        await c.click(".pad [data-tool=text]", wait=300); await c.click(".pad [data-col] >> nth=1", wait=200)
+        await c.moveto(x + w * .09, y + h * .19); await c.pg.mouse.down(); await c.pg.mouse.up(); await c.wait(0.4)
+        await c.click(".txtbox .mth", wait=400); await c.type("v = d", delay=110)
+        await c.click(".txtbox [data-ins='/']", wait=300); await c.type("t", delay=110, wait=600)
+        await c.moveto(x + w * .9, y + h * .9); await c.pg.mouse.down(); await c.pg.mouse.up(); await c.wait(0.8)
+        await c.click(".pad [data-tool=move]", wait=300)
+        await c.moveto(x + w * .34, y + h * .3); await c.pg.mouse.down(); await c.wait(0.3); await c.pg.mouse.move(x + w * .29, y + h * .2, steps=20); await c.pg.mouse.up(); await c.wait(0.8)
         await c.click(".pad [data-done]", wait=1500)
 
 @clip

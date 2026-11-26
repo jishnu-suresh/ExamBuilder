@@ -317,3 +317,10 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
 .box.pick .small{font-size:.88em;margin-top:14px}
 .pad .tb .lbl{font-size:.78em;color:var(--muted);margin-right:2px}
 .txtin.multi{position:fixed;z-index:80;min-width:220px;min-height:1.6em;resize:none;overflow:hidden;line-height:1.25;padding:4px 7px;border:2px dashed var(--gold,#B5892E);border-radius:6px;background:rgba(255,255,255,.95);font-family:system-ui,sans-serif;box-shadow:0 4px 14px rgba(0,0,0,.15)}
+.txtbox{position:fixed;z-index:80;display:flex;flex-direction:column;gap:4px}
+.txtbox .txtin.multi{position:static}
+.txtbox .symbar{display:flex;flex-wrap:wrap;gap:3px;max-width:430px;background:var(--paper,#fff);border:1px solid var(--line);border-radius:8px;padding:4px;box-shadow:0 4px 14px rgba(0,0,0,.12)}
+.txtbox .symbar button{font:600 14px system-ui,sans-serif;min-width:30px;height:28px;border:1px solid var(--line);background:#fff;border-radius:6px;cursor:pointer;padding:0 6px}
+.txtbox .symbar button:hover{background:var(--gold-l,#FBF3DF)}
+.txtbox .symbar .mth{font-weight:700}
+.txtbox .symbar .mth.on{background:#FBF3DF;border-color:#B5892E;color:#8A6418}
