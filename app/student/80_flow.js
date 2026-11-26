@@ -8,6 +8,7 @@ function saveFile(text, name, type){
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
 }
 
+let STORE_OK = true;
 async function boot(){
   if(!EXAM){ document.body.innerHTML = '<div class="screen"><div class="box"><h1>🐝 BEE student version</h1><p>This is an empty template. Teachers make the real file in BEE: ⬇ ▾ → 💻 Computer version for students.</p></div></div>'; return; }
   document.title = EXAM.title + " — computer version";
@@ -26,6 +27,9 @@ async function boot(){
     ["#stNew", "#stSaveRow", "#stBackup"].forEach(s => $(s).classList.add("hidden"));
     $("#stGo").textContent = "Open the paper";
   }
+  // opened in a preview (not a web browser): answers can't be saved here — say so plainly
+  STORE_OK = await DB.works().catch(() => false);
+  if(!STORE_OK && !READ_ONLY()) $("#stPreview").classList.remove("hidden");
   const done = await DB.get(DONE());
   if(done) return showEnded(done);
   const run = await DB.get(RUN());
@@ -100,8 +104,12 @@ function startExam(){
   $("#bReadAll").textContent = RO ? "▶ Read from the start" : "🔊 Read aloud";
   $("#bReadAll").title = RO ? "Read the paper aloud from the beginning" : "Read aloud from the part on the screen (or press 🔊 next to any part)";
   $(".nav .key").classList.toggle("hidden", RO);
-  show("#scrExam"); if(!RO) setupMathKeyboard(); renderPaper(); applyPrefs(); setupReading(); setupCalc(); if(ST.prefs.accents && !RO){ accBar(); $("#accBar").classList.remove("hidden"); }
-  guardStart(); tick(); changed(); saveNow();
+  // the paper comes first: an extra that can't start here (in a preview, an old browser…) never stops the questions appearing
+  const safe = (f, what) => { try{ f(); }catch(e){ console.warn("BEE: " + what + " could not start here", e); } };
+  show("#scrExam"); safe(() => { if(!RO) setupMathKeyboard(); }, "the maths keyboard"); renderPaper();
+  safe(applyPrefs, "the display settings"); safe(setupReading, "read aloud"); safe(setupCalc, "the calculator");
+  safe(() => { if(ST.prefs.accents && !RO){ accBar(); $("#accBar").classList.remove("hidden"); } }, "the accents bar");
+  safe(guardStart, "the exam lock"); tick(); changed(); saveNow();
   window.scrollTo(0, 0);
   if(ST.breakAt) showBreak();          // carried on during a rest break: still paused
 }

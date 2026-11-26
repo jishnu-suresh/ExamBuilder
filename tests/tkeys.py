@@ -53,6 +53,18 @@ async def main():
         await sp.click("#lkCode"); await sp.keyboard.type("246802"); await sp.click("#lkGo"); await sp.wait_for_timeout(500)
         ok("the teacher types the code on the lock screen and it opens", not await sp.is_visible("#scrLock"))
         ok("no errors", not serrs and not errs, (serrs + errs)[:3])
+        # opened inside a locked-down preview (iPad Files, an app's attachment preview): no storage, no full screen
+        pv = await b.new_page(viewport={"width": 1280, "height": 900})
+        body = open(f, "rb").read()
+        await pv.route("http://localhost:9/**", lambda r: r.fulfill(status=200, content_type="text/html", body=body if r.request.url.endswith("exam.html") else
+            b'<iframe id="f" src="exam.html" sandbox="allow-scripts allow-forms allow-modals" style="width:1250px;height:860px;border:0"></iframe>'))
+        await pv.goto("http://localhost:9/frame.html"); await pv.wait_for_timeout(2500)
+        fr = await (await pv.query_selector("#f")).content_frame(); await fr.wait_for_selector("#stName", timeout=15000)
+        ok("in a preview that can't save: a clear warning on the start screen", await fr.is_visible("#stPreview"))
+        await fr.fill("#stName", "Mia"); await fr.fill("#stCode", "KEYS-2345"); await fr.click("#stGo"); await pv.wait_for_timeout(3000)
+        ok("…the questions still appear (they used to stay blank)", await fr.evaluate("document.querySelectorAll('#paper .q').length") > 3)
+        ok("…and the bar says the answers are NOT saved", "NOT saved" in await fr.text_content("#bSaved"), await fr.text_content("#bSaved"))
+        await pv.close()
         await b.close()
     print(f"\n{sum(res)}/{len(res)} passed")
     sys.exit(0 if all(res) else 1)

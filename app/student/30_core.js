@@ -30,7 +30,9 @@ const DB = (() => {
   const tx = (mode, fn) => open().then(db => new Promise((res, rej) => { const t = db.transaction("kv", mode), s = t.objectStore("kv"), r = fn(s); t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); }));
   return {
     async get(k){ try{ return await tx("readonly", s => s.get(k)); }catch(_){ try{ const v = localStorage.getItem("bee:" + k); return v ? JSON.parse(v) : undefined; }catch(e){ return undefined; } } },
-    async set(k, v){ try{ await tx("readwrite", s => s.put(v, k)); }catch(_){ try{ localStorage.setItem("bee:" + k, JSON.stringify(v)); }catch(e){ console.warn(e); } } }
+    async set(k, v){ try{ await tx("readwrite", s => s.put(v, k)); return true; }catch(_){ try{ localStorage.setItem("bee:" + k, JSON.stringify(v)); return true; }catch(e){ console.warn(e); return false; } } },
+    // can answers be kept on this device? Not inside some file previews (iPad Files, apps that preview attachments)
+    async works(){ const k = "probe:" + Math.random(); if(!(await this.set(k, 1))) return false; return (await this.get(k)) === 1; }
   };
 })();
 const RUN = () => "run:" + EXAM.examId, DONE = () => "done:" + EXAM.examId;
@@ -42,7 +44,9 @@ async function saveNow(){
   try{
     dirty = false; ST.savedAt = now();
     const box = await BC.lock(CK, ST);
-    await DB.set(RUN(), { name: ST.name, startedAt: ST.startedAt, ended: !!ST.endedAt, box });
+    const kept = await DB.set(RUN(), { name: ST.name, startedAt: ST.startedAt, ended: !!ST.endedAt, box });
+    if(!kept){ $("#bSaved").textContent = "⚠ NOT saved on this device"; $("#bSaved").classList.add("bad"); $("#bSaved").title = "This file is open in a preview, so answers can't be kept here. Ask your teacher."; if(window.backupTick) backupTick(box); return; }
+    $("#bSaved").classList.remove("bad");
     if(window.backupTick) backupTick(box);
     $("#bSaved").textContent = "✓ Saved " + hm(ST.savedAt) + " on this computer" + (typeof saveDir !== "undefined" && saveDir && window.lastFolderSave ? " · copy in " + saveDir.name + " " + hm(lastFolderSave) : "");
     $("#bSaved").title = typeof saveDir !== "undefined" && saveDir ? "Saved on this computer every few seconds, and a backup copy goes to " + saveDir.name + " every minute." : "Saved on this computer every few seconds. Your teacher can also keep a copy on a USB stick or folder.";

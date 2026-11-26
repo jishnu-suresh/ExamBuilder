@@ -306,3 +306,5 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
 .bg-tbl td.res{color:var(--muted);font-style:italic}
 .bg-res{margin-top:3px;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
 .bg-res .pr{color:var(--muted)}
+.preview-warn{background:#FCEDEA;border:1.5px solid #C0392B;color:#7A2418;border-radius:10px;padding:10px 13px;margin:6px 0 12px;font-size:.95em;line-height:1.45}
+#bSaved.bad{color:#B03A2E;font-weight:700}

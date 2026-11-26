@@ -3553,6 +3553,8 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
 .bg-tbl td.res{color:var(--muted);font-style:italic}
 .bg-res{margin-top:3px;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
 .bg-res .pr{color:var(--muted)}
+.preview-warn{background:#FCEDEA;border:1.5px solid #C0392B;color:#7A2418;border-radius:10px;padding:10px 13px;margin:6px 0 12px;font-size:.95em;line-height:1.45}
+#bSaved.bad{color:#B03A2E;font-weight:700}
 
 </style>
 </head>
@@ -3576,6 +3578,7 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
       <label for="stClass">Class <span class="muted">(optional)</span></label><input type="text" id="stClass" autocomplete="off" spellcheck="false">
     </div>
     <div id="stResume" class="hidden"><p><b>Welcome back, <span id="stResName"></span>.</b> Your answers are safe. Your teacher will type the start code to carry on.</p></div>
+    <div class="preview-warn hidden" id="stPreview" role="alert"><b>⚠ This file is open in a preview, not in a web browser.</b> Answers can't be saved here. Open the file in Chrome, Edge, Firefox or Safari on a computer. On an iPad or iPhone, open it with <b>Microsoft Edge</b>: in Files, tap the file's Share button, then Edge.</div>
     <label for="stCode">Start code <span class="muted">— your teacher types this</span></label>
     <input type="password" id="stCode" class="code" autocomplete="off" spellcheck="false" placeholder="••••-••••">
     <div class="err" id="stErr"></div>
@@ -3842,7 +3845,9 @@ const DB = (() => {
   const tx = (mode, fn) => open().then(db => new Promise((res, rej) => { const t = db.transaction("kv", mode), s = t.objectStore("kv"), r = fn(s); t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error); }));
   return {
     async get(k){ try{ return await tx("readonly", s => s.get(k)); }catch(_){ try{ const v = localStorage.getItem("bee:" + k); return v ? JSON.parse(v) : undefined; }catch(e){ return undefined; } } },
-    async set(k, v){ try{ await tx("readwrite", s => s.put(v, k)); }catch(_){ try{ localStorage.setItem("bee:" + k, JSON.stringify(v)); }catch(e){ console.warn(e); } } }
+    async set(k, v){ try{ await tx("readwrite", s => s.put(v, k)); return true; }catch(_){ try{ localStorage.setItem("bee:" + k, JSON.stringify(v)); return true; }catch(e){ console.warn(e); return false; } } },
+    // can answers be kept on this device? Not inside some file previews (iPad Files, apps that preview attachments)
+    async works(){ const k = "probe:" + Math.random(); if(!(await this.set(k, 1))) return false; return (await this.get(k)) === 1; }
   };
 })();
 const RUN = () => "run:" + EXAM.examId, DONE = () => "done:" + EXAM.examId;
@@ -3854,7 +3859,9 @@ async function saveNow(){
   try{
     dirty = false; ST.savedAt = now();
     const box = await BC.lock(CK, ST);
-    await DB.set(RUN(), { name: ST.name, startedAt: ST.startedAt, ended: !!ST.endedAt, box });
+    const kept = await DB.set(RUN(), { name: ST.name, startedAt: ST.startedAt, ended: !!ST.endedAt, box });
+    if(!kept){ $("#bSaved").textContent = "⚠ NOT saved on this device"; $("#bSaved").classList.add("bad"); $("#bSaved").title = "This file is open in a preview, so answers can't be kept here. Ask your teacher."; if(window.backupTick) backupTick(box); return; }
+    $("#bSaved").classList.remove("bad");
     if(window.backupTick) backupTick(box);
     $("#bSaved").textContent = "✓ Saved " + hm(ST.savedAt) + " on this computer" + (typeof saveDir !== "undefined" && saveDir && window.lastFolderSave ? " · copy in " + saveDir.name + " " + hm(lastFolderSave) : "");
     $("#bSaved").title = typeof saveDir !== "undefined" && saveDir ? "Saved on this computer every few seconds, and a backup copy goes to " + saveDir.name + " every minute." : "Saved on this computer every few seconds. Your teacher can also keep a copy on a USB stick or folder.";
@@ -5792,6 +5799,7 @@ function saveFile(text, name, type){
   document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
 }
 
+let STORE_OK = true;
 async function boot(){
   if(!EXAM){ document.body.innerHTML = '<div class="screen"><div class="box"><h1>🐝 BEE student version</h1><p>This is an empty template. Teachers make the real file in BEE: ⬇ ▾ → 💻 Computer version for students.</p></div></div>'; return; }
   document.title = EXAM.title + " — computer version";
@@ -5810,6 +5818,9 @@ async function boot(){
     ["#stNew", "#stSaveRow", "#stBackup"].forEach(s => $(s).classList.add("hidden"));
     $("#stGo").textContent = "Open the paper";
   }
+  // opened in a preview (not a web browser): answers can't be saved here — say so plainly
+  STORE_OK = await DB.works().catch(() => false);
+  if(!STORE_OK && !READ_ONLY()) $("#stPreview").classList.remove("hidden");
   const done = await DB.get(DONE());
   if(done) return showEnded(done);
   const run = await DB.get(RUN());
@@ -5884,8 +5895,12 @@ function startExam(){
   $("#bReadAll").textContent = RO ? "▶ Read from the start" : "🔊 Read aloud";
   $("#bReadAll").title = RO ? "Read the paper aloud from the beginning" : "Read aloud from the part on the screen (or press 🔊 next to any part)";
   $(".nav .key").classList.toggle("hidden", RO);
-  show("#scrExam"); if(!RO) setupMathKeyboard(); renderPaper(); applyPrefs(); setupReading(); setupCalc(); if(ST.prefs.accents && !RO){ accBar(); $("#accBar").classList.remove("hidden"); }
-  guardStart(); tick(); changed(); saveNow();
+  // the paper comes first: an extra that can't start here (in a preview, an old browser…) never stops the questions appearing
+  const safe = (f, what) => { try{ f(); }catch(e){ console.warn("BEE: " + what + " could not start here", e); } };
+  show("#scrExam"); safe(() => { if(!RO) setupMathKeyboard(); }, "the maths keyboard"); renderPaper();
+  safe(applyPrefs, "the display settings"); safe(setupReading, "read aloud"); safe(setupCalc, "the calculator");
+  safe(() => { if(ST.prefs.accents && !RO){ accBar(); $("#accBar").classList.remove("hidden"); } }, "the accents bar");
+  safe(guardStart, "the exam lock"); tick(); changed(); saveNow();
   window.scrollTo(0, 0);
   if(ST.breakAt) showBreak();          // carried on during a rest break: still paused
 }
