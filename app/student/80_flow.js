@@ -9,8 +9,45 @@ function saveFile(text, name, type){
 }
 
 let STORE_OK = true;
+
+/* ---- 📂 the link for iPads (and any browser): an empty player that opens a student file ----
+   iPad Safari can't open an HTML file from Files, so the student opens this page and chooses the file.
+   The exam stays sealed: only the start code opens it, exactly as in the file itself. */
+function examFromFile(text){
+  const at = text.indexOf("let EXAM = ") >= 0 ? text.indexOf("let EXAM = ") + 11 : text.indexOf("const EXAM = ") >= 0 ? text.indexOf("const EXAM = ") + 13 : -1;
+  if(at < 0 || text[at] !== "{") return null;
+  let depth = 0, str = false, esc = false, end = -1;            // the end of the exam's data: matching braces, outside strings
+  for(let i = at; i < text.length; i++){
+    const ch = text[i];
+    if(str){ if(esc) esc = false; else if(ch === "\\") esc = true; else if(ch === '"') str = false; continue; }
+    if(ch === '"') str = true; else if(ch === "{") depth++; else if(ch === "}" && --depth === 0){ end = i + 1; break; }
+  }
+  if(end < 0) return null;
+  try{ const ex = JSON.parse(text.slice(at, end).replace(/<\\!--/g, "<!--")); return ex && ex.bee === "student-exam" ? ex : null; }catch(_){ return null; }
+}
+function pickExam(){
+  document.title = "BEE · take a test";
+  const L = document.createElement("div"); L.id = "pick"; L.className = "screen pick-layer";
+  L.innerHTML = `<div class="box pick">
+    <div class="logo">🐝</div><h1>Take a test</h1>
+    <p>Your teacher gives you the test file (it ends in <b>.html</b>). Choose it here: it opens in this browser, and your answers save on this device.</p>
+    <label class="btn primary big" id="pkBtn" tabindex="0">📂 Choose the exam file<input type="file" id="pkFile" accept=".html,.htm,text/html"></label>
+    <div class="err" id="pkErr" role="alert"></div>
+    <p class="muted small">Opened this test before on this device? Choose the same file again: you carry on where you were.</p>
+  </div>`;
+  document.body.appendChild(L);
+  $("#pkBtn").onkeydown = e => { if(e.key === "Enter" || e.key === " "){ e.preventDefault(); $("#pkFile").click(); } };
+  $("#pkFile").onchange = async e => {
+    const f = e.target.files && e.target.files[0]; if(!f) return;
+    $("#pkErr").textContent = "Opening…";
+    const ex = examFromFile(await f.text().catch(() => ""));
+    e.target.value = "";
+    if(!ex){ $("#pkErr").textContent = "That isn't a BEE test file. Choose the file your teacher gave you (it ends in computer-version.html or read-aloud.html)."; return; }
+    EXAM = ex; L.remove(); boot();
+  };
+}
 async function boot(){
-  if(!EXAM){ document.body.innerHTML = '<div class="screen"><div class="box"><h1>🐝 BEE student version</h1><p>This is an empty template. Teachers make the real file in BEE: ⬇ ▾ → 💻 Computer version for students.</p></div></div>'; return; }
+  if(!EXAM) return pickExam();          // the link (…/ExamBuilder/student/): the student chooses the exam file
   document.title = EXAM.title + " — computer version";
   if(!window.crypto || !crypto.subtle){ document.body.innerHTML = '<div class="screen"><div class="box"><h1>This browser can\'t open the test</h1><p>Please open this file with Chrome, Edge, Firefox or Safari.</p></div></div>'; return; }
   $("#stTitle").textContent = EXAM.title; $("#stSub").textContent = EXAM.subject || "";

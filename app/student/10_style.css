@@ -308,3 +308,10 @@ body.ruler-on #bRuler{background:var(--gold-l);border-color:var(--gold)}
 .bg-res .pr{color:var(--muted)}
 .preview-warn{background:#FCEDEA;border:1.5px solid #C0392B;color:#7A2418;border-radius:10px;padding:10px 13px;margin:6px 0 12px;font-size:.95em;line-height:1.45}
 #bSaved.bad{color:#B03A2E;font-weight:700}
+.pick-layer{position:fixed;inset:0;z-index:90;background:var(--bg,#F6F1E6);overflow:auto}
+.box.pick{text-align:center}
+.box.pick .logo{font-size:46px;line-height:1}
+.box.pick h1{margin:.2em 0 .4em}
+.box.pick #pkBtn{display:inline-flex;align-items:center;gap:8px;margin:14px 0 6px;cursor:pointer;position:relative;overflow:hidden}
+.box.pick #pkFile{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+.box.pick .small{font-size:.88em;margin-top:14px}

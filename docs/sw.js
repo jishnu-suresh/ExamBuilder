@@ -1,6 +1,6 @@
 // Exam Builder service worker — makes the app work offline and update itself.
-const CORE_CACHE = "eb-core-6fbd8f723fdb";
-const LAZY_CACHE = "eb-lazy-a940e4a5a187";
+const CORE_CACHE = "eb-core-30d632146f03";
+const LAZY_CACHE = "eb-lazy-9bedf8ad2c5a";
 const CORE = ["./", "index.html", "manifest.webmanifest", "vendor/jspdf.umd.min.js", "vendor/mathjax/tex-svg-full.js", "vendor/mathlive/mathlive.min.js", "vendor/mathlive/fonts.css", "vendor/sortable.min.js", "vendor/smiles-drawer.min.js", "vendor/pdfjs/pdf.min.js", "vendor/pdfjs/pdf.worker.min.js", "icons/icon-192.png", "icons/icon-512.png", "icons/maskable-512.png", "icons/bee-apple-touch-icon.png", "icons/bee-favicon-32.png", "guide.html"];
 const LAZY = ["student/player.html", "vendor/fonts.js", "vendor/easyfonts.js", "vendor/ocr/tesseract.min.js", "vendor/ocr/worker.min.js", "vendor/ocr/tesseract-core-simd-lstm.wasm.js", "vendor/ocr/lang/eng.traineddata.gz"];   // photo reader + extra fonts: fetched in the background after install
 
@@ -20,6 +20,14 @@ self.addEventListener("fetch", e => {
   const req = e.request;
   if(req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
   if(/\/guide\//.test(new URL(req.url).pathname)) return;     // 📖 the illustrated guide (pages + clips): straight from the website
+  // 📂 the student page (…/student/): the newest from the website, or the saved copy when offline — never BEE itself
+  if(req.mode === "navigate" && /\/student\/(index\.html)?$/.test(new URL(req.url).pathname)){
+    e.respondWith((async () => {
+      try{ const res = await fetch(req); if(res.ok){ const c = await caches.open(LAZY_CACHE); c.put("student/index.html", res.clone()); } return res; }
+      catch(err){ return (await caches.match("student/index.html")) || (await caches.match("student/player.html")) || Response.error(); }
+    })());
+    return;
+  }
   e.respondWith((async () => {
     const hit = await caches.match(req, { ignoreSearch: true });
     if(hit) return hit;

@@ -1,6 +1,6 @@
 /* ================= BEE · student computer version =================
    One file, no internet. The exam inside is locked with the start code; answers are sealed for the teacher. */
-const EXAM = /*__EXAM__*/null;          // filled in by BEE when the teacher downloads this file
+let EXAM = /*__EXAM__*/null;            // filled in by BEE when the teacher downloads this file
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const now = () => Date.now();

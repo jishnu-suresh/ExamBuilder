@@ -20,6 +20,14 @@ self.addEventListener("fetch", e => {
   const req = e.request;
   if(req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
   if(/\/guide\//.test(new URL(req.url).pathname)) return;     // 📖 the illustrated guide (pages + clips): straight from the website
+  // 📂 the student page (…/student/): the newest from the website, or the saved copy when offline — never BEE itself
+  if(req.mode === "navigate" && /\/student\/(index\.html)?$/.test(new URL(req.url).pathname)){
+    e.respondWith((async () => {
+      try{ const res = await fetch(req); if(res.ok){ const c = await caches.open(LAZY_CACHE); c.put("student/index.html", res.clone()); } return res; }
+      catch(err){ return (await caches.match("student/index.html")) || (await caches.match("student/player.html")) || Response.error(); }
+    })());
+    return;
+  }
   e.respondWith((async () => {
     const hit = await caches.match(req, { ignoreSearch: true });
     if(hit) return hit;

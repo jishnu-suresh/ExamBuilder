@@ -264,6 +264,7 @@ open(os.path.join(OUT, "download", "Exam_Builder_offline.html"), "w").write(sing
 open(os.path.join(OUT, ".nojekyll"), "w").write("")
 os.makedirs(os.path.join(OUT, "student"))
 open(os.path.join(OUT, "student", "player.html"), "w").write(player_html)
+open(os.path.join(OUT, "student", "index.html"), "w").write(player_html)      # 📂 the link for iPads: …/ExamBuilder/student/ — choose the exam file
 
 # service worker: core files cached on install; photo reader + extra fonts cached in the background
 def h(paths):
