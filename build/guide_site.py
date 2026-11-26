@@ -25,6 +25,7 @@ PAGES = [  # slug, emoji, title, one line for the welcome page
     ("read-aloud", "🔊", "Read aloud", "The computer voice, or your own voice"),
     ("calculator", "🧮", "Calculator", "BEEcalc Basic, Scientific, Graphing, and Desmos"),
     ("help", "🛟", "Help & tips", "If something goes wrong, and how to tell Jishnu"),
+    ("releases", "🗓", "Versions & release notes", "Every version of BEE so far, and what each one brought"),
 ]
 
 CSS = r"""
@@ -183,14 +184,29 @@ def _cards():
     out = []
     for slug, e, t, line in PAGES[1:]:
         img = {"start": "start_screen", "first-exam": "add_mcq", "questions": "q_subparts", "insert": "ins_row", "ai-photos": "ai_paste", "paper": "look",
-               "saving": "save_chip", "computer": "stu_dialog", "students": "stu_draw", "read-aloud": "read_computer", "calculator": "calc_curves", "help": "editor_map"}[slug]
+               "saving": "save_chip", "computer": "stu_dialog", "students": "stu_draw", "read-aloud": "read_computer", "calculator": "calc_curves", "help": "editor_map", "releases": "overview"}[slug]
         out.append(f'<a class="card" href="{slug}.html"><img src="media/{img}.jpg" alt="" loading="lazy"><div><b>{e} {t}</b><span>{line}</span></div></a>')
     return '<div class="cards">' + "".join(out) + "</div>"
 
 
+def _releases(version):
+    """the release notes, taken from the same list as BEE's ✨ What's new (app/src/70_events_and_start.js), so they never fall behind"""
+    js = open(os.path.join(ROOT, "app", "src", "70_events_and_start.js"), encoding="utf-8").read()
+    a = js.index("const NEWS = ["); e = js.index("\n];", a)
+    out = [f'<p>BEE tells you what changed the first time you open a new version (✨ What\'s new). Here is every version so far, newest first. Your version is in BEE's bottom corner; this guide is for <b>{version}</b>.</p>']
+    for m in re.finditer(r'\{ id: "([^"]+)", title: "([^"]+)", items: \[(.*?)\n  \] \}', js[a:e], re.S):
+        vid, title, body = m.groups()
+        items = [json.loads('"' + x + '"') for x in re.findall(r'"((?:[^"\\]|\\.)*)"', body)]
+        name, _, when = title.partition(" · ")
+        slug = "v" + re.sub(r"[^0-9]+", "-", name).strip("-")
+        out.append(f'<h2 id="{slug}">{html.escape(name)}{" <small>(this version)</small>" if name == version else ""}</h2><p style="margin:-6px 0 4px;color:var(--muted);font-size:15px">{html.escape(when)}</p>')
+        out.append("<ul>" + "".join(f"<li>{x}</li>" for x in items) + "</ul>")
+    return "\n".join(out)
+
+
 def page(i, version):
     slug, e, title, line = PAGES[i]
-    body = open(os.path.join(SRC, "pages", slug + ".html"), encoding="utf-8").read()
+    body = _releases(version) if slug == "releases" else open(os.path.join(SRC, "pages", slug + ".html"), encoding="utf-8").read()
     body = body.replace("<chapters/>", _cards())
     body = _expand(body)
     heads = re.findall(r'<h2 id="([^"]+)"[^>]*>(.*?)</h2>', body)
